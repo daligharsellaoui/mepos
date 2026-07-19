@@ -1,5 +1,5 @@
 import { query } from './database';
-import { hashPassword } from './routes/auth';
+import { hashPassword } from './services/auth.service';
 
 export const DDL_SCHEMA = `
 -- Enum Types if they don't exist
