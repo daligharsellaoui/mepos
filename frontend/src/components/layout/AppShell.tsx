@@ -72,7 +72,9 @@ export const AppShell: React.FC<AppShellProps> = ({
       </header>
 
       <main className="main-content">
-        {children}
+        <div className="page-enter" key={activeTab}>
+          {children}
+        </div>
       </main>
 
       <MobileNav user={user} activeTab={activeTab} onTabChange={onTabChange} />
