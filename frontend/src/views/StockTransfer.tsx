@@ -16,7 +16,12 @@ export const StockTransfer: React.FC<StockTransferProps> = ({
   onSubmitTransfer,
   onRefresh
 }) => {
-  const { user, apiKey, apiUrl } = useAuth();
+  const { user, token, apiUrl } = useAuth();
+  const getAuthHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  };
   const isCook = user?.role === 'cook';
   const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager';
 
@@ -65,7 +70,7 @@ export const StockTransfer: React.FC<StockTransferProps> = ({
   const fetchRequests = async () => {
     try {
       const response = await fetch(`${apiUrl}/transfers/requests`, {
-        headers: { 'x-api-key': apiKey }
+        headers: getAuthHeaders()
       });
       const resJson = await response.json();
       if (resJson.status === 'success') {
@@ -126,10 +131,7 @@ export const StockTransfer: React.FC<StockTransferProps> = ({
         // Cooks submit a digital request
         const response = await fetch(`${apiUrl}/transfers/requests`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey
-          },
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             source_department_id: parseInt(srcDept, 10),
             destination_department_id: parseInt(destDept, 10),
@@ -179,10 +181,7 @@ export const StockTransfer: React.FC<StockTransferProps> = ({
     try {
       const response = await fetch(`${apiUrl}/transfers/requests/${id}/validate`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ validated_by: user?.id })
       });
       const resJson = await response.json();
@@ -203,10 +202,7 @@ export const StockTransfer: React.FC<StockTransferProps> = ({
     try {
       const response = await fetch(`${apiUrl}/transfers/requests/${id}/reject`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ validated_by: user?.id })
       });
       const resJson = await response.json();

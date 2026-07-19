@@ -1,18 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { getClient, query, isDemoMode, demoDb } from '../database';
+import { authMiddleware } from './auth';
 import Decimal from 'decimal.js';
 
 const router = Router();
 
-const apiKeyMiddleware = (req: Request, res: Response, next: () => void) => {
-  const apiKey = req.headers['x-api-key'];
-  if (!apiKey || apiKey !== process.env.API_KEY) {
-    return res.status(401).json({ status: 'error', message: 'Invalid or missing API key' });
-  }
-  next();
-};
-
-router.use(apiKeyMiddleware);
+router.use(authMiddleware);
 
 router.post('/sync', async (req: Request, res: Response) => {
   const { department_id, tickets } = req.body;

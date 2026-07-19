@@ -243,7 +243,12 @@ const CookDashboard: React.FC<{ stocks: any[]; losses: any[]; recipes: any[]; de
 };
 
 export const Dashboard: React.FC<DashboardProps> = ({ stocks, losses, recipes, departments }) => {
-  const { user, apiKey, apiUrl } = useAuth();
+  const { user, token, apiUrl } = useAuth();
+  const getAuthHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  };
   const isAdmin = user?.role === 'admin';
   const isCook = user?.role === 'cook';
 
@@ -306,7 +311,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ stocks, losses, recipes, d
         url += `&startHour=${startHour}&endHour=${endHour}`;
       }
       const response = await fetch(url, {
-        headers: { 'x-api-key': apiKey }
+        headers: getAuthHeaders()
       });
       const resJson = await response.json();
       if (resJson.status === 'success') {
@@ -345,7 +350,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ stocks, losses, recipes, d
   const fetchSalesHistory = async () => {
     try {
       const response = await fetch(`${apiUrl}/sales/history`, {
-        headers: { 'x-api-key': apiKey }
+        headers: getAuthHeaders()
       });
       const resJson = await response.json();
       if (resJson.status === 'success') {

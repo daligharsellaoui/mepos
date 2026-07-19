@@ -16,7 +16,12 @@ export const Settings: React.FC<SettingsProps> = ({
   isOffline = false, 
   onSubmitAdjust 
 }) => {
-  const { apiKey, apiUrl } = useAuth();
+  const { token, apiUrl } = useAuth();
+  const getAuthHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  };
 
   // Sub-tabs in Settings: 'ingredients' | 'recipes' | 'stocks' | 'users' | 'depts'
   const [subTab, setSubTab] = useState<'ingredients' | 'recipes' | 'stocks' | 'users' | 'depts'>('ingredients');
@@ -115,7 +120,7 @@ export const Settings: React.FC<SettingsProps> = ({
 
     if (!isOffline && navigator.onLine) {
       try {
-        const headers = { 'x-api-key': apiKey };
+        const headers = getAuthHeaders();
         const [deptsRes, movRes] = await Promise.all([
           fetch(`${apiUrl}/departments`, { headers }).then(r => r.json()),
           fetch(`${apiUrl}/movements`, { headers }).then(r => r.json())
@@ -146,7 +151,7 @@ export const Settings: React.FC<SettingsProps> = ({
     if (!isOffline && navigator.onLine) {
       try {
         const response = await fetch(`${apiUrl}/auth/users`, {
-          headers: { 'x-api-key': apiKey }
+          headers: getAuthHeaders()
         });
         const resJson = await response.json();
         if (resJson.status === 'success') {
@@ -188,12 +193,8 @@ export const Settings: React.FC<SettingsProps> = ({
 
     try {
       const response = await fetch(`${apiUrl}/ingredients`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey
-        },
-        body: JSON.stringify({
+        method: 'POST',          headers: getAuthHeaders(),
+          body: JSON.stringify({
           name: ingName,
           unit: ingUnit,
           purchase_unit: ingPurchaseUnit,
@@ -232,12 +233,8 @@ export const Settings: React.FC<SettingsProps> = ({
 
     try {
       const response = await fetch(`${apiUrl}/recipes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey
-        },
-        body: JSON.stringify({
+        method: 'POST',          headers: getAuthHeaders(),
+          body: JSON.stringify({
           name: recName,
           sale_price: priceVal
         })
@@ -320,12 +317,8 @@ export const Settings: React.FC<SettingsProps> = ({
 
     try {
       const response = await fetch(`${apiUrl}/recipes/${selectedRecipeId}/ingredients`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey
-        },
-        body: JSON.stringify({
+        method: 'POST',          headers: getAuthHeaders(),
+          body: JSON.stringify({
           ingredients: ficheIngredients
         })
       });
@@ -414,12 +407,8 @@ export const Settings: React.FC<SettingsProps> = ({
       const endpoint = userId ? `${apiUrl}/auth/users/${userId}` : `${apiUrl}/auth/users`;
 
       const response = await fetch(endpoint, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey
-        },
-        body: JSON.stringify({
+        method,          headers: getAuthHeaders(),
+          body: JSON.stringify({
           username: userUsername,
           password: userPassword || undefined,
           role: userRole,
@@ -467,7 +456,7 @@ export const Settings: React.FC<SettingsProps> = ({
     try {
       const response = await fetch(`${apiUrl}/auth/users/${id}`, {
         method: 'DELETE',
-        headers: { 'x-api-key': apiKey }
+        headers: getAuthHeaders()
       });
       const resJson = await response.json();
       if (resJson.status === 'success') {
@@ -504,12 +493,8 @@ export const Settings: React.FC<SettingsProps> = ({
       const endpoint = deptId ? `${apiUrl}/departments/${deptId}` : `${apiUrl}/departments`;
 
       const response = await fetch(endpoint, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey
-        },
-        body: JSON.stringify({
+        method,          headers: getAuthHeaders(),
+          body: JSON.stringify({
           name: deptName,
           stock_type: deptStockType,
           description: deptDescription
@@ -568,7 +553,7 @@ export const Settings: React.FC<SettingsProps> = ({
 
       const response = await fetch(url, {
         method: 'DELETE',
-        headers: { 'x-api-key': apiKey }
+        headers: getAuthHeaders()
       });
       const resJson = await response.json();
       if (resJson.status === 'success') {

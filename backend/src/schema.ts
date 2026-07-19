@@ -1,4 +1,5 @@
 import { query } from './database';
+import { hashPassword } from './routes/auth';
 
 export const DDL_SCHEMA = `
 -- Enum Types if they don't exist
@@ -151,13 +152,17 @@ export async function initializeDatabase() {
     if (parseInt(checkUsers.rows[0].count, 10) === 0) {
       console.log('Seeding database with mock data...');
 
-      // 1. Seed Users
+      // 1. Seed Users (hash passwords)
+      const adminHash = await hashPassword('admin123');
+      const gerantHash = await hashPassword('gerant123');
+      const cuisinierHash = await hashPassword('cuisinier123');
+
       await query(`
         INSERT INTO users (username, password_hash, role, first_name, last_name) VALUES
-        ('admin', 'admin123', 'admin', 'Med', 'Mair'),
-        ('gerant', 'gerant123', 'manager', 'Ahmed', 'Ben Ali'),
-        ('cuisinier', 'cuisinier123', 'cook', 'Youssef', 'Tunisi')
-      `);
+        ('admin', $1, 'admin', 'Med', 'Mair'),
+        ('gerant', $2, 'manager', 'Ahmed', 'Ben Ali'),
+        ('cuisinier', $3, 'cook', 'Youssef', 'Tunisi')
+      `, [adminHash, gerantHash, cuisinierHash]);
 
       // 2. Seed Departments
       await query(`

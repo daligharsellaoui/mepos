@@ -60,7 +60,18 @@ const IconLogout = () => (
 );
 
 const MainAppContent: React.FC = () => {
-  const { user, login, logout, isLoading, error, apiKey, apiUrl } = useAuth();
+  const { user, login, logout, isLoading, error, token, apiUrl } = useAuth();
+
+  // Helper to get auth headers (JWT for frontend)
+  const getAuthHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+  };
   
   // Tab Switching state
   const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'losses' | 'transfers' | 'settings'>('dashboard');
@@ -208,7 +219,7 @@ const MainAppContent: React.FC = () => {
     }
 
     try {
-      const headers = { 'x-api-key': apiKey };
+      const headers = getAuthHeaders();
 
       const [stocksRes, lossesRes, deptsRes, ingsRes, recipesRes] = await Promise.all([
         fetch(`${apiUrl}/stocks`, { headers }).then(r => r.json()),
@@ -363,10 +374,7 @@ const MainAppContent: React.FC = () => {
     if (queue.length === 0) return;
 
     setIsSyncing(true);
-    const headers = {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey
-    };
+    const headers = getAuthHeaders();
 
     const remainingQueue: any[] = [];
     let hasFailed = false;
@@ -408,9 +416,9 @@ const MainAppContent: React.FC = () => {
     if (!hasFailed) {
       try {
         const [stocksRes, lossesRes, movementsRes] = await Promise.all([
-          fetch(`${apiUrl}/stocks`, { headers: { 'x-api-key': apiKey } }).then(r => r.json()),
-          fetch(`${apiUrl}/losses`, { headers: { 'x-api-key': apiKey } }).then(r => r.json()),
-          fetch(`${apiUrl}/movements`, { headers: { 'x-api-key': apiKey } }).then(r => r.json())
+          fetch(`${apiUrl}/stocks`, { headers: getAuthHeaders() }).then(r => r.json()),
+          fetch(`${apiUrl}/losses`, { headers: getAuthHeaders() }).then(r => r.json()),
+          fetch(`${apiUrl}/movements`, { headers: getAuthHeaders() }).then(r => r.json())
         ]);
         if (stocksRes.status === 'success') {
           setStocks(stocksRes.data);
@@ -449,10 +457,7 @@ const MainAppContent: React.FC = () => {
     try {
       const response = await fetch(`${apiUrl}/losses`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(lossData)
       });
       const resJson = await response.json();
@@ -475,10 +480,7 @@ const MainAppContent: React.FC = () => {
     try {
       const response = await fetch(`${apiUrl}/transfers`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(transferData)
       });
       const resJson = await response.json();
@@ -501,10 +503,7 @@ const MainAppContent: React.FC = () => {
     try {
       const response = await fetch(`${apiUrl}/inventory/adjust`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(adjustData)
       });
       const resJson = await response.json();

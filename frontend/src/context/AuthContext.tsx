@@ -29,7 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const apiKey = 'mepos_sec_key_prod_abc123';
+  const apiKey = ''; // API key is no longer hardcoded in frontend — use JWT instead
   const apiUrl = 'http://localhost:5000/api/v1';
 
   // Load session from localStorage on startup
