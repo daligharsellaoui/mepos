@@ -5,12 +5,18 @@ dotenv.config();
 
 const connectionString = process.env.DATABASE_URL;
 
-export const pool = new Pool({
-  connectionString,
+// Create pool (may be configured lazily)
+const poolConfig: any = {
   connectionTimeoutMillis: 2000 // fail fast if not running
-});
+};
+if (connectionString) {
+  poolConfig.connectionString = connectionString;
+}
 
-export let isDemoMode = false;
+export const pool = new Pool(poolConfig);
+
+// Default to demo mode. checkConnection() will switch to PG mode if database is available.
+export let isDemoMode = true;
 
 // Store in-memory state for Demo Mode fallback
 export const demoDb: {
