@@ -1,21 +1,34 @@
 # ======================================================
-# mePOS STOCK — Backend Dockerfile (Multi-stage)
+# mePOS STOCK — Backend Dockerfile (Optimized Multi-stage)
 # ======================================================
+# Build with: DOCKER_BUILDKIT=1 docker build -t mepos-backend .
+# Features: cache mount for npm, full deps for build, pruned for production
 
 # ---- Build Stage ----
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files and install dependencies
+# Copy dependency manifests first (better Docker layer caching)
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && \
-    npm cache clean --force
 
-# Copy source and build
+# Install ALL dependencies (including devDeps needed for TypeScript compilation)
+# Cache mount speeds up subsequent builds significantly
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
+
+# Copy source and type config
 COPY tsconfig.json ./
 COPY src/ ./src/
-RUN npx tsc
+
+# Build TypeScript to dist/
+# Use npm run build (which runs tsc) instead of npx tsc for proper PATH resolution
+RUN npm run build
+
+# Remove devDependencies from node_modules (keep only production deps)
+# This reduces the production image size significantly
+RUN npm prune --omit=dev && \
+    rm -rf src/ tsconfig.json
 
 # ---- Production Stage ----
 FROM node:20-alpine AS production
@@ -30,8 +43,8 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY package.json ./
 
-# Create logs directory
-RUN mkdir -p /app/logs && chown -R mepos:mepos /app/logs
+# Create logs directory with proper permissions
+RUN mkdir -p /app/logs && chown -R mepos:mepos /app
 
 # Switch to non-root user
 USER mepos

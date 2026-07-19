@@ -1,32 +1,34 @@
 # ======================================================
-# mePOS STOCK — Frontend Dockerfile (Multi-stage)
+# mePOS STOCK — Frontend Dockerfile (Optimized Multi-stage)
 # ======================================================
+# Build with: DOCKER_BUILDKIT=1 docker build -t mepos-frontend .
+# Features: cache mount for npm, VITE_API_URL build arg
 
 # ---- Build Stage ----
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files and install all dependencies
-# Using npm install instead of npm ci for better Docker cache compatibility
+# Copy dependency manifests first (better Docker layer caching)
 COPY package.json package-lock.json ./
-RUN npm install && npm cache clean --force
+
+# Install ALL dependencies (including devDeps for TypeScript types used by vite)
+# Cache mount speeds up subsequent builds significantly
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
 # Build-time arg for API base URL (use relative path for Nginx proxy)
+# Placed AFTER npm install to avoid cache invalidation when arg changes
 ARG VITE_API_URL=/api/v1
 ENV VITE_API_URL=${VITE_API_URL}
 
-# Add node_modules/.bin to PATH explicitly
-ENV PATH="/app/node_modules/.bin:${PATH}"
-
-# Copy source and build
+# Copy build configuration and source
 COPY tsconfig.json tsconfig.app.json tsconfig.node.json ./
 COPY vite.config.ts ./
 COPY index.html ./
 COPY src/ ./src/
 
-# Build: vite handles transpilation via esbuild; tsc is for type checking only
-# We use npx to ensure the binary is resolved correctly in the container
+# Build with Vite (handles transpilation via esbuild, no tsc needed)
 RUN npx vite build
 
 # ---- Production Stage ----
