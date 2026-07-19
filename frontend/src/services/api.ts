@@ -59,7 +59,7 @@ export function del<T>(path: string) {
 
 import type {
   InventoryStock, Ingredient, Department, Recipe, IngredientLoss,
-  TransferRequest, StockMovement, SalesStats, SalesHistory, User
+  TransferRequest, StockMovement, SalesStats, SalesHistory, User, ForecastData
 } from '../types/api';
 
 export const api = {
@@ -101,4 +101,7 @@ export const api = {
     post(`/transfers/requests/${id}/validate`, { validated_by: validatedBy }),
   rejectTransferRequest: (id: number, validatedBy: number) =>
     post(`/transfers/requests/${id}/reject`, { validated_by: validatedBy }),
+
+  // Forecast
+  getForecast: () => get<ForecastData>('/forecast'),
 };

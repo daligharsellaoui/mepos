@@ -148,4 +148,44 @@ export interface LossAlert {
   timestamp: Date;
 }
 
+export interface IngredientForecast {
+  ingredient_id: number;
+  ingredient_name: string;
+  unit: string;
+  current_stock: number;
+  avg_daily_usage: number;
+  days_until_depletion: number | null;
+  reorder_quantity: number;
+  alert_threshold: number;
+  is_critical: boolean;
+  department_id: number;
+  department_name: string;
+}
+
+export interface RecipeForecast {
+  recipe_id: number;
+  recipe_name: string;
+  sale_price: number;
+  avg_daily_quantity: number;
+  avg_daily_revenue: number;
+  total_7day_quantity: number;
+  total_7day_revenue: number;
+}
+
+export interface ForecastSummary {
+  total_recipes_analyzed: number;
+  total_ingredients_analyzed: number;
+  critical_ingredients: number;
+  total_reorder_cost: number;
+  estimated_daily_revenue: number;
+}
+
+export interface ForecastData {
+  generated_at: string;
+  days_analyzed: number;
+  recipes: RecipeForecast[];
+  ingredients: IngredientForecast[];
+  summary: ForecastSummary;
+}
+
 export type TabRoute = 'dashboard' | 'inventory' | 'losses' | 'transfers' | 'settings';

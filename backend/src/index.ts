@@ -17,6 +17,7 @@ import salesRouter from './routes/sales';
 import lossesRouter from './routes/losses';
 import transfersRouter from './routes/transfers';
 import inventoryRouter from './routes/inventory';
+import forecastRouter from './routes/forecast';
 
 dotenv.config();
 
@@ -75,6 +76,7 @@ app.use('/api/v1/sales', salesRouter);
 app.use('/api/v1/losses', lossesRouter);
 app.use('/api/v1/transfers', transfersRouter);
 app.use('/api/v1', inventoryRouter); // /departments, /ingredients, /recipes, /stocks
+app.use('/api/v1/forecast', forecastRouter);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
