@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS ingredients (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. Inventory Stocks
+-- 4. Inventory Stocks (CASCADE is intentional: stocks are deleted with their department/ingredient)
 CREATE TABLE IF NOT EXISTS inventory_stocks (
     id SERIAL PRIMARY KEY,
     department_id INT REFERENCES departments(id) ON DELETE CASCADE,
@@ -66,7 +66,8 @@ CREATE TABLE IF NOT EXISTS recipes (
     name VARCHAR(150) UNIQUE NOT NULL,
     sale_price DECIMAL(10, 2) NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 6. Recipe Ingredients
@@ -82,10 +83,11 @@ CREATE TABLE IF NOT EXISTS recipe_ingredients (
 CREATE TABLE IF NOT EXISTS sales_tickets (
     id SERIAL PRIMARY KEY,
     external_ticket_id VARCHAR(100) NOT NULL,
-    department_id INT REFERENCES departments(id),
+    department_id INT REFERENCES departments(id) ON DELETE SET NULL,
     ticket_date TIMESTAMP WITH TIME ZONE NOT NULL,
     total_amount DECIMAL(10, 2) NOT NULL,
     sync_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
     UNIQUE(department_id, external_ticket_id)
 );
 
@@ -101,8 +103,8 @@ CREATE TABLE IF NOT EXISTS sales_ticket_items (
 -- 9. Stock Movements
 CREATE TABLE IF NOT EXISTS stock_movements (
     id SERIAL PRIMARY KEY,
-    department_id INT REFERENCES departments(id),
-    ingredient_id INT REFERENCES ingredients(id),
+    department_id INT REFERENCES departments(id) ON DELETE SET NULL,
+    ingredient_id INT REFERENCES ingredients(id) ON DELETE SET NULL,
     quantity DECIMAL(12, 4) NOT NULL,
     type stock_movement_type NOT NULL,
     reference_id VARCHAR(100),
@@ -112,22 +114,22 @@ CREATE TABLE IF NOT EXISTS stock_movements (
 -- 10. Ingredient Losses
 CREATE TABLE IF NOT EXISTS ingredient_losses (
     id SERIAL PRIMARY KEY,
-    department_id INT REFERENCES departments(id),
-    ingredient_id INT REFERENCES ingredients(id),
+    department_id INT REFERENCES departments(id) ON DELETE SET NULL,
+    ingredient_id INT REFERENCES ingredients(id) ON DELETE SET NULL,
     quantity DECIMAL(12, 4) NOT NULL,
     loss_reason VARCHAR(100),
     cost_loss DECIMAL(10, 2) NOT NULL,
     opportunity_loss DECIMAL(10, 2) NOT NULL,
-    reported_by INT REFERENCES users(id),
+    reported_by INT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 11. Transfer Requests (Two-Step Recharge Workflow)
 CREATE TABLE IF NOT EXISTS transfer_requests (
     id SERIAL PRIMARY KEY,
-    source_department_id INT REFERENCES departments(id) ON DELETE CASCADE,
-    destination_department_id INT REFERENCES departments(id) ON DELETE CASCADE,
-    ingredient_id INT REFERENCES ingredients(id) ON DELETE CASCADE,
+    source_department_id INT REFERENCES departments(id) ON DELETE SET NULL,
+    destination_department_id INT REFERENCES departments(id) ON DELETE SET NULL,
+    ingredient_id INT REFERENCES ingredients(id) ON DELETE SET NULL,
     quantity DECIMAL(12, 4) NOT NULL,
     status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')),
     requested_by INT REFERENCES users(id) ON DELETE SET NULL,
@@ -136,9 +138,15 @@ CREATE TABLE IF NOT EXISTS transfer_requests (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexes
+-- Indexes (Query Performance)
 CREATE INDEX IF NOT EXISTS idx_sales_tickets_ext ON sales_tickets(department_id, external_ticket_id);
 CREATE INDEX IF NOT EXISTS idx_inventory_stocks_lookup ON inventory_stocks(department_id, ingredient_id);
+CREATE INDEX IF NOT EXISTS idx_sales_tickets_date ON sales_tickets(ticket_date);
+CREATE INDEX IF NOT EXISTS idx_stock_movements_lookup ON stock_movements(department_id, ingredient_id);
+CREATE INDEX IF NOT EXISTS idx_stock_movements_type_date ON stock_movements(department_id, type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ingredient_losses_date ON ingredient_losses(department_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transfer_requests_status ON transfer_requests(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sales_ticket_items_ticket ON sales_ticket_items(sales_ticket_id);
 `;
 
 export async function initializeDatabase() {
