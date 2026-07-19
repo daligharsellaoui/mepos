@@ -1,0 +1,122 @@
+[
+  {
+    "id": 1,
+    "ticket_number": "TK-LEGACY-101",
+    "sold_at": "2026-06-06T18:30:00.000",
+    "total_amount": 30,
+    "items": [
+      {
+        "recipe_id": 1,
+        "quantity": 2,
+        "unit_price": 15
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "ticket_number": "TK-LEGACY-102",
+    "sold_at": "2026-06-06T19:15:00.000",
+    "total_amount": 25,
+    "items": [
+      {
+        "recipe_id": 3,
+        "quantity": 2,
+        "unit_price": 2.5
+      },
+      {
+        "recipe_id": 2,
+        "quantity": 1,
+        "unit_price": 22.5
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "ticket_number": "TK-LEGACY-103",
+    "sold_at": "2026-06-06T20:00:00.000",
+    "total_amount": 15,
+    "items": [
+      {
+        "recipe_id": 1,
+        "quantity": 1,
+        "unit_price": 15
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "ticket_number": "TK-AUTO-LOSS-001",
+    "sold_at": "2026-06-07T10:30:00.000",
+    "total_amount": 15,
+    "items": [
+      {
+        "recipe_id": 1,
+        "quantity": 1,
+        "unit_price": 15,
+        "quantity_served": 2
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "ticket_number": "TK-AUTO-LOSS-002",
+    "sold_at": "2026-06-07T11:00:00.000",
+    "total_amount": 15,
+    "items": [
+      {
+        "recipe_id": 1,
+        "quantity": 1,
+        "unit_price": 15,
+        "quantity_served": 2
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "ticket_number": "TK-AUTO-LOSS-006",
+    "sold_at": "2026-06-06T23:04:01",
+    "total_amount": 15,
+    "items": [
+      {
+        "recipe_id": 1,
+        "quantity": 1,
+        "unit_price": 15,
+        "quantity_served": 2
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "ticket_number": "TK-AUTO-LOSS-007",
+    "sold_at": "2026-06-06T23:08:30",
+    "total_amount": 15,
+    "items": [
+      {
+        "recipe_id": 1,
+        "quantity": 1,
+        "unit_price": 15,
+        "quantity_served": 2
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "ticket_number": "TK-DEMO-FINAL-008",
+    "sold_at": "2026-06-06 23:14:20",
+    "total_amount": 47.5,
+    "items": [
+      {
+        "recipe_id": 1,
+        "quantity": 2,
+        "unit_price": 15,
+        "quantity_served": 4
+      },
+      {
+        "recipe_id": 2,
+        "quantity": 1,
+        "unit_price": 17.5,
+        "quantity_served": 2
+      }
+    ]
+  }
+]
