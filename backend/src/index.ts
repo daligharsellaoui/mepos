@@ -1,9 +1,12 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import helmet from 'helmet';
+import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 import { checkConnection, isDemoMode } from './database';
 import { initializeDatabase } from './schema';
 import { startSalesSimulator } from './simulator';
@@ -38,6 +41,15 @@ app.use(cors({
 
 app.use(bodyParser.json({ limit: '10mb' }));
 
+// Morgan: HTTP request logging
+const logDir = path.join(__dirname, '..', 'logs');
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+}
+const accessLogStream = fs.createWriteStream(path.join(logDir, 'access.log'), { flags: 'a' });
+app.use(morgan('combined', { stream: accessLogStream }));
+app.use(morgan('dev'));
+
 // Rate limiting: global
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -65,11 +77,11 @@ app.use('/api/v1/transfers', transfersRouter);
 app.use('/api/v1', inventoryRouter); // /departments, /ingredients, /recipes, /stocks
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({
     status: 'healthy',
     mode: isDemoMode ? 'demo-in-memory' : 'postgres-active',
-    version: process.env.npm_package_version || '1.1.0',
+    version: process.env.npm_package_version || '1.5.0',
     timestamp: new Date()
   });
 });
@@ -82,6 +94,15 @@ app.get('/api/config', (req, res) => {
       demoMode: isDemoMode,
       frontendUrl: FRONTEND_URL
     }
+  });
+});
+
+// Global error handling middleware
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('[ERROR]', err.message, err.stack);
+  res.status(500).json({
+    status: 'error',
+    message: process.env.NODE_ENV === 'production' ? 'Erreur interne du serveur.' : err.message
   });
 });
 
