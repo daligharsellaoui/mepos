@@ -4,7 +4,7 @@ import { LoginPage } from './pages/LoginPage';
 import { AppShell } from './components/layout/AppShell';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { api } from './services/api';
-import type { TabRoute, LossAlert } from './types/api';
+import type { TabRoute, LossAlert, ForecastData } from './types/api';
 
 // Lazy-loaded views for code splitting
 const Dashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -35,6 +35,8 @@ const MainAppContent: React.FC = () => {
   const [departments, setDepartments] = useState<any[]>([]);
   const [ingredients, setIngredients] = useState<any[]>([]);
   const [recipes, setRecipes] = useState<any[]>([]);
+  const [forecast, setForecast] = useState<ForecastData | null>(null);
+  const [isForecastLoading, setIsForecastLoading] = useState(false);
 
   // Offline & sync
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -138,6 +140,18 @@ const MainAppContent: React.FC = () => {
       if (deptsRes.status === 'success') { setDepartments(deptsRes.data as any[]); saveToCache('mepos_departments', deptsRes.data); }
       if (ingsRes.status === 'success') { setIngredients(ingsRes.data as any[]); saveToCache('mepos_ingredients', ingsRes.data); }
       if (recipesRes.status === 'success') { setRecipes(recipesRes.data as any[]); saveToCache('mepos_recipes', recipesRes.data); }
+
+      // Fetch forecast data (less frequent, lower priority)
+      if (user?.role === 'admin') {
+        try {
+          setIsForecastLoading(true);
+          const forecastRes = await api.getForecast();
+          if (forecastRes.status === 'success' && forecastRes.data) {
+            setForecast(forecastRes.data as ForecastData);
+          }
+        } catch { /* forecast is non-critical */ }
+        finally { setIsForecastLoading(false); }
+      }
 
       setIsOffline(false);
       syncOfflineActions();
@@ -303,7 +317,7 @@ const MainAppContent: React.FC = () => {
 
   const renderActiveView = () => {
     const viewProps = {
-      dashboard: <Dashboard stocks={stocks} losses={losses} recipes={recipes} departments={departments} />,
+      dashboard: <Dashboard stocks={stocks} losses={losses} recipes={recipes} departments={departments} forecast={forecast} isForecastLoading={isForecastLoading} />,
       inventory: <Inventory stocks={stocks} departments={departments} onRefresh={fetchData} />,
       losses: (
         <LossTracker

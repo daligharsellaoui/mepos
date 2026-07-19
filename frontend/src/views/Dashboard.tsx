@@ -2,11 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Chart } from 'chart.js/auto';
 
+import { ForecastPanel } from '../components/forecast/ForecastPanel';
+import type { ForecastData } from '../types/api';
+
 interface DashboardProps {
   stocks: any[];
   losses: any[];
   recipes: any[];
   departments: any[];
+  forecast?: ForecastData | null;
+  isForecastLoading?: boolean;
 }
 
 const getLossReasonLabel = (reason: string) => {
@@ -242,7 +247,7 @@ const CookDashboard: React.FC<{ stocks: any[]; losses: any[]; recipes: any[]; de
   );
 };
 
-export const Dashboard: React.FC<DashboardProps> = ({ stocks, losses, recipes, departments }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ stocks, losses, recipes, departments, forecast, isForecastLoading }) => {
   const { user, token, apiUrl } = useAuth();
   const getAuthHeaders = (): Record<string, string> => {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -635,6 +640,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ stocks, losses, recipes, d
           </p>
         </div>
       </div>
+
+      {/* Forecast Section (Admin only) */}
+      {isAdmin && (
+        <ForecastPanel forecast={forecast || null} isLoading={isForecastLoading || false} />
+      )}
+
+      {/* Divider between forecast and dashboard */}
+      {isAdmin && forecast && (
+        <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '0.5rem 0' }} />
+      )}
 
       <div className="metrics-grid">
         {/* Metric 1: Low stock alerts count */}
