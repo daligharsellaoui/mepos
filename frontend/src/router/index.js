@@ -48,6 +48,12 @@ const routes = [
         name: 'Agents',
         component: () => import('../views/AgentManagement.vue'),
         meta: { requiresAdmin: true }
+      },
+      {
+        path: 'sync',
+        name: 'SyncDashboard',
+        component: () => import('../views/SyncDashboard.vue'),
+        meta: { requiresAdmin: true }
       }
     ]
   }

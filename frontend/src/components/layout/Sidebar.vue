@@ -24,6 +24,7 @@ const navItems = [
   { path: '/transfers', label: 'Transfert Dépôt', icon: 'transfers' },
   { path: '/settings', label: 'Paramétrage', icon: 'settings', adminOnly: true },
   { path: '/agents', label: 'Agents Sync', icon: 'agents', adminOnly: true },
+  { path: '/sync', label: 'Sync Dashboard', icon: 'sync', adminOnly: true },
   { path: '/tenant-settings', label: 'Paramètres Restaurant', icon: 'tenant', adminOnly: true },
 ]
 
@@ -187,6 +188,20 @@ const toggleOffline = () => {
             stroke-linejoin="round"
           >
             <rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+          </svg>
+          <svg
+            v-else-if="item.icon === 'sync'"
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
           </svg>
           <svg
             v-else-if="item.icon === 'tenant'"
