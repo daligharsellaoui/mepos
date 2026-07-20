@@ -284,6 +284,22 @@ CREATE TABLE IF NOT EXISTS transfer_requests (
 );
 
 -- ============================================================
+-- MIGRATION: Add tenant_id to existing tables (if upgrading from single-tenant schema)
+-- ============================================================
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES tenants(id);
+ALTER TABLE departments ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES tenants(id);
+ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES tenants(id);
+ALTER TABLE inventory_stocks ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES tenants(id);
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES tenants(id);
+ALTER TABLE recipe_ingredients ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES tenants(id);
+ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES tenants(id);
+ALTER TABLE sales_ticket_items ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES tenants(id);
+ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES tenants(id);
+ALTER TABLE ingredient_losses ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES tenants(id);
+ALTER TABLE transfer_requests ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES tenants(id);
+
+-- ============================================================
 -- Indexes (Query Performance - Tenant-Scoped)
 -- ============================================================
 
@@ -329,6 +345,51 @@ export async function initializeDatabase() {
   try {
     await query(DDL_SCHEMA);
     console.log('Database tables verified/created successfully.');
+
+    // Detect and fix tables that were just upgraded from single-tenant (missing tenant_id data)
+    const checkNullTenant = await query(`
+      SELECT count(*) FROM users WHERE tenant_id IS NULL
+    `);
+    const nullTenantCount = parseInt(checkNullTenant.rows[0].count, 10);
+    
+    if (nullTenantCount > 0) {
+      console.log(`Found ${nullTenantCount} rows with NULL tenant_id. Running data migration...`);
+      
+      // Ensure default tenant exists
+      await query(`
+        INSERT INTO tenants (id, name, slug, status, subscription_plan)
+        VALUES (1, 'Default Restaurant', 'default', 'active', 'enterprise')
+        ON CONFLICT (id) DO NOTHING
+      `);
+      
+      // Assign existing rows to default tenant
+      await query(`UPDATE users SET tenant_id = 1 WHERE tenant_id IS NULL`);
+      await query(`UPDATE departments SET tenant_id = 1 WHERE tenant_id IS NULL`);
+      await query(`UPDATE ingredients SET tenant_id = 1 WHERE tenant_id IS NULL`);
+      await query(`UPDATE inventory_stocks SET tenant_id = 1 WHERE tenant_id IS NULL`);
+      await query(`UPDATE recipes SET tenant_id = 1 WHERE tenant_id IS NULL`);
+      await query(`UPDATE recipe_ingredients SET tenant_id = 1 WHERE tenant_id IS NULL`);
+      await query(`UPDATE sales_tickets SET tenant_id = 1 WHERE tenant_id IS NULL`);
+      await query(`UPDATE sales_ticket_items SET tenant_id = 1 WHERE tenant_id IS NULL`);
+      await query(`UPDATE stock_movements SET tenant_id = 1 WHERE tenant_id IS NULL`);
+      await query(`UPDATE ingredient_losses SET tenant_id = 1 WHERE tenant_id IS NULL`);
+      await query(`UPDATE transfer_requests SET tenant_id = 1 WHERE tenant_id IS NULL`);
+      
+      // Set NOT NULL on tenant_id columns
+      await query(`ALTER TABLE users ALTER COLUMN tenant_id SET NOT NULL`);
+      await query(`ALTER TABLE departments ALTER COLUMN tenant_id SET NOT NULL`);
+      await query(`ALTER TABLE ingredients ALTER COLUMN tenant_id SET NOT NULL`);
+      await query(`ALTER TABLE inventory_stocks ALTER COLUMN tenant_id SET NOT NULL`);
+      await query(`ALTER TABLE recipes ALTER COLUMN tenant_id SET NOT NULL`);
+      await query(`ALTER TABLE recipe_ingredients ALTER COLUMN tenant_id SET NOT NULL`);
+      await query(`ALTER TABLE sales_tickets ALTER COLUMN tenant_id SET NOT NULL`);
+      await query(`ALTER TABLE sales_ticket_items ALTER COLUMN tenant_id SET NOT NULL`);
+      await query(`ALTER TABLE stock_movements ALTER COLUMN tenant_id SET NOT NULL`);
+      await query(`ALTER TABLE ingredient_losses ALTER COLUMN tenant_id SET NOT NULL`);
+      await query(`ALTER TABLE transfer_requests ALTER COLUMN tenant_id SET NOT NULL`);
+      
+      console.log('Data migration complete: existing rows assigned to default tenant.');
+    }
 
     // Detect fresh install vs existing database
     const checkTenants = await query('SELECT count(*) FROM tenants');
@@ -509,9 +570,11 @@ export async function initializeDatabase() {
           (1, 'inventory', 'enable_transfers', 'true')
         `);
 
-        await client.query('COMMIT');
         // Reset sequences to prevent ID conflicts on future inserts
         await client.query("SELECT setval('users_id_seq', (SELECT COALESCE(MAX(id), 1) FROM users))");
+        await client.query("SELECT setval('departments_id_seq', (SELECT COALESCE(MAX(id), 1) FROM departments))");
+        await client.query("SELECT setval('ingredients_id_seq', (SELECT COALESCE(MAX(id), 1) FROM ingredients))");
+        await client.query("SELECT setval('recipes_id_seq', (SELECT COALESCE(MAX(id), 1) FROM recipes))");
         await client.query("SELECT setval('tenants_id_seq', (SELECT COALESCE(MAX(id), 1) FROM tenants))");
         await client.query("SELECT setval('platform_users_id_seq', (SELECT COALESCE(MAX(id), 1) FROM platform_users))");
         await client.query("SELECT setval('tenant_settings_id_seq', (SELECT COALESCE(MAX(id), 1) FROM tenant_settings))");
