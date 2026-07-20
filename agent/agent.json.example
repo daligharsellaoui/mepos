@@ -1,0 +1,8 @@
+{
+  "_comment": "mePOS STOCK Sync Agent v3 — Bootstrap Configuration",
+  "_instructions": "Create an agent via the dashboard at Settings > Agents. Copy agent.json from the 'Save Credentials' modal. Then save it as agent.json in the agent/ directory, and run: node sync_agent_v2.js",
+  "agent_id": 1,
+  "agent_secret": "your-agent-secret-here",
+  "backend_url": "http://localhost:5000",
+  "log_level": "INFO"
+}
