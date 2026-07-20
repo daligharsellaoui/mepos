@@ -3,11 +3,12 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useAppStore } from '../../stores/app'
+import logoSrc from '../../assets/sidelogo.png'
 
 const route = useRoute()
 const auth = useAuthStore()
 const app = useAppStore()
-const logoSrc = `${import.meta.env.BASE_URL}logo.png`
+
 
 const getRoleText = (role) => {
   switch (role) {
@@ -48,7 +49,7 @@ const toggleOffline = () => {
         style="display: flex; flex-direction: column; gap: 0.4rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);"
       >
         <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-          <img :src="logoSrc" alt="mePOS" style="height: 32px;">
+          <img :src="logoSrc" alt="mePOS" style="height: 45px;">
           <span class="brand-badge">v2.0</span>
         </div>
         <div

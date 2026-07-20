@@ -2,13 +2,14 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import logoSrc from '../assets/logo.png'
 
 const auth = useAuthStore()
 const router = useRouter()
 
 const username = ref('')
 const password = ref('')
-const logoSrc = `${import.meta.env.BASE_URL}logo.png`
+
 
 async function handleLogin() {
   if (!username.value || !password.value) return
@@ -24,7 +25,7 @@ async function handleLogin() {
     <div class="glass-panel login-card">
       <div class="login-header">
         <h1 class="login-title">
-          <img :src="logoSrc" alt="mePOS" style="height: 42px; display: block; margin: 0 auto;">
+          <img :src="logoSrc" alt="mePOS" style="height: 100px; display: block; margin: 0 auto;">
         </h1>
         <p class="login-subtitle">
           Connexion au système de gestion

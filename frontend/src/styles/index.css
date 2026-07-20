@@ -78,7 +78,7 @@ body {
 .brand-section { display: flex; flex-direction: column; gap: 0.5rem; padding-left: 0.5rem; }
 .brand-logo { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem; }
 .brand-logo-dot { width: 8px; height: 8px; background-color: var(--indigo); border-radius: 50%; display: inline-block; }
-.brand-badge { font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; background: rgba(99, 102, 241, 0.1); color: var(--indigo-light); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 4px; align-self: flex-start; text-transform: uppercase; }
+.brand-badge { font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; background: rgba(99, 102, 241, 0.1); color: var(--indigo-light); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 4px; text-transform: uppercase; }
 .nav-links { display: flex; flex-direction: column; gap: 0.4rem; }
 .nav-btn {
   background: transparent;
