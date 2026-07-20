@@ -22,8 +22,8 @@ export async function createLoss(
   tenantId?: number | null
 ): Promise<any> {
   const qtyDecimal = new Decimal(quantity);
-  const { costLoss, opportunityLoss } = await calculateLossCosts(ingredientId, qtyDecimal);
   const tid = tenantId ?? 1;
+  const { costLoss, opportunityLoss } = await calculateLossCosts(ingredientId, qtyDecimal, tid);
 
   if (isDemoMode) {
     const department = demoDb.departments.find((d: any) => d.id === departmentId);

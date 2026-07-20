@@ -45,10 +45,13 @@ function safeUser(user: any): SafeUser {
 
 export async function authenticateUser(
   username: string,
-  password: string
+  password: string,
+  tenantId?: number
 ): Promise<SafeUser> {
+  const tid = tenantId || 1;
+
   if (isDemoMode) {
-    const user = demoDb.users.find((u: any) => u.username === username);
+    const user = demoDb.users.find((u: any) => u.username === username && u.tenant_id === tid);
     if (!user) {
       throw new Error('Invalid username or password');
     }
@@ -68,8 +71,8 @@ export async function authenticateUser(
   }
 
   const result = await query(
-    'SELECT id, username, role, first_name, last_name, password_hash, tenant_id FROM users WHERE username = $1',
-    [username]
+    'SELECT id, username, role, first_name, last_name, password_hash, tenant_id FROM users WHERE username = $1 AND tenant_id = $2',
+    [username, tid]
   );
 
   if (result.rows.length === 0) {
@@ -179,22 +182,24 @@ export async function updateUser(
     role?: string;
     first_name?: string;
     last_name?: string;
-  }
+  },
+  tenantId?: number
 ): Promise<SafeUser> {
   const { username, password, role, first_name, last_name } = data;
+  const tid = tenantId || 1;
 
   if (role && !['admin', 'manager', 'cook'].includes(role)) {
     throw new Error('Invalid role');
   }
 
   if (isDemoMode) {
-    const idx = demoDb.users.findIndex((u: any) => u.id === userId);
+    const idx = demoDb.users.findIndex((u: any) => u.id === userId && u.tenant_id === tid);
     if (idx === -1) {
       throw new Error('Utilisateur non trouvé');
     }
 
     const exists = demoDb.users.some(
-      (u: any) => u.username === username && u.id !== userId
+      (u: any) => u.username === username && u.id !== userId && u.tenant_id === tid
     );
     if (exists) {
       throw new Error("Le nom d'utilisateur existe déjà");
@@ -217,8 +222,8 @@ export async function updateUser(
 
   if (username) {
     const existsRes = await query(
-      'SELECT id FROM users WHERE username = $1 AND id != $2',
-      [username, userId]
+      'SELECT id FROM users WHERE username = $1 AND tenant_id = $2 AND id != $3',
+      [username, tid, userId]
     );
     if (existsRes.rows.length > 0) {
       throw new Error("Le nom d'utilisateur existe déjà");
@@ -236,7 +241,7 @@ export async function updateUser(
            first_name = COALESCE($4, first_name),
            last_name = COALESCE($5, last_name),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $6 RETURNING id, username, role, first_name, last_name`,
+       WHERE id = $6 AND tenant_id = $7 RETURNING id, username, role, first_name, last_name`,
       [
         username || null,
         hashed,
@@ -244,6 +249,7 @@ export async function updateUser(
         first_name || null,
         last_name || null,
         userId,
+        tid,
       ]
     );
   } else {
@@ -254,8 +260,8 @@ export async function updateUser(
            first_name = COALESCE($3, first_name),
            last_name = COALESCE($4, last_name),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $5 RETURNING id, username, role, first_name, last_name`,
-      [username || null, role || null, first_name || null, last_name || null, userId]
+       WHERE id = $5 AND tenant_id = $6 RETURNING id, username, role, first_name, last_name`,
+      [username || null, role || null, first_name || null, last_name || null, userId, tid]
     );
   }
 
@@ -270,9 +276,11 @@ export async function updateUser(
 // DELETE USER
 // ──────────────────────────────────────────────
 
-export async function deleteUser(userId: number): Promise<void> {
+export async function deleteUser(userId: number, tenantId?: number): Promise<void> {
+  const tid = tenantId || 1;
+
   if (isDemoMode) {
-    const user = demoDb.users.find((u: any) => u.id === userId);
+    const user = demoDb.users.find((u: any) => u.id === userId && u.tenant_id === tid);
     if (!user) {
       throw new Error('Utilisateur non trouvé');
     }
@@ -283,7 +291,7 @@ export async function deleteUser(userId: number): Promise<void> {
     return;
   }
 
-  const checkUser = await query('SELECT username FROM users WHERE id = $1', [userId]);
+  const checkUser = await query('SELECT username FROM users WHERE id = $1 AND tenant_id = $2', [userId, tid]);
   if (checkUser.rows.length === 0) {
     throw new Error('Utilisateur non trouvé');
   }
@@ -291,5 +299,5 @@ export async function deleteUser(userId: number): Promise<void> {
     throw new Error('Impossible de supprimer le compte administrateur principal');
   }
 
-  await query('DELETE FROM users WHERE id = $1', [userId]);
+  await query('DELETE FROM users WHERE id = $1 AND tenant_id = $2', [userId, tid]);
 }

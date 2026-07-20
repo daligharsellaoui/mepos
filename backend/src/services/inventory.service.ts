@@ -586,6 +586,8 @@ export async function saveRecipeIngredients(
     throw new Error('Missing ingredients array');
   }
 
+  const tid = tenantId ?? 1;
+
   if (isDemoMode) {
     demoDb.recipe_ingredients = demoDb.recipe_ingredients.filter(
       (ri: any) => ri.recipe_id !== recipeId
@@ -596,16 +598,22 @@ export async function saveRecipeIngredients(
         recipe_id: recipeId,
         ingredient_id: parseInt(item.ingredient_id as any, 10),
         quantity_needed: parseFloat(item.quantity_needed as any),
+        tenant_id: tid,
       });
     });
     return;
   }
 
+  const recipeCheck = await query('SELECT id FROM recipes WHERE id = $1 AND tenant_id = $2', [recipeId, tid]);
+  if (recipeCheck.rows.length === 0) {
+    throw new Error('Recipe not found for this tenant');
+  }
+
   await query('DELETE FROM recipe_ingredients WHERE recipe_id = $1', [recipeId]);
   for (const item of ingredients) {
     await query(
-      `INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity_needed) VALUES ($1, $2, $3)`,
-      [recipeId, item.ingredient_id, item.quantity_needed]
+      `INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity_needed, tenant_id) VALUES ($1, $2, $3, $4)`,
+      [recipeId, item.ingredient_id, item.quantity_needed, tid]
     );
   }
 }

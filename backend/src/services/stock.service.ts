@@ -90,7 +90,8 @@ export async function ensureStockRow(
 export async function getStockQuantity(
   departmentId: number,
   ingredientId: number,
-  client?: any
+  client?: any,
+  tenantId?: number
 ): Promise<Decimal> {
   if (isDemoMode) {
     const stock = demoDb.inventory_stocks.find(
@@ -100,9 +101,10 @@ export async function getStockQuantity(
   }
 
   const db = client || query;
+  const tid = tenantId || 1;
   const result = await db(
-    'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2',
-    [departmentId, ingredientId]
+    'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 AND tenant_id = $3',
+    [departmentId, ingredientId, tid]
   );
   if (result.rows.length === 0) return new Decimal(0);
   return new Decimal(result.rows[0].quantity);
@@ -130,14 +132,15 @@ export async function updateStockQuantity(
     return new Decimal(0);
   }
 
+  const tid = tenantId || 1;
   await clientOrDb.query(
-    'UPDATE inventory_stocks SET quantity = GREATEST(0, quantity + $1), updated_at = CURRENT_TIMESTAMP WHERE department_id = $2 AND ingredient_id = $3',
-    [delta.toString(), departmentId, ingredientId]
+    'UPDATE inventory_stocks SET quantity = GREATEST(0, quantity + $1), updated_at = CURRENT_TIMESTAMP WHERE department_id = $2 AND ingredient_id = $3 AND tenant_id = $4',
+    [delta.toString(), departmentId, ingredientId, tid]
   );
 
   const result = await clientOrDb.query(
-    'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2',
-    [departmentId, ingredientId]
+    'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 AND tenant_id = $3',
+    [departmentId, ingredientId, tid]
   );
   return new Decimal(result.rows[0]?.quantity || 0);
 }
@@ -190,9 +193,10 @@ export async function getStockWarning(
   let ingredientInfo: any = null;
   let newQty: Decimal;
   const db = client || query;
+  const tid = tenantId || 1;
 
   if (isDemoMode) {
-    ingredientInfo = demoDb.ingredients.find((i: any) => i.id === ingredientId);
+    ingredientInfo = demoDb.ingredients.find((i: any) => i.id === ingredientId && i.tenant_id === tid);
     if (!ingredientInfo) return null;
 
     const stock = demoDb.inventory_stocks.find(
@@ -201,8 +205,8 @@ export async function getStockWarning(
     newQty = new Decimal(stock ? stock.quantity : 0);
   } else {
     const ingRes = await db(
-      'SELECT name, alert_threshold FROM ingredients WHERE id = $1',
-      [ingredientId]
+      'SELECT name, alert_threshold FROM ingredients WHERE id = $1 AND tenant_id = $2',
+      [ingredientId, tid]
     );
     if (ingRes.rows.length === 0) return null;
     ingredientInfo = ingRes.rows[0];
@@ -276,7 +280,7 @@ export async function processSaleDeduction(
 
       // Handle excess (preparation loss)
       if (excessQty.greaterThan(0)) {
-        const { costLoss, opportunityLoss } = await calculateLossCosts(ingredientId, excessQty);
+        const { costLoss, opportunityLoss } = await calculateLossCosts(ingredientId, excessQty, tid);
 
         if (isDemoMode) {
           demoDb.ingredient_losses.push({
@@ -320,7 +324,7 @@ export async function processSaleDeduction(
         ingredientInfo = ingRes.rows[0];
       }
 
-      const newQty = await getStockQuantity(stockDeptId, ingredientId, clientOrDb);
+      const newQty = await getStockQuantity(stockDeptId, ingredientId, clientOrDb, tid);
 
       if (ingredientInfo) {
         if (newQty.lessThanOrEqualTo(new Decimal(ingredientInfo.alert_threshold))) {
@@ -348,19 +352,21 @@ export async function processSaleDeduction(
  */
 export async function calculateLossCosts(
   ingredientId: number,
-  quantity: Decimal
+  quantity: Decimal,
+  tenantId?: number
 ): Promise<{ costLoss: Decimal; opportunityLoss: Decimal }> {
   let purchasePrice: Decimal;
   let bestRecipe: { sale_price: number; quantity_needed: number } | null = null;
+  const tid = tenantId || 1;
 
   if (isDemoMode) {
-    const ing = demoDb.ingredients.find((i: any) => i.id === ingredientId);
+    const ing = demoDb.ingredients.find((i: any) => i.id === ingredientId && i.tenant_id === tid);
     purchasePrice = ing ? new Decimal(ing.purchase_price_per_unit) : new Decimal(0);
 
     const recipesUsingIng = demoDb.recipe_ingredients
-      .filter((ri: any) => ri.ingredient_id === ingredientId)
+      .filter((ri: any) => ri.ingredient_id === ingredientId && ri.tenant_id === tid)
       .map((ri: any) => {
-        const rec = demoDb.recipes.find((r: any) => r.id === ri.recipe_id);
+        const rec = demoDb.recipes.find((r: any) => r.id === ri.recipe_id && r.tenant_id === tid);
         return { ...ri, sale_price: rec ? rec.sale_price : 0 };
       })
       .sort((a: any, b: any) => b.sale_price - a.sale_price);
@@ -369,17 +375,17 @@ export async function calculateLossCosts(
       bestRecipe = { sale_price: recipesUsingIng[0].sale_price, quantity_needed: recipesUsingIng[0].quantity_needed };
     }
   } else {
-    const ingRes = await query('SELECT purchase_price_per_unit FROM ingredients WHERE id = $1', [ingredientId]);
+    const ingRes = await query('SELECT purchase_price_per_unit FROM ingredients WHERE id = $1 AND tenant_id = $2', [ingredientId, tid]);
     purchasePrice = ingRes.rows.length > 0 ? new Decimal(ingRes.rows[0].purchase_price_per_unit) : new Decimal(0);
 
     const recipeResult = await query(
       `SELECT r.sale_price, ri.quantity_needed
        FROM recipe_ingredients ri
        JOIN recipes r ON ri.recipe_id = r.id
-       WHERE ri.ingredient_id = $1
+       WHERE ri.ingredient_id = $1 AND r.tenant_id = $2
        ORDER BY r.sale_price DESC
        LIMIT 1`,
-      [ingredientId]
+      [ingredientId, tid]
     );
     if (recipeResult.rows.length > 0) {
       bestRecipe = recipeResult.rows[0];
