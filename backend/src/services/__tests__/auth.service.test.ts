@@ -13,7 +13,7 @@ afterEach(async () => {
   // Use .filter to rebuild the array since deleteUser mutates demoDb
   for (const userId of createdUsers) {
     const user = demoDb.users.find((u: any) => u.id === userId);
-    if (user && user.username !== 'admin') {
+    if (user && user.username !== 'ahmed') {
       try { await deleteUser(userId); } catch { /* already deleted */ }
     }
   }
@@ -49,15 +49,15 @@ describe('Auth Service (Demo Mode)', () => {
 
   describe('authenticateUser', () => {
     it('should authenticate admin user with correct credentials', async () => {
-      const user = await authenticateUser('admin', 'admin123');
+      const user = await authenticateUser('ahmed', 'admin123');
       expect(user).toBeDefined();
-      expect(user.username).toBe('admin');
+      expect(user.username).toBe('ahmed');
       expect(user.role).toBe('admin');
       expect((user as any).password_hash).toBeUndefined(); // no password leaked
     });
 
     it('should throw for wrong password', async () => {
-      await expect(authenticateUser('admin', 'wrong'))
+      await expect(authenticateUser('ahmed', 'wrong'))
         .rejects.toThrow('Invalid username or password');
     });
 
@@ -99,7 +99,7 @@ describe('Auth Service (Demo Mode)', () => {
 
     it('should reject duplicate username', async () => {
       await expect(createUser({
-        username: 'admin',
+        username: 'ahmed',
         password: 'test123',
         role: 'cook',
       })).rejects.toThrow('existe déjà');

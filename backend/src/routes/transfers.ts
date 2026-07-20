@@ -1,10 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from './auth';
+import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { executeTransfer, createTransferRequest, approveTransferRequest, rejectTransferRequest, getTransferRequests } from '../services/transfer.service';
 
 const router = Router();
 
 router.use(authMiddleware);
+router.use(tenantContextMiddleware);
 
 router.post('/', async (req: Request, res: Response) => {
   const { source_department_id, destination_department_id, ingredient_id, quantity } = req.body;

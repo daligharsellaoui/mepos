@@ -1,10 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from './auth';
+import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { createLoss, getLosses } from '../services/loss.service';
 
 const router = Router();
 
 router.use(authMiddleware);
+router.use(tenantContextMiddleware);
 
 router.get('/', async (req: Request, res: Response) => {
   try {

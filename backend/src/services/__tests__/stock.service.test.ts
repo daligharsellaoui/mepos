@@ -10,8 +10,8 @@ import {
 } from '../stock.service';
 
 describe('Stock Service (Demo Mode)', () => {
-  // Department IDs from seed: 1=Dépôt Central, 2=Cuisine, 3=Comptoir
-  // Ingredient IDs from seed: 1=Farine, 2=Mozzarella, 4=Steak
+  // Department IDs from seed: 1=Dépôt Central, 2=Cuisine, 3=Chambre Froide
+  // Ingredient IDs from seed: 1=Viande Hachée Bœuf, 2=Blanc de Poulet, 4=Fromage Cheddar
 
   describe('getEffectiveDepartmentId', () => {
     it('should return same ID for isolated department', async () => {
@@ -68,28 +68,26 @@ describe('Stock Service (Demo Mode)', () => {
 
   describe('calculateLossCosts', () => {
     it('should calculate cost and opportunity loss for an ingredient', async () => {
-      const { costLoss, opportunityLoss } = await calculateLossCosts(1, new Decimal(1)); // 1kg Farine
+      const { costLoss, opportunityLoss } = await calculateLossCosts(1, new Decimal(1)); // 1kg Viande Hachée Bœuf
 
-      // Farine purchase_price_per_unit = 1.80
-      expect(costLoss.toNumber()).toBeCloseTo(1.80, 2);
-      // Opportunity loss should be positive (Farine is in recipes)
+      // Viande Hachée Bœuf purchase_price_per_unit = 18.50
+      expect(costLoss.toNumber()).toBeCloseTo(18.50, 2);
+      // Opportunity loss should be positive (Viande Hachée Bœuf is in recipes)
       expect(opportunityLoss.toNumber()).toBeGreaterThan(0);
     });
 
     it('should return 0 opportunity loss for unused ingredient', async () => {
-      const { costLoss, opportunityLoss } = await calculateLossCosts(11, new Decimal(1)); // Soda
+      const { costLoss, opportunityLoss } = await calculateLossCosts(13, new Decimal(1)); // Moutarde
 
-      // Soda purchase_price_per_unit = 1.20
-      expect(costLoss.toNumber()).toBeCloseTo(1.20, 2);
-      // Soda is used directly as item but not in recipes... 
-      // Actually Soda is recipe_id 8, so ingredient 11 is used in a recipe
-      // Let's use a truly unused ID or just verify cost is correct
-      expect(opportunityLoss.toNumber()).toBeGreaterThanOrEqual(0);
+      // Moutarde purchase_price_per_unit = 7.00
+      expect(costLoss.toNumber()).toBeCloseTo(7.00, 2);
+      // Moutarde is not used in any recipe
+      expect(opportunityLoss.toNumber()).toBe(0);
     });
 
     it('should scale loss with quantity', async () => {
-      const single = await calculateLossCosts(2, new Decimal(1)); // 1kg Mozzarella
-      const double = await calculateLossCosts(2, new Decimal(2)); // 2kg Mozzarella
+      const single = await calculateLossCosts(2, new Decimal(1)); // 1kg Blanc de Poulet
+      const double = await calculateLossCosts(2, new Decimal(2)); // 2kg Blanc de Poulet
 
       expect(double.costLoss.toNumber()).toBeCloseTo(single.costLoss.toNumber() * 2, 2);
     });

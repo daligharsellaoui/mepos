@@ -77,9 +77,12 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       const defaults = {
-        admin: { id: 1, username: 'admin', role: 'admin', first_name: 'Med', last_name: 'Mair', pass: 'admin123' },
-        gerant: { id: 2, username: 'gerant', role: 'manager', first_name: 'Ahmed', last_name: 'Ben Ali', pass: 'gerant123' },
-        cuisinier: { id: 3, username: 'cuisinier', role: 'cook', first_name: 'Youssef', last_name: 'Tunisi', pass: 'cuisinier123' }
+        ahmed: { id: 1, username: 'ahmed', role: 'admin', first_name: 'Ahmed', last_name: 'Ben Salah', pass: 'admin123' },
+        sami: { id: 2, username: 'sami', role: 'manager', first_name: 'Sami', last_name: 'Trabelsi', pass: 'manager123' },
+        youssef: { id: 3, username: 'youssef', role: 'cook', first_name: 'Youssef', last_name: 'Gharbi', pass: 'cook123' },
+        mohamed: { id: 4, username: 'mohamed', role: 'admin', first_name: 'Mohamed', last_name: 'Jaziri', pass: 'admin123' },
+        aymen: { id: 5, username: 'aymen', role: 'manager', first_name: 'Aymen', last_name: 'Kefi', pass: 'manager123' },
+        walid: { id: 6, username: 'walid', role: 'cook', first_name: 'Walid', last_name: 'Hamdi', pass: 'cook123' }
       }
       const fb = defaults[username]
       if (fb && fb.pass === password) {

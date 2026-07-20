@@ -74,9 +74,10 @@ describe('Agent Service (Demo Mode)', () => {
   });
 
   describe('getAgentsByTenant', () => {
-    it('should return empty array when no agents exist', async () => {
+    it('should return seeded agents for tenant 1', async () => {
       const agents = await getAgentsByTenant(TENANT_ID);
-      expect(agents).toEqual([]);
+      expect(agents.length).toBeGreaterThanOrEqual(1);
+      expect(agents.some((a: any) => a.name === 'POS-DB-Sync')).toBe(true);
     });
 
     it('should return only agents for the given tenant', async () => {
@@ -86,8 +87,8 @@ describe('Agent Service (Demo Mode)', () => {
       createdAgentIds.push(a2.id);
 
       const agents = await getAgentsByTenant(TENANT_ID);
-      expect(agents.length).toBe(2);
-      expect(agents.map((a: any) => a.name).sort()).toEqual(['Agent A', 'Agent B']);
+      expect(agents.length).toBe(3); // 1 seeded + 2 created
+      expect(agents.map((a: any) => a.name).sort()).toEqual(['Agent A', 'Agent B', 'POS-DB-Sync']);
       agents.forEach((a: any) => {
         expect((a as any).agent_secret_hash).toBeUndefined();
       });

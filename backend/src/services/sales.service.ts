@@ -100,8 +100,8 @@ export async function syncTickets(
 
       for (const item of items) {
         await client.query(
-          `INSERT INTO sales_ticket_items (sales_ticket_id, recipe_id, quantity, unit_price) VALUES ($1, $2, $3, $4)`,
-          [ticketId, item.recipe_id, item.quantity, item.unit_price]
+          `INSERT INTO sales_ticket_items (sales_ticket_id, tenant_id, recipe_id, quantity, unit_price) VALUES ($1, $2, $3, $4, $5)`,
+          [ticketId, tid, item.recipe_id, item.quantity, item.unit_price]
         );
       }
 

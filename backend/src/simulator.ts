@@ -153,6 +153,7 @@ export async function seedHistoricalSales() {
         const tId = ticketIdCounter++;
         demoDb.sales_tickets.push({
           id: tId,
+          tenant_id: 1,
           external_ticket_id: ticket.external_ticket_id,
           department_id: ticket.department_id,
           ticket_date: ticket.ticket_date,
@@ -162,6 +163,7 @@ export async function seedHistoricalSales() {
         ticket.items.forEach(item => {
           demoDb.sales_ticket_items.push({
             id: itemIdCounter++,
+            tenant_id: 1,
             sales_ticket_id: tId,
             recipe_id: item.recipe_id,
             quantity: item.quantity,
@@ -172,17 +174,17 @@ export async function seedHistoricalSales() {
         // Postgres insertions
         try {
           const ticketRes = await query(
-            `INSERT INTO sales_tickets (external_ticket_id, department_id, ticket_date, total_amount) 
-             VALUES ($1, $2, $3, $4) RETURNING id`,
-            [ticket.external_ticket_id, ticket.department_id, ticket.ticket_date, ticket.total_amount]
+            `INSERT INTO sales_tickets (external_ticket_id, department_id, ticket_date, total_amount, tenant_id) 
+             VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+            [ticket.external_ticket_id, ticket.department_id, ticket.ticket_date, ticket.total_amount, 1]
           );
           const tId = ticketRes.rows[0].id;
 
           for (const item of ticket.items) {
             await query(
-              `INSERT INTO sales_ticket_items (sales_ticket_id, recipe_id, quantity, unit_price) 
-               VALUES ($1, $2, $3, $4)`,
-              [tId, item.recipe_id, item.quantity, item.unit_price]
+              `INSERT INTO sales_ticket_items (sales_ticket_id, tenant_id, recipe_id, quantity, unit_price) 
+               VALUES ($1, $2, $3, $4, $5)`,
+              [tId, 1, item.recipe_id, item.quantity, item.unit_price]
             );
           }
         } catch (err) {
@@ -443,43 +445,56 @@ export async function seedHistoricalLosses() {
 export function startSalesSimulator() {
   // Wait 3 seconds before first live sale to let HTTP server start
   setTimeout(async () => {
-    // 1. Seed history
+    // 1. Seed history (skip if already seeded by comprehensive seed)
     await seedHistoricalSales();
     await seedHistoricalLosses();
 
-    console.log('[Simulator] Starting background sales loop (Every 12 seconds)...');
-    let ticketIndex = 1000;
+    console.log('[Simulator] Starting background sales loop (Every 15 seconds)...');
+    let ticketIndex = 10000;
 
     setInterval(async () => {
       ticketIndex++;
       const now = new Date();
-      
-      let departments: any[] = [];
-      let recipes: any[] = [];
 
       if (isDemoMode) {
-        departments = demoDb.departments;
-        recipes = demoDb.recipes;
+        // Generate live tickets for tenant 1 (Burger House)
+        const depts1 = demoDb.departments.filter((d: any) => d.tenant_id === 1);
+        const recipes1 = demoDb.recipes.filter((r: any) => r.tenant_id === 1);
+        if (depts1.length > 0 && recipes1.length > 0) {
+          const ticket1 = generateRandomTicketData(ticketIndex, now, depts1, recipes1);
+          if (ticket1) {
+            ticket1.external_ticket_id = ticket1.external_ticket_id.replace('TK-', 'TK-BH-');
+            postLiveTicket(ticket1);
+          }
+        }
+
+        // Generate live tickets for tenant 2 (Pizza Palace)
+        const depts2 = demoDb.departments.filter((d: any) => d.tenant_id === 2);
+        const recipes2 = demoDb.recipes.filter((r: any) => r.tenant_id === 2);
+        if (depts2.length > 0 && recipes2.length > 0) {
+          const ticket2 = generateRandomTicketData(ticketIndex + 1000, now, depts2, recipes2);
+          if (ticket2) {
+            ticket2.external_ticket_id = ticket2.external_ticket_id.replace('TK-', 'TK-PP-');
+            postLiveTicket(ticket2);
+          }
+        }
       } else {
         try {
           const deptsRes = await query('SELECT * FROM departments');
-          departments = deptsRes.rows;
+          const departments = deptsRes.rows;
           const recipesRes = await query('SELECT * FROM recipes');
-          recipes = recipesRes.rows;
+          const recipes = recipesRes.rows;
+
+          if (departments.length > 0 && recipes.length > 0) {
+            const ticket = generateRandomTicketData(ticketIndex, now, departments, recipes);
+            if (ticket) {
+              postLiveTicket(ticket);
+            }
+          }
         } catch (err) {
           console.error('[Simulator] Failed to fetch departments/recipes for live sale:', err);
-          return;
         }
       }
-
-      if (departments.length === 0 || recipes.length === 0) {
-        return;
-      }
-
-      const ticket = generateRandomTicketData(ticketIndex, now, departments, recipes);
-      if (ticket) {
-        postLiveTicket(ticket);
-      }
-    }, 12000); // every 12 seconds
+    }, 15000); // every 15 seconds
   }, 3000);
 }

@@ -19,9 +19,9 @@ afterEach(async () => {
   if (demoDb.users) {
     demoDb.users.length = 0;
     demoDb.users.push(
-      { id: 1, tenant_id: 1, username: 'admin', password_hash: 'admin123', role: 'admin', first_name: 'Med', last_name: 'Mair' },
-      { id: 2, tenant_id: 1, username: 'gerant', password_hash: 'gerant123', role: 'manager', first_name: 'Ahmed', last_name: 'Ben Ali' },
-      { id: 3, tenant_id: 1, username: 'cuisinier', password_hash: 'cuisinier123', role: 'cook', first_name: 'Youssef', last_name: 'Tunisi' },
+      { id: 1, tenant_id: 1, username: 'ahmed', password_hash: 'admin123', role: 'admin', first_name: 'Ahmed', last_name: 'Ben Salah' },
+      { id: 2, tenant_id: 1, username: 'sami', password_hash: 'manager123', role: 'manager', first_name: 'Sami', last_name: 'Trabelsi' },
+      { id: 3, tenant_id: 1, username: 'youssef', password_hash: 'cook123', role: 'cook', first_name: 'Youssef', last_name: 'Gharbi' },
     );
   }
 

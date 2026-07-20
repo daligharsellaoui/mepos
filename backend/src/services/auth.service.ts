@@ -48,10 +48,10 @@ export async function authenticateUser(
   password: string,
   tenantId?: number
 ): Promise<SafeUser> {
-  const tid = tenantId || 1;
-
   if (isDemoMode) {
-    const user = demoDb.users.find((u: any) => u.username === username && u.tenant_id === tid);
+    const user = tenantId
+      ? demoDb.users.find((u: any) => u.username === username && u.tenant_id === tenantId)
+      : demoDb.users.find((u: any) => u.username === username);
     if (!user) {
       throw new Error('Invalid username or password');
     }
@@ -70,16 +70,25 @@ export async function authenticateUser(
     return safeUser(user);
   }
 
-  const result = await query(
-    'SELECT id, username, role, first_name, last_name, password_hash, tenant_id FROM users WHERE username = $1 AND tenant_id = $2',
-    [username, tid]
-  );
+  let dbUser;
+  if (tenantId) {
+    const result = await query(
+      'SELECT id, username, role, first_name, last_name, password_hash, tenant_id FROM users WHERE username = $1 AND tenant_id = $2',
+      [username, tenantId]
+    );
+    dbUser = result.rows[0];
+  } else {
+    const result = await query(
+      'SELECT id, username, role, first_name, last_name, password_hash, tenant_id FROM users WHERE username = $1',
+      [username]
+    );
+    dbUser = result.rows[0];
+  }
 
-  if (result.rows.length === 0) {
+  if (!dbUser) {
     throw new Error('Invalid username or password');
   }
 
-  const dbUser = result.rows[0];
   const isValid = await verifyPassword(password, dbUser.password_hash);
   if (!isValid) {
     throw new Error('Invalid username or password');
@@ -284,18 +293,18 @@ export async function deleteUser(userId: number, tenantId?: number): Promise<voi
     if (!user) {
       throw new Error('Utilisateur non trouvé');
     }
-    if (user.username === 'admin') {
+    if (user.id === 1) {
       throw new Error('Impossible de supprimer le compte administrateur principal');
     }
     demoDb.users = demoDb.users.filter((u: any) => u.id !== userId);
     return;
   }
 
-  const checkUser = await query('SELECT username FROM users WHERE id = $1 AND tenant_id = $2', [userId, tid]);
+  const checkUser = await query('SELECT id, username FROM users WHERE id = $1 AND tenant_id = $2', [userId, tid]);
   if (checkUser.rows.length === 0) {
     throw new Error('Utilisateur non trouvé');
   }
-  if (checkUser.rows[0].username === 'admin') {
+  if (checkUser.rows[0].id === 1) {
     throw new Error('Impossible de supprimer le compte administrateur principal');
   }
 

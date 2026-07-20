@@ -1,10 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from './auth';
+import { tenantContextMiddleware } from '../middleware/tenantContext';
 import { getForecast } from '../services/forecast.service';
 
 const router = Router();
 
 router.use(authMiddleware);
+router.use(tenantContextMiddleware);
 
 /**
  * GET /api/v1/forecast

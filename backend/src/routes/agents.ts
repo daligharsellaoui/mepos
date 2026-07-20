@@ -23,6 +23,7 @@
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { authMiddleware } from './auth';
+import { tenantContextMiddleware } from '../middleware/tenantContext';
 import {
   getAgentsByTenant,
   getAgentById,
@@ -145,6 +146,7 @@ router.get('/:id/config', async (req: Request, res: Response) => {
 // ============================================================
 
 router.use(authMiddleware);
+router.use(tenantContextMiddleware);
 
 // ─── Agent CRUD ───
 

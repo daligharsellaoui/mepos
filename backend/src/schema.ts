@@ -1,5 +1,6 @@
 import { query, getClient } from './database';
 import { hashPassword } from './services/auth.service';
+import { seedData } from './seed';
 
 export const DDL_SCHEMA = `
 -- ============================================================
@@ -417,170 +418,197 @@ export async function initializeDatabase() {
     // Seed data if database is empty (or if users table has no data)
     const checkUsers = await query('SELECT count(*) FROM users');
     if (parseInt(checkUsers.rows[0].count, 10) === 0) {
-      console.log('Seeding database with mock data for tenant_id=1...');
+      console.log('Seeding database with comprehensive demo data...');
 
-      // Use transaction for atomic seed operation
       const { client, release } = await getClient();
       try {
         await client.query('BEGIN');
 
-        // 1. Seed Users (hash passwords) - All assigned to tenant_id=1
-        const adminHash = await hashPassword('admin123');
-        const gerantHash = await hashPassword('gerant123');
-        const cuisinierHash = await hashPassword('cuisinier123');
+        // Seed tenants
+        for (const t of seedData.tenants) {
+          await client.query(
+            `INSERT INTO tenants (id, uuid, name, slug, email, phone, address, country, timezone, language, currency, status, subscription_plan, max_users, max_agents, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+             ON CONFLICT (id) DO NOTHING`,
+            [t.id, t.uuid, t.name, t.slug, t.email, t.phone, t.address, t.country, t.timezone, t.language, t.currency, t.status, t.subscription_plan, t.max_users, t.max_agents, t.created_at]
+          );
+        }
 
-        await client.query(`
-          INSERT INTO users (tenant_id, username, password_hash, role, first_name, last_name) VALUES
-          (1, 'admin', $1, 'admin', 'Med', 'Mair'),
-          (1, 'gerant', $2, 'manager', 'Ahmed', 'Ben Ali'),
-          (1, 'cuisinier', $3, 'cook', 'Youssef', 'Tunisi')
-        `, [adminHash, gerantHash, cuisinierHash]);
+        // Seed platform admin
+        const platformHash = await hashPassword('platform123');
+        await client.query(
+          `INSERT INTO platform_users (username, password_hash, email, first_name, last_name, is_super_admin)
+           VALUES ('superadmin', $1, 'superadmin@mepos.com', 'Platform', 'Admin', TRUE)
+           ON CONFLICT (username) DO NOTHING`,
+          [platformHash]
+        );
 
-        // 2. Seed Departments
-        await client.query(`
-          INSERT INTO departments (id, tenant_id, name, stock_type, description) VALUES
-          (1, 1, 'Dépôt Central', 'isolated', 'Stockage principal des matières premières'),
-          (2, 1, 'Cuisine', 'isolated', 'Zone de préparation de la cuisine'),
-          (3, 1, 'Comptoir', 'isolated', 'Vente comptoir et service clients')
-        `);
-        await client.query("SELECT setval('departments_id_seq', (SELECT MAX(id) FROM departments))");
+        // Seed users (with hashed passwords)
+        for (const u of seedData.users) {
+          const hashed = await hashPassword(u.password_hash);
+          await client.query(
+            `INSERT INTO users (id, tenant_id, username, password_hash, role, first_name, last_name, is_active, last_login_at, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             ON CONFLICT (id) DO NOTHING`,
+            [u.id, u.tenant_id, u.username, hashed, u.role, u.first_name, u.last_name, true, u.last_login_at || new Date(), u.created_at || new Date()]
+          );
+        }
 
-        // 3. Seed Ingredients
-        await client.query(`
-          INSERT INTO ingredients (id, tenant_id, name, unit, purchase_price_per_unit, alert_threshold, purchase_unit, purchase_unit_price, conversion_factor) VALUES
-          (1, 1, 'Farine de Blé', 'kg', 1.80, 15.0000, 'sac', 36.00, 20.0000),
-          (2, 1, 'Mozzarella Râpée', 'kg', 18.00, 8.0000, 'carton', 180.00, 10.0000),
-          (3, 1, 'Sauce Tomate', 'kg', 4.50, 6.0000, 'bidon', 22.50, 5.0000),
-          (4, 1, 'Steak de Bœuf', 'pcs', 3.50, 40.0000, 'carton', 175.00, 50.0000),
-          (5, 1, 'Pain Burger', 'pcs', 0.80, 45.0000, 'paquet', 19.20, 24.0000),
-          (6, 1, 'Fromage Cheddar', 'kg', 24.00, 4.0000, 'bloc', 120.00, 5.0000),
-          (7, 1, 'Poulet Émincé', 'kg', 14.00, 8.0000, 'sac', 70.00, 5.0000),
-          (8, 1, 'Nutella', 'g', 0.0250, 1000.0000, 'pot', 25.00, 1000.0000),
-          (9, 1, 'Frites Surgelées', 'kg', 6.00, 20.0000, 'carton', 60.00, 10.0000),
-          (10, 1, 'Huile de Friture', 'L', 5.50, 12.0000, 'bidon', 110.00, 20.0000),
-          (11, 1, 'Soda Cannette', 'pcs', 1.20, 50.0000, 'plateau', 28.80, 24.0000),
-          (12, 1, 'Eau Minérale 0.5L', 'pcs', 0.60, 6.0000, 'fardeau', 7.20, 12.0000),
-          (13, 1, 'Pepperoni Bœuf', 'kg', 28.00, 3.0000, 'barquette', 56.00, 2.0000)
-        `);
-        await client.query("SELECT setval('ingredients_id_seq', (SELECT MAX(id) FROM ingredients))");
+        // Seed departments
+        for (const d of seedData.departments) {
+          await client.query(
+            `INSERT INTO departments (id, tenant_id, name, stock_type, description, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (id) DO NOTHING`,
+            [d.id, d.tenant_id, d.name, d.stock_type, d.description || '', d.created_at || new Date()]
+          );
+        }
 
-        // 4. Seed Inventory Stocks
-        await client.query(`
-          INSERT INTO inventory_stocks (tenant_id, department_id, ingredient_id, quantity) VALUES
-          -- Dépôt Central starting stock
-          (1, 1, 1, 300.0000),  -- Farine
-          (1, 1, 2, 80.0000),   -- Mozzarella
-          (1, 1, 3, 60.0000),   -- Sauce Tomate
-          (1, 1, 4, 200.0000),  -- Steaks
-          (1, 1, 5, 150.0000),  -- Pains
-          (1, 1, 6, 30.0000),   -- Cheddar
-          (1, 1, 7, 50.0000),   -- Poulet
-          (1, 1, 8, 15000.0000),-- Nutella
-          (1, 1, 9, 120.0000),  -- Frites
-          (1, 1, 10, 80.0000),  -- Huile
-          (1, 1, 11, 240.0000), -- Soda
-          (1, 1, 12, 200.0000), -- Eau
-          (1, 1, 13, 20.0000),  -- Pepperoni
+        // Seed ingredients
+        for (const i of seedData.ingredients) {
+          await client.query(
+            `INSERT INTO ingredients (id, tenant_id, name, unit, purchase_price_per_unit, alert_threshold, purchase_unit, purchase_unit_price, conversion_factor, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             ON CONFLICT (id) DO NOTHING`,
+            [i.id, i.tenant_id, i.name, i.unit, i.purchase_price_per_unit, i.alert_threshold, i.purchase_unit, i.purchase_unit_price, i.conversion_factor, i.created_at || new Date()]
+          );
+        }
 
-          -- Cuisine stocks
-          (1, 2, 4, 30.0000),   -- Steaks
-          (1, 2, 5, 30.0000),   -- Pains
-          (1, 2, 6, 5.0000),    -- Cheddar
-          (1, 2, 9, 10.0000),   -- Frites
-          (1, 2, 10, 10.0000),  -- Huile
-          (1, 2, 1, 40.0000),   -- Farine
-          (1, 2, 2, 10.0000),   -- Mozzarella
-          (1, 2, 3, 10.0000),   -- Sauce Tomate
-          (1, 2, 13, 3.0000),   -- Pepperoni
+        // Seed inventory stocks
+        for (const s of seedData.inventory_stocks) {
+          await client.query(
+            `INSERT INTO inventory_stocks (id, tenant_id, department_id, ingredient_id, quantity, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (id) DO NOTHING`,
+            [s.id, s.tenant_id, s.department_id, s.ingredient_id, s.quantity, s.updated_at || new Date()]
+          );
+        }
 
-          -- Comptoir stocks
-          (1, 3, 1, 10.0000),   -- Farine
-          (1, 3, 8, 3000.0000)  -- Nutella
-        `);
+        // Seed recipes
+        for (const r of seedData.recipes) {
+          await client.query(
+            `INSERT INTO recipes (id, tenant_id, name, sale_price, is_active, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (id) DO NOTHING`,
+            [r.id, r.tenant_id, r.name, r.sale_price, true, r.created_at || new Date()]
+          );
+        }
 
-        // 5. Seed Recipes
-        await client.query(`
-          INSERT INTO recipes (id, tenant_id, name, sale_price) VALUES
-          (1, 1, 'Pizza Margherita', 12.50),
-          (2, 1, 'Pizza Pepperoni', 16.50),
-          (3, 1, 'Burger Classic', 13.50),
-          (4, 1, 'Burger Double Cheddar', 18.50),
-          (5, 1, 'Pizza BBQ Poulet', 17.50),
-          (6, 1, 'Crêpe Nutella', 8.50),
-          (7, 1, 'Portion Frites', 4.50),
-          (8, 1, 'Soda Cola Frais', 2.50),
-          (9, 1, 'Eau Minérale', 1.50)
-        `);
-        await client.query("SELECT setval('recipes_id_seq', (SELECT MAX(id) FROM recipes))");
+        // Seed recipe ingredients
+        for (const ri of seedData.recipe_ingredients) {
+          await client.query(
+            `INSERT INTO recipe_ingredients (id, tenant_id, recipe_id, ingredient_id, quantity_needed)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (id) DO NOTHING`,
+            [ri.id, ri.tenant_id, ri.recipe_id, ri.ingredient_id, ri.quantity_needed]
+          );
+        }
 
-        // 6. Seed Recipe Ingredients (Fiches Techniques)
-        await client.query(`
-          INSERT INTO recipe_ingredients (tenant_id, recipe_id, ingredient_id, quantity_needed) VALUES
-          -- Pizza Margherita (1)
-          (1, 1, 1, 0.2000), -- Farine
-          (1, 1, 2, 0.1500), -- Mozzarella
-          (1, 1, 3, 0.1000), -- Sauce Tomate
+        // Seed sales tickets (in batches to avoid huge transactions)
+        const BATCH_SIZE = 500;
+        for (let i = 0; i < seedData.sales_tickets.length; i += BATCH_SIZE) {
+          const batch = seedData.sales_tickets.slice(i, i + BATCH_SIZE);
+          for (const ticket of batch) {
+            await client.query(
+              `INSERT INTO sales_tickets (id, tenant_id, external_ticket_id, department_id, ticket_date, total_amount, sync_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)
+               ON CONFLICT (id) DO NOTHING`,
+              [ticket.id, ticket.tenant_id, ticket.external_ticket_id, ticket.department_id, ticket.ticket_date, ticket.total_amount, ticket.sync_at || new Date()]
+            );
+          }
+        }
 
-          -- Pizza Pepperoni (2)
-          (1, 2, 1, 0.2000), -- Farine
-          (1, 2, 2, 0.1500), -- Mozzarella
-          (1, 2, 3, 0.1000), -- Sauce Tomate
-          (1, 2, 13, 0.0800),-- Pepperoni
+        // Seed sales ticket items
+        for (let i = 0; i < seedData.sales_ticket_items.length; i += BATCH_SIZE) {
+          const batch = seedData.sales_ticket_items.slice(i, i + BATCH_SIZE);
+          for (const item of batch) {
+            await client.query(
+              `INSERT INTO sales_ticket_items (id, tenant_id, sales_ticket_id, recipe_id, quantity, unit_price)
+               VALUES ($1, $2, $3, $4, $5, $6)
+               ON CONFLICT (id) DO NOTHING`,
+              [item.id, item.tenant_id, item.sales_ticket_id, item.recipe_id, item.quantity, item.unit_price]
+            );
+          }
+        }
 
-          -- Burger Classic (3)
-          (1, 3, 5, 1.0000), -- Pain Burger
-          (1, 3, 4, 1.0000), -- Steak
-          (1, 3, 6, 0.0300), -- Cheddar
+        // Seed stock movements
+        for (const m of seedData.stock_movements) {
+          await client.query(
+            `INSERT INTO stock_movements (id, tenant_id, department_id, ingredient_id, quantity, type, reference_id, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (id) DO NOTHING`,
+            [m.id, m.tenant_id, m.department_id, m.ingredient_id, m.quantity, m.type, m.reference_id || '', m.created_at || new Date()]
+          );
+        }
 
-          -- Burger Double Cheddar (4)
-          (1, 4, 5, 1.0000), -- Pain Burger
-          (1, 4, 4, 2.0000), -- Steak x2
-          (1, 4, 6, 0.0600), -- Cheddar x2
+        // Seed ingredient losses
+        for (const l of seedData.ingredient_losses) {
+          await client.query(
+            `INSERT INTO ingredient_losses (id, tenant_id, department_id, ingredient_id, quantity, loss_reason, cost_loss, opportunity_loss, reported_by, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             ON CONFLICT (id) DO NOTHING`,
+            [l.id, l.tenant_id, l.department_id, l.ingredient_id, l.quantity, l.loss_reason, l.cost_loss, l.opportunity_loss, l.reported_by, l.created_at || new Date()]
+          );
+        }
 
-          -- Pizza BBQ Poulet (5)
-          (1, 5, 1, 0.2000), -- Farine
-          (1, 5, 2, 0.1500), -- Mozzarella
-          (1, 5, 3, 0.1000), -- Sauce Tomate
-          (1, 5, 7, 0.1000), -- Poulet
+        // Seed transfer requests
+        for (const tr of seedData.transfer_requests) {
+          await client.query(
+            `INSERT INTO transfer_requests (id, tenant_id, source_department_id, destination_department_id, ingredient_id, quantity, status, requested_by, validated_by, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+             ON CONFLICT (id) DO NOTHING`,
+            [tr.id, tr.tenant_id, tr.source_department_id, tr.destination_department_id, tr.ingredient_id, tr.quantity, tr.status, tr.requested_by, tr.validated_by, tr.created_at || new Date(), tr.updated_at || new Date()]
+          );
+        }
 
-          -- Crêpe Nutella (6)
-          (1, 6, 1, 0.0800), -- Farine
-          (1, 6, 8, 50.0000),-- Nutella
+        // Seed agents
+        for (const a of seedData.agents) {
+          await client.query(
+            `INSERT INTO agents (id, uuid, tenant_id, name, machine_name, machine_id, operating_system, version, connector_type, status, agent_secret_hash, config, last_seen_at, last_sync_at, last_heartbeat_at, health_status, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+             ON CONFLICT (id) DO NOTHING`,
+            [a.id, a.uuid, a.tenant_id, a.name, a.machine_name, a.machine_id, a.operating_system, a.version, a.connector_type, a.status, a.agent_secret_hash, JSON.stringify(a.config), a.last_seen_at, a.last_sync_at, a.last_heartbeat_at, a.health_status, a.created_at]
+          );
+        }
 
-          -- Portion Frites (7)
-          (1, 7, 9, 0.2500), -- Frites
-          (1, 7, 10, 0.0500),-- Huile
+        // Seed agent heartbeats
+        for (const hb of seedData.agent_heartbeats) {
+          await client.query(
+            `INSERT INTO agent_heartbeats (id, agent_id, tenant_id, version, status, health_status, last_sync_at, connector_status, sync_duration_ms, tickets_imported, errors_count, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+             ON CONFLICT (id) DO NOTHING`,
+            [hb.id, hb.agent_id, hb.tenant_id, hb.version, hb.status || 'active', hb.health_status, hb.last_sync_at, hb.connector_status, hb.sync_duration_ms, hb.tickets_imported, hb.errors_count, hb.created_at]
+          );
+        }
 
-          -- Soda Cola Frais (8)
-          (1, 8, 11, 1.0000),-- Soda can
+        // Seed tenant settings
+        for (const ts of seedData.tenant_settings) {
+          await client.query(
+            `INSERT INTO tenant_settings (id, tenant_id, category, key, value, encrypted, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (id) DO NOTHING`,
+            [ts.id, ts.tenant_id, ts.category, ts.key, ts.value, ts.encrypted || false, ts.created_at || new Date()]
+          );
+        }
 
-          -- Eau Minérale (9)
-          (1, 9, 12, 1.0000) -- Eau
-        `);
+        // Seed audit logs
+        for (const al of seedData.audit_logs) {
+          await client.query(
+            `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id, ip_address, user_agent, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+             ON CONFLICT (id) DO NOTHING`,
+            [al.id, al.tenant_id, al.user_id, al.action, al.entity_type, al.entity_id, al.ip_address, al.user_agent, al.created_at]
+          );
+        }
 
-        // 7. Seed Tenant Settings
-        await client.query(`
-          INSERT INTO tenant_settings (tenant_id, category, key, value) VALUES
-          (1, 'restaurant', 'name', '"Restaurant Demo"'),
-          (1, 'restaurant', 'currency', '"TND"'),
-          (1, 'restaurant', 'timezone', '"Africa/Tunis"'),
-          (1, 'general', 'language', '"fr"'),
-          (1, 'sync', 'polling_interval', '12000'),
-          (1, 'inventory', 'enable_losses', 'true'),
-          (1, 'inventory', 'enable_transfers', 'true')
-        `);
-
-        // Reset sequences to prevent ID conflicts on future inserts
-        await client.query("SELECT setval('users_id_seq', (SELECT COALESCE(MAX(id), 1) FROM users))");
-        await client.query("SELECT setval('departments_id_seq', (SELECT COALESCE(MAX(id), 1) FROM departments))");
-        await client.query("SELECT setval('ingredients_id_seq', (SELECT COALESCE(MAX(id), 1) FROM ingredients))");
-        await client.query("SELECT setval('recipes_id_seq', (SELECT COALESCE(MAX(id), 1) FROM recipes))");
-        await client.query("SELECT setval('tenants_id_seq', (SELECT COALESCE(MAX(id), 1) FROM tenants))");
-        await client.query("SELECT setval('platform_users_id_seq', (SELECT COALESCE(MAX(id), 1) FROM platform_users))");
-        await client.query("SELECT setval('tenant_settings_id_seq', (SELECT COALESCE(MAX(id), 1) FROM tenant_settings))");
+        // Reset all sequences
+        const tables = ['users', 'departments', 'ingredients', 'recipes', 'sales_tickets', 'sales_ticket_items', 'stock_movements', 'ingredient_losses', 'transfer_requests', 'agents', 'agent_heartbeats', 'tenant_settings', 'audit_logs', 'tenants', 'platform_users'];
+        for (const table of tables) {
+          await client.query(`SELECT setval('${table}_id_seq', (SELECT COALESCE(MAX(id), 1) FROM ${table}))`);
+        }
 
         await client.query('COMMIT');
-        console.log('Database seeded successfully for tenant_id=1.');
+        console.log(`Database seeded with ${seedData.sales_tickets.length} sales tickets, ${seedData.stock_movements.length} stock movements, and more.`);
       } catch (error) {
         await client.query('ROLLBACK');
         throw error;

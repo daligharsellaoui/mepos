@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from './auth';
+import { tenantContextMiddleware } from '../middleware/tenantContext';
 import {
   getAllDepartments,
   createDepartment,
@@ -19,6 +20,7 @@ import {
 const router = Router();
 
 router.use(authMiddleware);
+router.use(tenantContextMiddleware);
 
 // ======================================================
 // DEPARTMENTS

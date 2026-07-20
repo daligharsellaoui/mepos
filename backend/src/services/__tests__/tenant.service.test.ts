@@ -43,7 +43,7 @@ describe('Tenant Service (Demo Mode)', () => {
     it('should return the default tenant', async () => {
       const tenants = await getAllTenants();
       expect(tenants.length).toBeGreaterThanOrEqual(1);
-      expect(tenants[0].name).toBe('Restaurant Demo');
+      expect(tenants[0].name).toBe('Burger House Tunis');
     });
 
     it('should return all created tenants', async () => {
@@ -63,8 +63,8 @@ describe('Tenant Service (Demo Mode)', () => {
     it('should return the default tenant by ID', async () => {
       const tenant = await getTenantById(1);
       expect(tenant).not.toBeNull();
-      expect(tenant!.name).toBe('Restaurant Demo');
-      expect(tenant!.slug).toBe('restaurant-demo');
+      expect(tenant!.name).toBe('Burger House Tunis');
+      expect(tenant!.slug).toBe('burger-house-tunis');
     });
 
     it('should return null for non-existent ID', async () => {
@@ -75,7 +75,7 @@ describe('Tenant Service (Demo Mode)', () => {
 
   describe('getTenantBySlug', () => {
     it('should find tenant by slug', async () => {
-      const tenant = await getTenantBySlug('restaurant-demo');
+      const tenant = await getTenantBySlug('burger-house-tunis');
       expect(tenant).not.toBeNull();
       expect(tenant!.id).toBe(1);
     });
@@ -317,9 +317,9 @@ describe('Tenant Service (Demo Mode)', () => {
       expect(stats).toBeDefined();
       expect(stats.user_count).toBeGreaterThanOrEqual(3);
       expect(stats.department_count).toBe(3);
-      expect(stats.ingredient_count).toBe(13);
+      expect(stats.ingredient_count).toBe(22);
       expect(stats.recipe_count).toBe(9);
-      expect(stats.agent_count).toBe(0);
+      expect(stats.agent_count).toBe(1);
     });
 
     it('should return zero counts for tenant with no data', async () => {
