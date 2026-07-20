@@ -1,0 +1,144 @@
+# mePOS STOCK — Agent Definitions
+# Project-specific agents for the Vue 3 + Express inventory management system
+
+# =====================================================
+# Code Agents
+# =====================================================
+
+[agent.code-reviewer-frontend]
+name = "Frontend Code Reviewer"
+description = "Reviews Vue 3 component changes for correctness, performance, and adherence to project conventions"
+instructions = """
+Review the provided Vue 3 code changes with focus on:
+1. Correct use of <script setup> and Composition API
+2. Proper named import: `import { api } from '../api'` (never default)
+3. Pinia store usage patterns
+4. Reactive state management (ref, computed, watch)
+5. Lifecycle hooks (onMounted, onUnmounted)
+6. Template bindings and event handlers
+7. CSS class naming (BEM for base components)
+8. Accessibility (aria labels, keyboard navigation)
+9. Performance (lazy loading, computed caching, no unnecessary re-renders)
+"""
+scope = "frontend/src/**"
+trigger = "After changes to .vue or .js files in frontend/"
+
+[agent.code-reviewer-backend]
+name = "Backend Code Reviewer"
+description = "Reviews Express/TypeScript service and route changes"
+instructions = """
+Review the provided backend code changes with focus on:
+1. Service layer separation (routes are thin, logic in services)
+2. Error handling and response format consistency
+3. SQL query safety (parameterized queries, no injection)
+4. Authentication middleware usage
+5. Input validation
+6. TypeScript type correctness
+7. Database transaction handling
+8. Rate limiting and security headers
+"""
+scope = "backend/src/**"
+trigger = "After changes to .ts files in backend/"
+
+[agent.docker-specialist]
+name = "Docker Specialist"
+description = "Reviews Docker and docker-compose configuration changes"
+instructions = """
+Review Docker configuration with focus on:
+1. Multi-stage build optimization
+2. Security (non-root users, minimal images)
+3. Layer caching efficiency
+4. Health checks
+5. Volume persistence
+6. Network configuration
+7. Environment variable handling
+8. .dockerignore completeness
+"""
+scope = "backend/Dockerfile, frontend/Dockerfile, docker-compose.yml, .dockerignore"
+trigger = "After changes to Docker files"
+
+[agent.sync-agent-developer]
+name = "Sync Agent Developer"
+description = "Reviews and develops POS sync agent changes"
+instructions = """
+Review sync agent code with focus on:
+1. Plugin architecture compliance (BasePOSAdapter interface)
+2. Error handling and retry logic
+3. Circuit breaker implementation
+4. Deduplication (hash-based)
+5. Exponential backoff
+6. Structured logging
+7. Graceful shutdown
+8. Configuration management
+"""
+scope = "agent/**"
+trigger = "After changes to agent files"
+
+# =====================================================
+# Testing Agents
+# =====================================================
+
+[agent.test-runner]
+name = "Test Runner"
+description = "Runs backend vitest tests and reports results"
+instructions = """
+Run the backend test suite:
+1. Execute: cd backend && npm test
+2. Report pass/fail counts
+3. Show any failing test details
+4. Suggest fixes for failures
+"""
+scope = "backend/"
+trigger = "After backend service changes or manually"
+
+[agent.lint-checker]
+name = "Lint Checker"
+description = "Runs ESLint on frontend code and reports results"
+instructions = """
+Run frontend linting:
+1. Execute: cd frontend && npx eslint src/
+2. Report error/warning counts
+3. Show specific issues by file
+4. Suggest auto-fixable issues
+"""
+scope = "frontend/"
+trigger = "After frontend code changes or manually"
+
+# =====================================================
+# Documentation Agents
+# =====================================================
+
+[agent.doc-writer]
+name = "Documentation Writer"
+description = "Updates project documentation after significant changes"
+instructions = """
+Update project documentation when:
+1. New features are added → update architecture.md
+2. API endpoints change → update API table
+3. Setup steps change → update INSTRUCTIONS.md
+4. File structure changes → update project tree
+5. New environment variables → update env table
+
+Maintain consistency with existing doc format and French language for user-facing docs.
+"""
+scope = "architecture.md, INSTRUCTIONS.md, tasks/"
+trigger = "After significant feature additions or structural changes"
+
+# =====================================================
+# DevOps Agents
+# =====================================================
+
+[agent.docker-build-tester]
+name = "Docker Build Tester"
+description = "Tests Docker build and deployment"
+instructions = """
+Test the Docker stack:
+1. docker compose build --no-cache
+2. docker compose up -d
+3. Wait for health checks to pass
+4. Test API: curl http://localhost:5000/health
+5. Test Frontend: curl -I http://localhost:5173
+6. Report any failures
+"""
+scope = "docker-compose.yml, Dockerfiles"
+trigger = "Before merging Docker-related changes"

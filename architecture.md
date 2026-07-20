@@ -1,57 +1,122 @@
 # mePOS STOCK — Architecture Document
 
+> **Version:** 2.4.0  
+> **Last Updated:** July 20, 2026  
+> **Stack:** Vue 3 + JavaScript (Frontend) · Express + TypeScript (Backend) · PostgreSQL · Docker
+
+---
+
+## Project Overview
+
+mePOS STOCK is an inventory and recipe management system for restaurants, designed for tablet/kiosk use. It features real-time stock tracking, loss detection, multi-department transfers, and automatic POS synchronization.
+
+### Key Features
+- **Role-Based Access Control** (Admin, Manager, Cook) with financial data masking
+- **Real-time loss detection** with dual-loss calculation (dry loss + opportunity loss)
+- **Two-step transfer workflow** (request → validate/reject)
+- **Automatic POS synchronization** via background sync agent
+- **Offline-first architecture** with localStorage caching and queue
+- **7-day moving average forecasting** with depletion analysis
+- **Premium dark-mode UI** with HSL design system
+
+---
+
 ## Project Structure
 
 ```
 mePOS-STOCK/
-├── backend/                    # Express REST API (TypeScript)
+├── backend/                        # Express REST API (TypeScript)
 │   ├── src/
-│   │   ├── index.ts            # Entry: middleware, routes, startup
-│   │   ├── database.ts         # PG pool & demo in-memory DB
-│   │   ├── schema.ts           # DDL, indexes, seed data
-│   │   ├── simulator.ts        # Background sales simulator
-│   │   ├── services/           # Business logic layer
+│   │   ├── index.ts                # Entry: middleware, routes, startup
+│   │   ├── database.ts             # PG pool & demo in-memory DB
+│   │   ├── schema.ts               # DDL, indexes, seed data
+│   │   ├── simulator.ts            # Background sales simulator
+│   │   ├── services/               # Business logic layer
+│   │   │   ├── auth.service.ts     # User CRUD, login, bcrypt wrappers
 │   │   │   ├── stock.service.ts    # Stock read/write, deductions, loss calc
 │   │   │   ├── sales.service.ts    # Ticket sync, stats, history
 │   │   │   ├── loss.service.ts     # Loss creation & querying
 │   │   │   ├── transfer.service.ts # Transfer execution & approval
 │   │   │   ├── inventory.service.ts# CRUD: depts, ingredients, recipes, movements, adjustments
-│   │   │   └── auth.service.ts     # User CRUD, login, bcrypt wrappers
-│   │   └── routes/             # Controllers (thin)
-│   │       ├── auth.ts         # + JWT middleware, combined auth middleware
+│   │   │   ├── forecast.service.ts # 7-day moving average, depletion analysis
+│   │   │   └── __tests__/          # Vitest unit tests
+│   │   │       ├── auth.service.test.ts
+│   │   │       └── stock.service.test.ts
+│   │   └── routes/                 # Controllers (thin)
+│   │       ├── auth.ts             # + JWT middleware, combined auth middleware
 │   │       ├── sales.ts
 │   │       ├── losses.ts
 │   │       ├── transfers.ts
-│   │       └── inventory.ts    # Depts, ingredients, recipes, stocks, movements, adjustments
-│   ├── dist/                   # Compiled JS
-│   ├── logs/                   # Morgan access logs
-│   └── .env.example
-├── frontend/                   # React SPA (TypeScript + Vite)
+│   │       ├── inventory.ts        # Depts, ingredients, recipes, stocks, movements, adjustments
+│   │       └── forecast.ts
+│   ├── dist/                       # Compiled JS
+│   ├── logs/                       # Morgan access logs
+│   ├── Dockerfile                  # Multi-stage build (node:20-alpine)
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── vitest.config.ts
+│
+├── frontend/                       # Vue 3 SPA (JavaScript + Vite)
 │   ├── src/
-│   │   ├── App.tsx             # Slim shell with lazy-loaded views
-│   │   ├── main.tsx            # React Router entry
-│   │   ├── context/
-│   │   │   └── AuthContext.tsx # JWT auth context
+│   │   ├── main.js                 # createApp, Pinia, Router
+│   │   ├── App.vue                 # Root: ErrorBoundary + router-view
+│   │   ├── api/
+│   │   │   └── index.js            # Axios client + API methods (named export: api)
+│   │   ├── router/
+│   │   │   └── index.js            # Vue Router with auth guards
+│   │   ├── stores/                 # Pinia stores
+│   │   │   ├── auth.js             # Session, login, logout, offline fallback
+│   │   │   └── app.js              # Data, offline queue, alerts, polling
+│   │   ├── composables/            # Vue composables (reusable logic)
+│   │   │   ├── useOffline.js       # Online/offline detection
+│   │   │   └── usePolling.js       # Generic API polling
+│   │   ├── layouts/
+│   │   │   └── AppShell.vue        # Sidebar + MobileNav + Content + Alerts
 │   │   ├── components/
-│   │   │   ├── layout/         # AppShell, Sidebar, MobileNav
-│   │   │   └── ui/             # ErrorBoundary
-│   │   ├── views/              # Dashboard, Inventory, LossTracker, StockTransfer, Settings
-│   │   ├── pages/              # LoginPage
-│   │   ├── hooks/              # useApi, usePolling, useStocks, etc.
-│   │   ├── services/           # api.ts (centralized fetch wrapper)
-│   │   └── types/              # api.ts (TypeScript interfaces)
-│   └── dist/
-├── agent/                      # Legacy POS sync agents
-│   ├── sync_agent.py           # Python agent (primary)
-│   ├── sync_agent.js           # Node.js agent (alternative)
-│   ├── setup_local_db.py       # Python mock DB setup
-│   ├── local_sales_db.json     # JSON-based mock sales data (Node agent)
-│   ├── sync_metadata.json      # Last synced offset
-│   ├── sync_config.json.example # Example config (copy, fill, rename)
-│   └── sync_config.json        # Active config (gitignored)
-├── docker-compose.yml          # Postgres + backend
-└── .gitignore
+│   │   │   ├── base/               # Design system components
+│   │   │   │   ├── Badge.vue
+│   │   │   │   ├── Card.vue
+│   │   │   │   ├── EmptyState.vue
+│   │   │   │   ├── ErrorBoundary.vue
+│   │   │   │   ├── Modal.vue
+│   │   │   │   ├── Skeleton.vue
+│   │   │   │   └── Toast.vue
+│   │   │   ├── layout/
+│   │   │   │   ├── Sidebar.vue     # Desktop navigation
+│   │   │   │   └── MobileNav.vue   # Mobile bottom navigation
+│   │   │   └── forecast/
+│   │   │       └── ForecastPanel.vue # Critical stocks, depletion timeline, reorder
+│   │   ├── views/                  # Page components (lazy-loaded)
+│   │   │   ├── DashboardView.vue   # Metrics, charts, alerts, forecast
+│   │   │   ├── InventoryView.vue   # Stock table with department filtering
+│   │   │   ├── LossTrackerView.vue # Loss declaration form + journal
+│   │   │   ├── StockTransferView.vue # Transfer requests + approval workflow
+│   │   │   ├── SettingsView.vue    # Admin: departments, ingredients, recipes
+│   │   │   └── LoginPage.vue       # Authentication
+│   │   └── styles/
+│   │       └── index.css           # HSL design system (dark mode, tactile)
+│   ├── nginx.conf                  # SPA proxy config for production
+│   ├── Dockerfile                  # Multi-stage: node build → nginx serve
+│   ├── eslint.config.js            # ESLint flat config (Vue plugin)
+│   ├── vite.config.js              # Vite config
+│   └── package.json
+│
+├── agent/                          # Legacy POS sync agents
+│   ├── sync_agent.py               # Python agent (primary)
+│   ├── sync_agent.js               # Node.js agent (alternative)
+│   ├── setup_local_db.py           # Python mock DB setup
+│   ├── local_sales_db.json         # JSON-based mock sales data (Node agent)
+│   ├── sync_metadata.json          # Last synced offset
+│   ├── sync_config.json.example    # Example config
+│   └── sync_config.json            # Active config (gitignored)
+│
+├── docker-compose.yml              # Full stack: PostgreSQL + Backend + Frontend
+├── architecture.md                 # This file
+├── INSTRUCTIONS.md                 # Setup & usage guide
+└── tasks/                          # Walkthrough docs
 ```
+
+---
 
 ## Architecture Layers
 
@@ -67,13 +132,26 @@ Route (Controller) → Service (Business Logic) → Database (PG pool / in-memor
 - **Services** contain all business logic (demo + PG modes)
 - **Database** exposes `query()` for PG and `demoDb` for in-memory mode
 
-### Frontend (Component-based)
+### Frontend (Vue 3 Composition API)
 
 ```
-AppShell → Sidebar / MobileNav / Content Area
-             └── Views (lazy-loaded via Suspense)
-                    └── API calls via services/api.ts (JWT auth)
+App.vue → ErrorBoundary → Router
+  └── AppShell.vue (requiresAuth)
+        ├── Sidebar.vue (desktop)
+        ├── MobileNav.vue (mobile)
+        ├── Main Content Area → <router-view />
+        │     ├── DashboardView.vue
+        │     ├── InventoryView.vue
+        │     ├── LossTrackerView.vue
+        │     ├── StockTransferView.vue
+        │     └── SettingsView.vue
+        └── Real-time Loss Alerts (toast notifications)
 ```
+
+**State Management:** Pinia stores (auth + app)  
+**API Layer:** Centralized Axios client with JWT interceptors  
+**Routing:** Vue Router with auth guards and lazy-loaded routes  
+**Composables:** Reusable logic (useOffline, usePolling)
 
 ### Sync Agent (Adapter Pattern)
 
@@ -82,72 +160,75 @@ Legacy POS DB → Sync Agent → mePOS STOCK API
                                  └── Process stock deductions
 ```
 
-## POS System Plugin Architecture
+---
 
-The sync agent is designed to support multiple POS systems via a plugin architecture:
+## Frontend Architecture (Vue 3)
 
-```
-agent/
-├── sync_agent.py          # Main orchestrator (common logic)
-├── pos_adapters/          # POS-specific adapters (future)
-│   ├── __init__.py
-│   ├── base.py            # Abstract base adapter
-│   ├── mepos_legacy.py    # Built-in legacy adapter
-│   ├── pos_lightning.py   # Example: POS Lightning adapter
-│   └── pos_cloud_api.py   # Example: Cloud-based POS adapter
-└── sync_config.json       # Select active adapter
-```
+### Component Pattern
 
-### Adapter Interface
+All components use `<script setup>` with Composition API:
 
-```python
-class BasePOSAdapter(ABC):
-    @abstractmethod
-    def get_unsynced_tickets(self, last_synced_id: int, max_batch: int) -> list:
-        """Fetch unsynced tickets from the POS system."""
-        pass
+```vue
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useAuthStore } from '../stores/auth'
+import { api } from '../api'
 
-    @abstractmethod
-    def mark_as_synced(self, ticket_ids: list):
-        """Mark tickets as synced in the POS system."""
-        pass
+const auth = useAuthStore()
+const data = ref(null)
 
-    @abstractmethod
-    def get_adapter_name(self) -> str:
-        """Return a unique identifier for this POS adapter."""
-        pass
+onMounted(async () => {
+  const res = await api.getStocks()
+  data.value = res.data.data
+})
+</script>
 ```
 
-### Adding a New POS System
+### API Import Convention
 
-1. Create a new file in `agent/pos_adapters/`
-2. Implement `BasePOSAdapter` (get_unsynced_tickets, mark_as_synced, get_adapter_name)
-3. Set `adapter: "your_adapter_name"` in `sync_config.json`
-4. The main orchestrator handles: retry, backoff, circuit breaker, logging, dedup
+```javascript
+// ✅ Correct — named export gives access to API methods
+import { api } from '../api'
+api.getStocks()  // Works
 
-## Deployment Architecture
-
+// ❌ Wrong — default export is the raw axios client
+import api from '../api'
+api.getStocks()  // undefined → TypeError
 ```
-                    ┌─────────────┐
-                    │  Browser     │
-                    │  (React SPA) │
-                    └──────┬──────┘
-                           │ JWT Bearer
-                    ┌──────▼──────┐
-                    │  Express    │
-                    │  API Server │
-                    │  :5000      │
-                    └──┬──────┬───┘
-                       │      │
-              ┌────────▼┐  ┌──▼──────────┐
-              │PostgreSQL│  │ Legacy POS  │
-              │ :5432    │  │ DB (SQLite) │
-              └──────────┘  └──────┬──────┘
-                                   │ Sync Agent
-                                   │ (Python/Node)
-                                   │
-                                   └─── Polling Interval
+
+### Store Pattern (Pinia)
+
+```javascript
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { api } from '../api'
+
+export const useAuthStore = defineStore('auth', () => {
+  const user = ref(null)
+  const isLoggedIn = computed(() => !!user.value)
+
+  async function login(username, password) {
+    const { data } = await api.login(username, password)
+    // ...
+  }
+
+  return { user, isLoggedIn, login }
+})
 ```
+
+### Router Guards
+
+```javascript
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('mepos_token')
+  if (to.meta.requiresAuth && !token) next('/login')
+  else if (to.path === '/login' && token) next('/')
+  else if (to.meta.requiresAdmin && user?.role !== 'admin') next('/')
+  else next()
+})
+```
+
+---
 
 ## API Endpoints
 
@@ -158,28 +239,104 @@ class BasePOSAdapter(ABC):
 | POST | /api/v1/auth/users | JWT | Create user |
 | PUT | /api/v1/auth/users/:id | JWT | Update user |
 | DELETE | /api/v1/auth/users/:id | JWT | Delete user |
-| GET | /api/v1/departments | JWT+API | List departments |
-| POST | /api/v1/departments | JWT+API | Create department |
-| PUT | /api/v1/departments/:id | JWT+API | Update department |
-| DELETE | /api/v1/departments/:id | JWT+API | Delete department |
-| GET | /api/v1/ingredients | JWT+API | List ingredients |
-| POST | /api/v1/ingredients | JWT+API | Create ingredient |
-| PUT | /api/v1/ingredients/:id | JWT+API | Update ingredient |
-| GET | /api/v1/recipes | JWT+API | List recipes |
-| POST | /api/v1/recipes | JWT+API | Create recipe |
-| POST | /api/v1/recipes/:id/ingredients | JWT+API | Set recipe ingredients |
-| GET | /api/v1/stocks | JWT+API | List inventory stocks |
-| POST | /api/v1/inventory/adjust | JWT+API | Adjust stock |
-| GET | /api/v1/movements | JWT+API | List stock movements |
-| POST | /api/v1/sales/sync | JWT+API | Sync sales tickets |
-| GET | /api/v1/sales/stats | JWT+API | Sales statistics |
-| GET | /api/v1/sales/history | JWT+API | 7-day sales history |
-| POST | /api/v1/losses | JWT+API | Create loss |
-| GET | /api/v1/losses | JWT+API | List losses |
-| POST | /api/v1/transfers | JWT+API | Execute transfer |
-| GET | /api/v1/transfers/requests | JWT+API | List transfer requests |
-| POST | /api/v1/transfers/requests | JWT+API | Create transfer request |
-| POST | /api/v1/transfers/requests/:id/validate | JWT+API | Approve transfer |
-| POST | /api/v1/transfers/requests/:id/reject | JWT+API | Reject transfer |
+| GET | /api/v1/departments | JWT | List departments |
+| POST | /api/v1/departments | JWT | Create department |
+| PUT | /api/v1/departments/:id | JWT | Update department |
+| DELETE | /api/v1/departments/:id | JWT | Delete department |
+| GET | /api/v1/ingredients | JWT | List ingredients |
+| POST | /api/v1/ingredients | JWT | Create ingredient |
+| GET | /api/v1/recipes | JWT | List recipes |
+| POST | /api/v1/recipes | JWT | Create recipe |
+| POST | /api/v1/recipes/:id/ingredients | JWT | Set recipe ingredients |
+| GET | /api/v1/stocks | JWT | List inventory stocks |
+| POST | /api/v1/inventory/adjust | JWT | Adjust stock |
+| GET | /api/v1/movements | JWT | List stock movements |
+| POST | /api/v1/sales/sync | API Key | Sync sales tickets |
+| GET | /api/v1/sales/stats | JWT | Sales statistics |
+| GET | /api/v1/sales/history | JWT | 7-day sales history |
+| POST | /api/v1/losses | JWT | Create loss |
+| GET | /api/v1/losses | JWT | List losses |
+| POST | /api/v1/transfers | JWT | Execute transfer |
+| GET | /api/v1/transfers/requests | JWT | List transfer requests |
+| POST | /api/v1/transfers/requests | JWT | Create transfer request |
+| POST | /api/v1/transfers/requests/:id/validate | JWT | Approve transfer |
+| POST | /api/v1/transfers/requests/:id/reject | JWT | Reject transfer |
+| GET | /api/v1/forecast | JWT | 7-day moving average forecast |
 | GET | /health | None | Health check |
-| GET | /api/config | None | Client-side config |
+
+---
+
+## Deployment Architecture
+
+```
+                    ┌─────────────────┐
+                    │  Browser         │
+                    │  (Vue 3 SPA)     │
+                    │  :5173 (Nginx)   │
+                    └────────┬────────┘
+                             │ JWT Bearer
+                    ┌────────▼────────┐
+                    │  Express API    │
+                    │  :5000          │
+                    └──┬──────────┬───┘
+                       │          │
+              ┌────────▼┐    ┌───▼──────────────┐
+              │PostgreSQL│    │ Legacy POS DB     │
+              │ :5432     │    │ (SQLite/JSON)     │
+              └──────────┘    └───────┬──────────┘
+                                      │ Sync Agent
+                                      │ (Python/Node)
+                                      └─── Polling Interval
+```
+
+### Docker Services
+
+| Service | Image | Port | Description |
+|---------|-------|------|-------------|
+| db | postgres:15-alpine | 5432 | PostgreSQL database |
+| backend | node:20-alpine (multi-stage) | 5000 | Express API server |
+| frontend | nginx:1.25-alpine (multi-stage) | 5173→80 | Vue SPA + API proxy |
+
+---
+
+## POS System Plugin Architecture
+
+The sync agent supports multiple POS systems via a plugin architecture:
+
+```
+agent/
+├── sync_agent.py          # Main orchestrator (common logic)
+├── pos_adapters/          # POS-specific adapters (future)
+│   ├── base.py            # Abstract base adapter
+│   ├── mepos_legacy.py    # Built-in legacy adapter
+│   └── pos_lightning.py   # Example: POS Lightning adapter
+└── sync_config.json       # Select active adapter
+```
+
+### Adding a New POS System
+
+1. Create a new file in `agent/pos_adapters/`
+2. Implement `BasePOSAdapter` (get_unsynced_tickets, mark_as_synced, get_adapter_name)
+3. Set `adapter: "your_adapter_name"` in `sync_config.json`
+4. The main orchestrator handles: retry, backoff, circuit breaker, logging, dedup
+
+---
+
+## Environment Variables
+
+### Backend (.env or docker-compose.yml)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| PORT | 5000 | API server port |
+| DATABASE_URL | postgres://mepos_user:mepos_password@localhost:5432/mepos_stock | PostgreSQL connection string |
+| API_KEY | mepos_sec_key_prod_abc123 | API key for POS sync agent |
+| JWT_SECRET | change_me_in_production | JWT signing secret |
+| FRONTEND_URL | http://localhost | CORS allowed origin |
+| NODE_ENV | production | Environment mode |
+
+### Frontend (Vite env)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| VITE_API_URL | /api/v1 | API base URL (proxied by Nginx in production) |
