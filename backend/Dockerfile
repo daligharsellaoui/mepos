@@ -1,34 +1,30 @@
 # ======================================================
-# mePOS STOCK — Backend Dockerfile (Optimized Multi-stage)
+# mePOS STOCK — Backend Dockerfile (Simple Multi-stage)
 # ======================================================
-# Build with: DOCKER_BUILDKIT=1 docker build -t mepos-backend .
-# Features: cache mount for npm, full deps for build, pruned for production
 
 # ---- Build Stage ----
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy dependency manifests first (better Docker layer caching)
-COPY package.json package-lock.json ./
+# Copy package.json only (lockfile excluded — host lockfile was generated with npm v11,
+# incompatible with the npm v9 in node:20-alpine, causing devDeps like typescript to not install)
+COPY package.json ./
 
-# Install ALL dependencies (including devDeps needed for TypeScript compilation)
-# Cache mount speeds up subsequent builds significantly
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+# Fresh install — ensures devDependencies are properly resolved
+RUN npm install
 
 # Copy source and type config
 COPY tsconfig.json ./
 COPY src/ ./src/
 
 # Build TypeScript to dist/
-# Use npm run build (which runs tsc) instead of npx tsc for proper PATH resolution
 RUN npm run build
 
-# Remove devDependencies from node_modules (keep only production deps)
-# This reduces the production image size significantly
+# Remove devDependencies — keep only production packages
+# This reduces the production stage size significantly
 RUN npm prune --omit=dev && \
-    rm -rf src/ tsconfig.json
+    rm -rf src/ tsconfig.json node_modules/.cache
 
 # ---- Production Stage ----
 FROM node:20-alpine AS production
