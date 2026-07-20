@@ -20,6 +20,7 @@ import lossesRouter from './routes/losses';
 import transfersRouter from './routes/transfers';
 import inventoryRouter from './routes/inventory';
 import forecastRouter from './routes/forecast';
+import agentsRouter from './routes/agents';
 
 dotenv.config();
 
@@ -83,6 +84,8 @@ app.use('/api/v1/losses', authMiddleware, tenantContextMiddleware, lossesRouter)
 app.use('/api/v1/transfers', authMiddleware, tenantContextMiddleware, transfersRouter);
 app.use('/api/v1', authMiddleware, tenantContextMiddleware, inventoryRouter);
 app.use('/api/v1/forecast', authMiddleware, tenantContextMiddleware, forecastRouter);
+// Agent routes: /authenticate is public, /heartbeat uses agent JWT, rest uses user JWT
+app.use('/api/v1/agents', agentsRouter);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {

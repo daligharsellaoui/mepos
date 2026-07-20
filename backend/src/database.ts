@@ -32,6 +32,8 @@ export const demoDb: {
   stock_movements: any[];
   ingredient_losses: any[];
   transfer_requests: any[];
+  agents: any[];
+  agent_heartbeats: any[];
 } = {
   tenants: [
     { id: 1, uuid: '00000000-0000-0000-0000-000000000001', name: 'Restaurant Demo', slug: 'restaurant-demo', email: 'admin@restaurant-demo.com', country: 'Tunisia', timezone: 'Africa/Tunis', language: 'fr', currency: 'TND', status: 'active', subscription_plan: 'starter' }
@@ -62,7 +64,6 @@ export const demoDb: {
     { id: 13, tenant_id: 1, name: 'Pepperoni Bœuf', unit: 'kg', purchase_price_per_unit: 28.00, alert_threshold: 3.0000, purchase_unit: 'barquette', purchase_unit_price: 56.00, conversion_factor: 2.0000 }
   ],
   inventory_stocks: [
-    // Dépôt Central starting stock
     { id: 1, tenant_id: 1, department_id: 1, ingredient_id: 1, quantity: 300.0000 },
     { id: 2, tenant_id: 1, department_id: 1, ingredient_id: 2, quantity: 80.0000 },
     { id: 3, tenant_id: 1, department_id: 1, ingredient_id: 3, quantity: 60.0000 },
@@ -76,7 +77,6 @@ export const demoDb: {
     { id: 11, tenant_id: 1, department_id: 1, ingredient_id: 11, quantity: 240.0000 },
     { id: 12, tenant_id: 1, department_id: 1, ingredient_id: 12, quantity: 200.0000 },
     { id: 13, tenant_id: 1, department_id: 1, ingredient_id: 13, quantity: 20.0000 },
-    // Cuisine stocks
     { id: 14, tenant_id: 1, department_id: 2, ingredient_id: 4, quantity: 30.0000 },
     { id: 15, tenant_id: 1, department_id: 2, ingredient_id: 5, quantity: 30.0000 },
     { id: 16, tenant_id: 1, department_id: 2, ingredient_id: 6, quantity: 5.0000 },
@@ -86,7 +86,6 @@ export const demoDb: {
     { id: 20, tenant_id: 1, department_id: 2, ingredient_id: 2, quantity: 10.0000 },
     { id: 21, tenant_id: 1, department_id: 2, ingredient_id: 3, quantity: 10.0000 },
     { id: 22, tenant_id: 1, department_id: 2, ingredient_id: 13, quantity: 3.0000 },
-    // Comptoir stocks
     { id: 23, tenant_id: 1, department_id: 3, ingredient_id: 1, quantity: 10.0000 },
     { id: 24, tenant_id: 1, department_id: 3, ingredient_id: 8, quantity: 3000.0000 }
   ],
@@ -102,37 +101,28 @@ export const demoDb: {
     { id: 9, tenant_id: 1, name: 'Eau Minérale', sale_price: 1.50, is_active: true }
   ],
   recipe_ingredients: [
-    // Pizza Margherita (1)
     { id: 1, tenant_id: 1, recipe_id: 1, ingredient_id: 1, quantity_needed: 0.2000 },
     { id: 2, tenant_id: 1, recipe_id: 1, ingredient_id: 2, quantity_needed: 0.1500 },
     { id: 3, tenant_id: 1, recipe_id: 1, ingredient_id: 3, quantity_needed: 0.1000 },
-    // Pizza Pepperoni (2)
     { id: 4, tenant_id: 1, recipe_id: 2, ingredient_id: 1, quantity_needed: 0.2000 },
     { id: 5, tenant_id: 1, recipe_id: 2, ingredient_id: 2, quantity_needed: 0.1500 },
     { id: 6, tenant_id: 1, recipe_id: 2, ingredient_id: 3, quantity_needed: 0.1000 },
     { id: 7, tenant_id: 1, recipe_id: 2, ingredient_id: 13, quantity_needed: 0.0800 },
-    // Burger Classic (3)
     { id: 8, tenant_id: 1, recipe_id: 3, ingredient_id: 5, quantity_needed: 1.0000 },
     { id: 9, tenant_id: 1, recipe_id: 3, ingredient_id: 4, quantity_needed: 1.0000 },
     { id: 10, tenant_id: 1, recipe_id: 3, ingredient_id: 6, quantity_needed: 0.0300 },
-    // Burger Double Cheddar (4)
     { id: 11, tenant_id: 1, recipe_id: 4, ingredient_id: 5, quantity_needed: 1.0000 },
     { id: 12, tenant_id: 1, recipe_id: 4, ingredient_id: 4, quantity_needed: 2.0000 },
     { id: 13, tenant_id: 1, recipe_id: 4, ingredient_id: 6, quantity_needed: 0.0600 },
-    // Pizza BBQ Poulet (5)
     { id: 14, tenant_id: 1, recipe_id: 5, ingredient_id: 1, quantity_needed: 0.2000 },
     { id: 15, tenant_id: 1, recipe_id: 5, ingredient_id: 2, quantity_needed: 0.1500 },
     { id: 16, tenant_id: 1, recipe_id: 5, ingredient_id: 3, quantity_needed: 0.1000 },
     { id: 17, tenant_id: 1, recipe_id: 5, ingredient_id: 7, quantity_needed: 0.1000 },
-    // Crêpe Nutella (6)
     { id: 18, tenant_id: 1, recipe_id: 6, ingredient_id: 1, quantity_needed: 0.0800 },
     { id: 19, tenant_id: 1, recipe_id: 6, ingredient_id: 8, quantity_needed: 50.0000 },
-    // Portion Frites (7)
     { id: 20, tenant_id: 1, recipe_id: 7, ingredient_id: 9, quantity_needed: 0.2500 },
     { id: 21, tenant_id: 1, recipe_id: 7, ingredient_id: 10, quantity_needed: 0.0500 },
-    // Soda Cola Frais (8)
     { id: 22, tenant_id: 1, recipe_id: 8, ingredient_id: 11, quantity_needed: 1.0000 },
-    // Eau Minérale (9)
     { id: 23, tenant_id: 1, recipe_id: 9, ingredient_id: 12, quantity_needed: 1.0000 }
   ],
   sales_tickets: [],
@@ -153,7 +143,9 @@ export const demoDb: {
       created_at: new Date(Date.now() - 3600 * 1000).toISOString(),
       updated_at: new Date(Date.now() - 3600 * 1000).toISOString()
     }
-  ]
+  ],
+  agents: [],
+  agent_heartbeats: []
 };
 
 // Check DB Connection
@@ -176,8 +168,6 @@ export async function checkConnection() {
 // Helper for executing queries
 export async function query(text: string, params?: any[]) {
   if (isDemoMode) {
-    // Return empty results or throw, but checkConnection handles init.
-    // For queries, we handle them route by route or throw an error.
     return { rows: [] as any[], rowCount: 0 };
   }
   const start = Date.now();
@@ -189,7 +179,6 @@ export async function query(text: string, params?: any[]) {
 // Helper for transaction execution
 export async function getClient() {
   if (isDemoMode) {
-    // Return a mock client that resolves successfully
     const mockClient = {
       query: async (text: string, params?: any[]) => {
         return { rows: [] as any[], rowCount: 0 };
