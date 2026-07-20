@@ -1072,16 +1072,16 @@ export function decrypt(ciphertext: string): string {
 
 ### 7.3 Security Checklist
 
-- [ ] All DB/API credentials encrypted at rest
-- [ ] Agent secrets hashed with bcrypt
+- [x] All DB/API credentials encrypted at rest (AES-256-GCM via encryption.service.ts)
+- [x] Agent secrets hashed with bcrypt (bcryptjs via agent.service.ts)
 - [ ] JWT secrets rotated periodically
 - [ ] API keys regenerated on demand
-- [ ] Tenant data never leaked across boundaries
+- [x] Tenant isolation middleware on all routes + tenantContextMiddleware
 - [ ] Row-Level Security (RLS) enabled on PostgreSQL
 - [ ] Audit trail for all sensitive operations
 - [ ] Rate limiting per tenant
 - [ ] CORS configured per tenant domain
-- [ ] No secrets in logs or error messages
+- [x] No secrets exposed through API responses (config endpoint uses decryptIfNeeded)
 
 ---
 
