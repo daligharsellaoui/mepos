@@ -1077,11 +1077,13 @@ export function decrypt(ciphertext: string): string {
 - [ ] JWT secrets rotated periodically
 - [ ] API keys regenerated on demand
 - [x] Tenant isolation middleware on all routes + tenantContextMiddleware
+- [ ] Tenant data never leaked across boundaries (enforced by middleware + queries)
 - [ ] Row-Level Security (RLS) enabled on PostgreSQL
 - [ ] Audit trail for all sensitive operations
 - [ ] Rate limiting per tenant
 - [ ] CORS configured per tenant domain
-- [x] No secrets exposed through API responses (config endpoint uses decryptIfNeeded)
+- [x] No secrets exposed through API responses
+- [ ] No secrets in logs or error messages
 
 ---
 
@@ -1450,7 +1452,7 @@ Each phase has a rollback script:
 
 ---
 
-### 2.7 Agent Heartbeat Retention Policy
+### 10.1 Agent Heartbeat Retention Policy
 
 The `agent_heartbeats` table grows unboundedly. Implement retention + aggregation.
 
@@ -1500,7 +1502,7 @@ DELETE FROM agent_heartbeats WHERE created_at < NOW() - INTERVAL '7 days';
 - Daily summaries retained indefinitely (analytics)
 - Table size stays bounded (~50KB/day per agent)
 
-### 2.8 Forecast Service Tenant Scoping
+### 10.2 Forecast Service Tenant Scoping
 
 The forecast service queries sales data globally. It must be tenant-scoped.
 
@@ -1541,7 +1543,7 @@ export async function getForecast(tenantId: number): Promise<ForecastResponse> {
 - Ingredients: `WHERE tenant_id = $1`
 - Inventory stocks: `WHERE tenant_id = $1`
 
-### 2.9 Complete Service Migration Checklist
+### 10.3 Complete Service Migration Checklist
 
 Every service with `isDemoMode` branches must be updated:
 
