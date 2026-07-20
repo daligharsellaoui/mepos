@@ -1,29 +1,31 @@
 <template>
-  <div class="tenant-settings">
-    <div class="page-header">
-      <h1>Paramètres du Restaurant</h1>
-      <button class="btn btn-primary" @click="saveAll" :disabled="isSaving">
+  <PageContainer
+    title="Paramètres du Restaurant"
+    subtitle="Configurez les paramètres généraux de votre établissement."
+  >
+    <template #actions>
+      <button class="touch-btn" @click="saveAll" :disabled="isSaving" style="min-height: 40px;">
         {{ isSaving ? 'Enregistrement...' : 'Enregistrer' }}
       </button>
-    </div>
+    </template>
 
-    <div v-if="isLoading" class="loading-state">
-      <div class="spinner"></div>
+    <div v-if="isLoading" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+      <div class="spinner" style="margin: 0 auto 1rem;" />
       <p>Chargement des paramètres...</p>
     </div>
 
-    <div v-else class="settings-grid">
+    <div v-else style="display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 1.25rem;">
       <!-- Restaurant Info -->
-      <div class="settings-card">
-        <h2>🏪 Informations du Restaurant</h2>
+      <div class="glass-panel" style="padding: 1.5rem;">
+        <h2 style="font-size: 1rem; font-weight: 700; margin: 0 0 1rem; color: var(--text-primary);">🏪 Informations du Restaurant</h2>
         <div class="form-group">
-          <label>Nom du restaurant</label>
-          <input v-model="settings.restaurant.name" type="text" />
+          <label class="form-label">Nom du restaurant</label>
+          <input v-model="settings.restaurant.name" type="text" class="form-input" />
         </div>
-        <div class="form-row">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label>Devise</label>
-            <select v-model="settings.restaurant.currency">
+            <label class="form-label">Devise</label>
+            <select v-model="settings.restaurant.currency" class="form-select">
               <option value="EUR">EUR (€)</option>
               <option value="TND">TND (د.ت)</option>
               <option value="USD">USD ($)</option>
@@ -32,8 +34,8 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Fuseau horaire</label>
-            <select v-model="settings.restaurant.timezone">
+            <label class="form-label">Fuseau horaire</label>
+            <select v-model="settings.restaurant.timezone" class="form-select">
               <option value="Europe/Paris">Europe/Paris</option>
               <option value="Africa/Tunis">Africa/Tunis</option>
               <option value="Africa/Casablanca">Africa/Casablanca</option>
@@ -42,8 +44,8 @@
           </div>
         </div>
         <div class="form-group">
-          <label>Langue</label>
-          <select v-model="settings.restaurant.language">
+          <label class="form-label">Langue</label>
+          <select v-model="settings.restaurant.language" class="form-select">
             <option value="fr">Français</option>
             <option value="en">English</option>
             <option value="ar">العربية</option>
@@ -52,49 +54,49 @@
       </div>
 
       <!-- Notification Settings -->
-      <div class="settings-card">
-        <h2>🔔 Notifications</h2>
+      <div class="glass-panel" style="padding: 1.5rem;">
+        <h2 style="font-size: 1rem; font-weight: 700; margin: 0 0 1rem; color: var(--text-primary);">🔔 Notifications</h2>
         <div class="form-group">
-          <label class="checkbox-label">
+          <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
             <input type="checkbox" v-model="notifications.lowStockAlerts" />
             Alertes de stock bas
           </label>
         </div>
         <div class="form-group">
-          <label class="checkbox-label">
+          <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
             <input type="checkbox" v-model="notifications.lossAlerts" />
             Alertes de pertes
           </label>
         </div>
         <div class="form-group">
-          <label class="checkbox-label">
+          <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
             <input type="checkbox" v-model="notifications.transferUpdates" />
             Mises à jour des transferts
           </label>
         </div>
         <div class="form-group">
-          <label>Seuil d'alerte stock (défaut)</label>
-          <input v-model.number="notifications.defaultAlertThreshold" type="number" min="0" />
+          <label class="form-label">Seuil d'alerte stock (défaut)</label>
+          <input v-model.number="notifications.defaultAlertThreshold" type="number" min="0" class="form-input" />
         </div>
       </div>
 
       <!-- Inventory Settings -->
-      <div class="settings-card">
-        <h2>📦 Inventaire</h2>
+      <div class="glass-panel" style="padding: 1.5rem;">
+        <h2 style="font-size: 1rem; font-weight: 700; margin: 0 0 1rem; color: var(--text-primary);">📦 Inventaire</h2>
         <div class="form-group">
-          <label class="checkbox-label">
+          <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
             <input type="checkbox" v-model="inventory.enableLosses" />
             Activer le suivi des pertes
           </label>
         </div>
         <div class="form-group">
-          <label class="checkbox-label">
+          <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
             <input type="checkbox" v-model="inventory.enableTransfers" />
             Activer les transferts de stock
           </label>
         </div>
         <div class="form-group">
-          <label class="checkbox-label">
+          <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
             <input type="checkbox" v-model="inventory.enableForecasting" />
             Activer les prévisions
           </label>
@@ -102,28 +104,29 @@
       </div>
 
       <!-- Sync Settings -->
-      <div class="settings-card">
-        <h2>🔄 Synchronisation</h2>
+      <div class="glass-panel" style="padding: 1.5rem;">
+        <h2 style="font-size: 1rem; font-weight: 700; margin: 0 0 1rem; color: var(--text-primary);">🔄 Synchronisation</h2>
         <div class="form-group">
-          <label>Intervalle de synchronisation (secondes)</label>
-          <input v-model.number="sync.pollingInterval" type="number" min="5" max="300" />
+          <label class="form-label">Intervalle de synchronisation (secondes)</label>
+          <input v-model.number="sync.pollingInterval" type="number" min="5" max="300" class="form-input" />
         </div>
         <div class="form-group">
-          <label>Taille maximale des lots</label>
-          <input v-model.number="sync.maxBatchSize" type="number" min="1" max="500" />
+          <label class="form-label">Taille maximale des lots</label>
+          <input v-model.number="sync.maxBatchSize" type="number" min="1" max="500" class="form-input" />
         </div>
         <div class="form-group">
-          <label>Tentatives maximales</label>
-          <input v-model.number="sync.maxRetries" type="number" min="1" max="20" />
+          <label class="form-label">Tentatives maximales</label>
+          <input v-model.number="sync.maxRetries" type="number" min="1" max="20" class="form-input" />
         </div>
       </div>
     </div>
-  </div>
+  </PageContainer>
 </template>
 
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
 import { api } from '../api'
+import PageContainer from '../components/base/PageContainer.vue'
 
 const isLoading = ref(true)
 const isSaving = ref(false)
@@ -196,68 +199,3 @@ async function saveAll() {
   }
 }
 </script>
-
-<style scoped>
-.tenant-settings { padding: 24px; }
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-.page-header h1 { font-size: 24px; font-weight: 700; color: #1a1a2e; }
-
-.settings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  gap: 20px;
-}
-
-.settings-card {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-}
-.settings-card h2 { font-size: 16px; margin: 0 0 16px 0; color: #1a1a2e; }
-
-.form-group { margin-bottom: 14px; }
-.form-group label { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 500; color: #374151; }
-.form-group input, .form-group select {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 14px;
-}
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-.checkbox-label {
-  display: flex !important;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-.checkbox-label input { width: auto; }
-
-.btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-}
-.btn-primary { background: #6366f1; color: white; }
-.btn-primary:hover { background: #4f46e5; }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.loading-state { text-align: center; padding: 48px; color: #64748b; }
-.spinner {
-  width: 32px; height: 32px;
-  border: 3px solid #e2e8f0; border-top-color: #6366f1;
-  border-radius: 50%; animation: spin 0.8s linear infinite;
-  margin: 0 auto 12px;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-</style>

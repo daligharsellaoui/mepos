@@ -212,8 +212,8 @@ export async function getStockWarning(
     ingredientInfo = ingRes.rows[0];
 
     const stockRes = await db(
-      'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2',
-      [departmentId, ingredientId]
+      'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 AND tenant_id = $3',
+      [departmentId, ingredientId, tid]
     );
     newQty = stockRes.rows.length > 0 ? new Decimal(stockRes.rows[0].quantity) : new Decimal(0);
   }
@@ -255,8 +255,8 @@ export async function processSaleDeduction(
       recipeIngs = demoDb.recipe_ingredients.filter((ri: any) => ri.recipe_id === recipe_id);
     } else {
       const ingRes = await clientOrDb.query(
-        'SELECT ingredient_id, quantity_needed FROM recipe_ingredients WHERE recipe_id = $1',
-        [recipe_id]
+        'SELECT ingredient_id, quantity_needed FROM recipe_ingredients WHERE recipe_id = $1 AND tenant_id = $2',
+        [recipe_id, tid]
       );
       recipeIngs = ingRes.rows;
     }
@@ -318,8 +318,8 @@ export async function processSaleDeduction(
         ingredientInfo = demoDb.ingredients.find((i: any) => i.id === ingredientId);
       } else {
         const ingRes = await clientOrDb.query(
-          'SELECT name, alert_threshold FROM ingredients WHERE id = $1',
-          [ingredientId]
+          'SELECT name, alert_threshold FROM ingredients WHERE id = $1 AND tenant_id = $2',
+          [ingredientId, tid]
         );
         ingredientInfo = ingRes.rows[0];
       }

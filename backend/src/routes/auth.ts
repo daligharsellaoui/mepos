@@ -173,7 +173,7 @@ router.put('/users/:id', jwtAuthMiddleware, tenantContextMiddleware, async (req:
   const { username, password, role, first_name, last_name } = req.body;
 
   try {
-    const user = await updateUser(userId, { username, password, role, first_name, last_name });
+    const user = await updateUser(userId, { username, password, role, first_name, last_name }, req.tenantId ?? 1);
     res.json({ status: 'success', data: user });
   } catch (error: any) {
     const status = error.message.includes('non trouvé') ? 404 : 400;
@@ -189,7 +189,7 @@ router.delete('/users/:id', jwtAuthMiddleware, tenantContextMiddleware, async (r
   const userId = parseInt(req.params.id, 10);
 
   try {
-    await deleteUser(userId);
+    await deleteUser(userId, req.tenantId ?? 1);
     res.json({ status: 'success', message: 'Utilisateur supprimé avec succès' });
   } catch (error: any) {
     const status = error.message.includes('non trouvé') ? 404 : 400;

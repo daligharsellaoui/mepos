@@ -9,8 +9,10 @@ import {
   getAllIngredients,
   createIngredient,
   updateIngredient,
+  deleteIngredient,
   getAllRecipes,
   createRecipe,
+  updateRecipe,
   saveRecipeIngredients,
   getAllStocks,
   getAllMovements,
@@ -140,6 +142,21 @@ router.put('/ingredients/:id', async (req: Request, res: Response) => {
   }
 });
 
+router.delete('/ingredients/:id', async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+
+  try {
+    const result = await deleteIngredient(id, req.tenantId);
+    if (!result.success) {
+      return res.status(409).json({ status: 'error', ...result });
+    }
+    res.json({ status: 'success', message: result.message });
+  } catch (error: any) {
+    const status = error.message.includes('not found') ? 404 : 500;
+    res.status(status).json({ status: 'error', message: error.message });
+  }
+});
+
 // ======================================================
 // RECIPES
 // ======================================================
@@ -165,6 +182,19 @@ router.post('/recipes', async (req: Request, res: Response) => {
     res.json({ status: 'success', data });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: error.message });
+  }
+});
+
+router.put('/recipes/:id', async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+  const { name, sale_price } = req.body;
+
+  try {
+    const data = await updateRecipe(id, { name, sale_price }, req.tenantId);
+    res.json({ status: 'success', data });
+  } catch (error: any) {
+    const status = error.message.includes('not found') ? 404 : 500;
+    res.status(status).json({ status: 'error', message: error.message });
   }
 });
 

@@ -1,263 +1,323 @@
 <template>
-  <div class="agent-management">
-    <div class="page-header">
-      <h1>Gestion des Agents</h1>
-      <button class="btn btn-primary" @click="showCreateModal = true">
-        <span class="icon">+</span> Nouvel Agent
+  <PageContainer
+    title="Gestion des Agents"
+    subtitle="Configurez et surveillez les agents de synchronisation POS."
+  >
+    <template #actions>
+      <button
+        class="touch-btn"
+        style="padding: 0.5rem 1.2rem; min-height: 40px;"
+        @click="showCreateModal = true"
+      >
+        + Nouvel Agent
       </button>
-    </div>
+    </template>
 
     <!-- Stats Cards -->
-    <div class="stats-grid">
-      <div class="stat-card online">
-        <div class="stat-value">{{ agentStore.onlineAgents.length }}</div>
-        <div class="stat-label">En ligne</div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+      <div class="glass-panel" style="padding: 1.25rem; text-align: center; border-left: 4px solid #10b981;">
+        <div style="font-size: 2rem; font-weight: 800; color: var(--text-primary);">{{ agentStore.onlineAgents.length }}</div>
+        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.2rem;">En ligne</div>
       </div>
-      <div class="stat-card offline">
-        <div class="stat-value">{{ agentStore.offlineAgents.length }}</div>
-        <div class="stat-label">Hors ligne</div>
+      <div class="glass-panel" style="padding: 1.25rem; text-align: center; border-left: 4px solid #f59e0b;">
+        <div style="font-size: 2rem; font-weight: 800; color: var(--text-primary);">{{ agentStore.offlineAgents.length }}</div>
+        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.2rem;">Hors ligne</div>
       </div>
-      <div class="stat-card total">
-        <div class="stat-value">{{ agentStore.agents.length }}</div>
-        <div class="stat-label">Total</div>
+      <div class="glass-panel" style="padding: 1.25rem; text-align: center; border-left: 4px solid #6366f1;">
+        <div style="font-size: 2rem; font-weight: 800; color: var(--text-primary);">{{ agentStore.agents.length }}</div>
+        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.2rem;">Total</div>
       </div>
     </div>
 
     <!-- Loading State -->
-    <div v-if="agentStore.isLoading" class="loading-state">
-      <div class="spinner"></div>
+    <div v-if="agentStore.isLoading" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+      <div class="spinner" style="margin: 0 auto 1rem;" />
       <p>Chargement des agents...</p>
     </div>
 
     <!-- Empty State -->
-    <div v-else-if="agentStore.agents.length === 0" class="empty-state">
-      <div class="empty-icon">🤖</div>
-      <h3>Aucun agent configuré</h3>
-      <p>Créez votre premier agent de synchronisation pour connecter votre système POS.</p>
-      <button class="btn btn-primary" @click="showCreateModal = true">Créer un agent</button>
+    <div v-else-if="agentStore.agents.length === 0" style="text-align: center; padding: 4rem 2rem;">
+      <EmptyState
+        title="Aucun agent configuré"
+        description="Créez votre premier agent de synchronisation pour connecter votre système POS."
+        action-label="Créer un agent"
+        @action="showCreateModal = true"
+      />
     </div>
 
     <!-- Agent List -->
-    <div v-else class="agent-grid">
-      <div v-for="agent in agentStore.agents" :key="agent.id" class="agent-card" :class="agent.status">
-        <div class="agent-header">
-          <div class="agent-status" :class="agent.status"></div>
-          <h3>{{ agent.name }}</h3>
-          <span class="agent-type">{{ agent.connector_type }}</span>
+    <div v-else style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1rem;">
+      <div
+        v-for="agent in agentStore.agents"
+        :key="agent.id"
+        class="glass-panel"
+        :style="{ padding: '1.25rem', borderTop: `3px solid ${agent.status === 'online' ? '#10b981' : agent.status === 'offline' ? '#f59e0b' : '#94a3b8'}`, opacity: agent.status === 'disabled' ? 0.7 : 1 }"
+      >
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+          <span
+            :style="{ width: '10px', height: '10px', borderRadius: '50%', background: agent.status === 'online' ? '#10b981' : agent.status === 'offline' ? '#f59e0b' : '#94a3b8', flexShrink: 0 }"
+          />
+          <h3 style="font-size: 1rem; font-weight: 700; margin: 0; flex: 1; color: var(--text-primary);">{{ agent.name }}</h3>
+          <span class="badge badge-info" style="font-size: 0.7rem;">{{ agent.connector_type }}</span>
         </div>
 
-        <div class="agent-details">
-          <div v-if="agent.machine_name" class="detail">
-            <span class="label">Machine:</span>
-            <span class="value">{{ agent.machine_name }}</span>
+        <div style="display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.85rem; margin-bottom: 0.75rem;">
+          <div v-if="agent.machine_name" style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-secondary);">Machine:</span>
+            <span style="color: var(--text-primary); font-weight: 500;">{{ agent.machine_name }}</span>
           </div>
-          <div v-if="agent.version" class="detail">
-            <span class="label">Version:</span>
-            <span class="value">{{ agent.version }}</span>
+          <div v-if="agent.version" style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-secondary);">Version:</span>
+            <span style="color: var(--text-primary); font-weight: 500;">{{ agent.version }}</span>
           </div>
-          <div class="detail">
-            <span class="label">Statut:</span>
-            <span class="value status-badge" :class="agent.status">{{ statusLabel(agent.status) }}</span>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-secondary);">Statut:</span>
+            <span :class="['badge', agent.status === 'online' ? 'badge-success' : agent.status === 'offline' ? 'badge-warn' : agent.status === 'disabled' ? '' : 'badge-danger']" style="font-size: 0.7rem;">
+              {{ statusLabel(agent.status) }}
+            </span>
           </div>
-          <div class="detail">
-            <span class="label">Santé:</span>
-            <span class="value health-badge" :class="agent.health_status">{{ healthLabel(agent.health_status) }}</span>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-secondary);">Santé:</span>
+            <span :class="['badge', agent.health_status === 'healthy' ? 'badge-success' : agent.health_status === 'degraded' ? 'badge-warn' : agent.health_status === 'unhealthy' ? 'badge-danger' : '']" style="font-size: 0.7rem;">
+              {{ healthLabel(agent.health_status) }}
+            </span>
           </div>
-          <div v-if="agent.last_sync_at" class="detail">
-            <span class="label">Dernière synchro:</span>
-            <span class="value">{{ formatDate(agent.last_sync_at) }}</span>
+          <div v-if="agent.last_sync_at" style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-secondary);">Dernière synchro:</span>
+            <span style="color: var(--text-primary); font-weight: 500;">{{ formatDate(agent.last_sync_at) }}</span>
           </div>
-          <div v-if="agent.last_heartbeat_at" class="detail">
-            <span class="label">Dernier heartbeat:</span>
-            <span class="value">{{ formatDate(agent.last_heartbeat_at) }}</span>
+          <div v-if="agent.last_heartbeat_at" style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-secondary);">Dernier heartbeat:</span>
+            <span style="color: var(--text-primary); font-weight: 500;">{{ formatDate(agent.last_heartbeat_at) }}</span>
           </div>
         </div>
 
-        <div class="agent-actions">
-          <button v-if="agent.status !== 'disabled'" class="btn btn-sm btn-warning" @click="handleDisable(agent)" title="Désactiver">
-            ⏸
+        <div style="display: flex; gap: 0.4rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
+          <button
+            v-if="agent.status !== 'disabled'"
+            class="touch-btn touch-btn-secondary"
+            style="padding: 0.3rem 0.7rem; min-height: 32px; font-size: 0.8rem;"
+            title="Désactiver"
+            @click="handleDisable(agent)"
+          >
+            ⏸ Désactiver
           </button>
-          <button v-if="agent.status === 'disabled'" class="btn btn-sm btn-success" @click="handleEnable(agent)" title="Activer">
-            ▶
+          <button
+            v-if="agent.status === 'disabled'"
+            class="touch-btn touch-btn-secondary"
+            style="padding: 0.3rem 0.7rem; min-height: 32px; font-size: 0.8rem;"
+            title="Activer"
+            @click="handleEnable(agent)"
+          >
+            ▶ Activer
           </button>
-          <button class="btn btn-sm btn-info" @click="viewDetails(agent)" title="Détails">
-            📋
+          <button
+            class="touch-btn touch-btn-secondary"
+            style="padding: 0.3rem 0.7rem; min-height: 32px; font-size: 0.8rem;"
+            title="Détails"
+            @click="viewDetails(agent)"
+          >
+            Détails
           </button>
-          <button class="btn btn-sm btn-warning" @click="handleRotateSecret(agent)" title="Rotation du secret">
-            🔑
+          <button
+            class="touch-btn touch-btn-secondary"
+            style="padding: 0.3rem 0.7rem; min-height: 32px; font-size: 0.8rem;"
+            title="Rotation du secret"
+            @click="handleRotateSecret(agent)"
+          >
+            🔑 Secret
           </button>
-          <button class="btn btn-sm btn-danger" @click="handleDelete(agent)" title="Supprimer">
-            🗑
+          <button
+            class="touch-btn touch-btn-danger"
+            style="padding: 0.3rem 0.7rem; min-height: 32px; font-size: 0.8rem;"
+            title="Supprimer"
+            @click="handleDeleteClick(agent)"
+          >
+            Supprimer
           </button>
         </div>
       </div>
     </div>
 
     <!-- Create Agent Modal -->
-    <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
-      <div class="modal">
-        <div class="modal-header">
-          <h2>Nouvel Agent</h2>
-          <button class="close-btn" @click="showCreateModal = false">&times;</button>
+    <Modal
+      :is-open="showCreateModal"
+      title="Nouvel Agent"
+      max-width="520px"
+      @close="showCreateModal = false"
+    >
+      <div class="form-group">
+        <label class="form-label">Nom de l'agent *</label>
+        <input v-model="newAgent.name" class="form-input" type="text" placeholder="Ex: Kitchen Terminal" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nom de la machine</label>
+        <input v-model="newAgent.machine_name" class="form-input" type="text" placeholder="Ex: kitchen-pc-01" />
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label">Type de connecteur</label>
+          <select v-model="newAgent.connector_type" class="form-select">
+            <option value="database">Base de données</option>
+            <option value="api">API REST</option>
+          </select>
         </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>Nom de l'agent *</label>
-            <input v-model="newAgent.name" type="text" placeholder="Ex: Kitchen Terminal" />
-          </div>
-          <div class="form-group">
-            <label>Nom de la machine</label>
-            <input v-model="newAgent.machine_name" type="text" placeholder="Ex: kitchen-pc-01" />
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Type de connecteur</label>
-              <select v-model="newAgent.connector_type">
-                <option value="database">Base de données</option>
-                <option value="api">API REST</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Système d'exploitation</label>
-              <input v-model="newAgent.operating_system" type="text" placeholder="Ex: Windows 11" />
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Version</label>
-            <input v-model="newAgent.version" type="text" placeholder="Ex: 2.5.0" />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showCreateModal = false">Annuler</button>
-          <button class="btn btn-primary" @click="handleCreate" :disabled="!newAgent.name">
-            Créer l'agent
-          </button>
+        <div class="form-group">
+          <label class="form-label">Système d'exploitation</label>
+          <input v-model="newAgent.operating_system" class="form-input" type="text" placeholder="Ex: Windows 11" />
         </div>
       </div>
-    </div>
+      <div class="form-group">
+        <label class="form-label">Version</label>
+        <input v-model="newAgent.version" class="form-input" type="text" placeholder="Ex: 2.5.0" />
+      </div>
+      <template #footer>
+        <button class="touch-btn touch-btn-secondary" @click="showCreateModal = false">Annuler</button>
+        <button class="touch-btn" :disabled="!newAgent.name" @click="handleCreate">Créer l'agent</button>
+      </template>
+    </Modal>
 
     <!-- Secret Display Modal -->
-    <div v-if="showSecretModal" class="modal-overlay" @click.self="showSecretModal = false">
-      <div class="modal">
-        <div class="modal-header">
-          <h2>🔑 Secret de l'Agent</h2>
-          <button class="close-btn" @click="showSecretModal = false">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="secret-warning">
-            <p>⚠️ <strong>Important :</strong> Ce secret ne sera affiché qu'une seule fois. Copiez-le et stockez-le en lieu sûr.</p>
-          </div>
-          <div class="secret-display">
-            <code>{{ createdSecret }}</code>
-          </div>
-          <div class="secret-info">
-            <p><strong>ID de l'agent :</strong> {{ createdAgentId }}</p>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-primary" @click="copySecret">Copier le secret</button>
-          <button class="btn btn-secondary" @click="showSecretModal = false">Fermer</button>
-        </div>
+    <Modal
+      :is-open="showSecretModal"
+      title="Secret de l'Agent"
+      max-width="480px"
+      @close="showSecretModal = false"
+    >
+      <div style="padding: 1rem; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: var(--radius-md); margin-bottom: 1rem;">
+        <p style="margin: 0; font-size: 0.85rem; color: var(--amber);">
+          <strong>Important :</strong> Ce secret ne sera affiché qu'une seule fois. Copiez-le et stockez-le en lieu sûr.
+        </p>
       </div>
-    </div>
+      <div style="background: #1e293b; border-radius: var(--radius-md); padding: 1rem; margin-bottom: 0.75rem;">
+        <code style="color: #10b981; font-family: monospace; font-size: 0.9rem; word-break: break-all;">{{ createdSecret }}</code>
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-secondary);">
+        <strong>ID de l'agent :</strong> {{ createdAgentId }}
+      </div>
+      <template #footer>
+        <button class="touch-btn" @click="copySecret">Copier le secret</button>
+        <button class="touch-btn touch-btn-secondary" @click="showSecretModal = false">Fermer</button>
+      </template>
+    </Modal>
 
     <!-- Details Modal -->
-    <div v-if="showDetailsModal" class="modal-overlay" @click.self="showDetailsModal = false">
-      <div class="modal modal-lg">
-        <div class="modal-header">
-          <h2>Détails de l'Agent : {{ selectedAgent?.name }}</h2>
-          <button class="close-btn" @click="showDetailsModal = false">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="details-tabs">
-            <button :class="{ active: detailsTab === 'info' }" @click="detailsTab = 'info'">Informations</button>
-            <button :class="{ active: detailsTab === 'heartbeats' }" @click="detailsTab = 'heartbeats'">Heartbeats</button>
-            <button :class="{ active: detailsTab === 'config' }" @click="detailsTab = 'config'">Configuration</button>
-          </div>
+    <Modal
+      :is-open="showDetailsModal"
+      :title="`Détails de l'Agent : ${selectedAgent?.name}`"
+      max-width="680px"
+      @close="showDetailsModal = false"
+    >
+      <div style="display: flex; gap: 0.25rem; border-bottom: 2px solid var(--border-color); margin-bottom: 1rem;">
+        <button
+          v-for="tab in ['info', 'heartbeats', 'config']"
+          :key="tab"
+          :style="{ padding: '0.5rem 1rem', background: 'none', border: 'none', borderBottom: `2px solid ${detailsTab === tab ? 'var(--indigo)' : 'transparent'}`, color: detailsTab === tab ? 'var(--indigo-light)' : 'var(--text-secondary)', cursor: 'pointer', fontWeight: detailsTab === tab ? 700 : 500, fontSize: '0.9rem', marginBottom: '-2px' }"
+          @click="detailsTab = tab"
+        >
+          {{ tab === 'info' ? 'Informations' : tab === 'heartbeats' ? 'Heartbeats' : 'Configuration' }}
+        </button>
+      </div>
 
-          <div v-if="detailsTab === 'info'" class="tab-content">
-            <div class="detail-grid">
-              <div class="detail-item">
-                <span class="label">ID:</span>
-                <span class="value">{{ selectedAgent?.id }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="label">UUID:</span>
-                <span class="value mono">{{ selectedAgent?.uuid }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="label">Nom:</span>
-                <span class="value">{{ selectedAgent?.name }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="label">Machine:</span>
-                <span class="value">{{ selectedAgent?.machine_name || 'N/A' }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="label">Connecteur:</span>
-                <span class="value">{{ selectedAgent?.connector_type }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="label">Version:</span>
-                <span class="value">{{ selectedAgent?.version || 'N/A' }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="label">Créé le:</span>
-                <span class="value">{{ formatDate(selectedAgent?.created_at) }}</span>
-              </div>
-            </div>
+      <div v-if="detailsTab === 'info'">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div style="padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: var(--radius-sm);">
+            <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">ID:</span>
+            <span style="font-size: 0.9rem; font-weight: 500; color: var(--text-primary);">{{ selectedAgent?.id }}</span>
           </div>
-
-          <div v-if="detailsTab === 'heartbeats'" class="tab-content">
-            <div v-if="agentStore.heartbeats.length === 0" class="empty-state-sm">
-              <p>Aucun heartbeat enregistré.</p>
-            </div>
-            <table v-else class="data-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Version</th>
-                  <th>Statut</th>
-                  <th>Santé</th>
-                  <th>Synchro</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="hb in agentStore.heartbeats" :key="hb.id">
-                  <td>{{ formatDate(hb.created_at) }}</td>
-                  <td>{{ hb.version || 'N/A' }}</td>
-                  <td><span class="badge" :class="hb.status">{{ hb.status }}</span></td>
-                  <td><span class="badge" :class="hb.health_status">{{ hb.health_status }}</span></td>
-                  <td>{{ hb.connector_status || 'N/A' }}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div style="padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: var(--radius-sm);">
+            <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">UUID:</span>
+            <span style="font-size: 0.8rem; font-weight: 500; font-family: monospace; color: var(--text-primary);">{{ selectedAgent?.uuid }}</span>
           </div>
-
-          <div v-if="detailsTab === 'config'" class="tab-content">
-            <div class="config-display">
-              <pre>{{ JSON.stringify(selectedAgent?.config || {}, null, 2) }}</pre>
-            </div>
+          <div style="padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: var(--radius-sm);">
+            <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">Nom:</span>
+            <span style="font-size: 0.9rem; font-weight: 500; color: var(--text-primary);">{{ selectedAgent?.name }}</span>
+          </div>
+          <div style="padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: var(--radius-sm);">
+            <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">Machine:</span>
+            <span style="font-size: 0.9rem; font-weight: 500; color: var(--text-primary);">{{ selectedAgent?.machine_name || 'N/A' }}</span>
+          </div>
+          <div style="padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: var(--radius-sm);">
+            <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">Connecteur:</span>
+            <span style="font-size: 0.9rem; font-weight: 500; color: var(--text-primary);">{{ selectedAgent?.connector_type }}</span>
+          </div>
+          <div style="padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: var(--radius-sm);">
+            <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">Version:</span>
+            <span style="font-size: 0.9rem; font-weight: 500; color: var(--text-primary);">{{ selectedAgent?.version || 'N/A' }}</span>
+          </div>
+          <div style="padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: var(--radius-sm);">
+            <span style="display: block; font-size: 0.75rem; color: var(--text-secondary);">Créé le:</span>
+            <span style="font-size: 0.9rem; font-weight: 500; color: var(--text-primary);">{{ formatDate(selectedAgent?.created_at) }}</span>
           </div>
         </div>
       </div>
-    </div>
-  </div>
+
+      <div v-if="detailsTab === 'heartbeats'">
+        <div v-if="agentStore.heartbeats.length === 0" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+          Aucun heartbeat enregistré.
+        </div>
+        <div v-else style="max-height: 350px; overflow-y: auto;">
+          <table class="mepos-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Version</th>
+                <th>Statut</th>
+                <th>Santé</th>
+                <th>Synchro</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="hb in agentStore.heartbeats" :key="hb.id">
+                <td>{{ formatDate(hb.created_at) }}</td>
+                <td>{{ hb.version || 'N/A' }}</td>
+                <td><span :class="['badge', hb.status === 'online' ? 'badge-success' : 'badge-warn']" style="font-size: 0.7rem;">{{ hb.status }}</span></td>
+                <td><span :class="['badge', hb.health_status === 'healthy' ? 'badge-success' : hb.health_status === 'degraded' ? 'badge-warn' : 'badge-danger']" style="font-size: 0.7rem;">{{ hb.health_status }}</span></td>
+                <td>{{ hb.connector_status || 'N/A' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div v-if="detailsTab === 'config'">
+        <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: var(--radius-md); font-size: 0.85rem; overflow-x: auto;">{{ JSON.stringify(selectedAgent?.config || {}, null, 2) }}</pre>
+      </div>
+    </Modal>
+
+    <!-- Delete Confirmation -->
+    <ConfirmDialog
+      :is-open="showDeleteConfirm"
+      title="Supprimer l'agent"
+      :message="deletingAgent ? `Êtes-vous sûr de vouloir supprimer l'agent « ${deletingAgent.name} » ? Cette action est irréversible.` : ''"
+      confirm-label="Supprimer"
+      variant="danger"
+      @confirm="handleDeleteConfirm"
+      @cancel="showDeleteConfirm = false"
+      @close="showDeleteConfirm = false"
+    />
+  </PageContainer>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useAgentStore } from '../stores/agent'
+import PageContainer from '../components/base/PageContainer.vue'
+import Modal from '../components/base/Modal.vue'
+import EmptyState from '../components/base/EmptyState.vue'
+import ConfirmDialog from '../components/base/ConfirmDialog.vue'
 
 const agentStore = useAgentStore()
 
 const showCreateModal = ref(false)
 const showSecretModal = ref(false)
 const showDetailsModal = ref(false)
+const showDeleteConfirm = ref(false)
 const createdSecret = ref('')
 const createdAgentId = ref(null)
 const selectedAgent = ref(null)
 const detailsTab = ref('info')
+const deletingAgent = ref(null)
 
 const newAgent = ref({
   name: '',
@@ -283,7 +343,7 @@ function healthLabel(health) {
 
 function formatDate(dateStr) {
   if (!dateStr) return 'N/A'
-  return new Date(dateStr).toLocaleString('fr-FR')
+  return new Date(dateStr).toLocaleString('fr-TN')
 }
 
 async function handleCreate() {
@@ -299,10 +359,15 @@ async function handleCreate() {
   }
 }
 
-async function handleDelete(agent) {
-  if (confirm(`Supprimer l'agent "${agent.name}" ? Cette action est irréversible.`)) {
-    await agentStore.deleteAgent(agent.id)
-  }
+function handleDeleteClick(agent) {
+  deletingAgent.value = agent
+  showDeleteConfirm.value = true
+}
+
+async function handleDeleteConfirm() {
+  await agentStore.deleteAgent(deletingAgent.value.id)
+  showDeleteConfirm.value = false
+  deletingAgent.value = null
 }
 
 async function handleEnable(agent) {
@@ -314,12 +379,10 @@ async function handleDisable(agent) {
 }
 
 async function handleRotateSecret(agent) {
-  if (confirm(`Rotir le secret de l'agent "${agent.name}" ? L'ancien secret sera immédiatement révoqué.`)) {
-    const newSecret = await agentStore.rotateSecret(agent.id)
-    createdSecret.value = newSecret
-    createdAgentId.value = agent.id
-    showSecretModal.value = true
-  }
+  const newSecret = await agentStore.rotateSecret(agent.id)
+  createdSecret.value = newSecret
+  createdAgentId.value = agent.id
+  showSecretModal.value = true
 }
 
 function viewDetails(agent) {
@@ -332,279 +395,5 @@ function viewDetails(agent) {
 
 function copySecret() {
   navigator.clipboard.writeText(createdSecret.value)
-  alert('Secret copié dans le presse-papier !')
 }
 </script>
-
-<style scoped>
-.agent-management {
-  padding: 24px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.page-header h1 {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1a1a2e;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.stat-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-}
-
-.stat-card.online { border-left: 4px solid #10b981; }
-.stat-card.offline { border-left: 4px solid #f59e0b; }
-.stat-card.total { border-left: 4px solid #6366f1; }
-
-.stat-value { font-size: 32px; font-weight: 700; color: #1a1a2e; }
-.stat-label { font-size: 14px; color: #64748b; margin-top: 4px; }
-
-.agent-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 16px;
-}
-
-.agent-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  transition: transform 0.2s;
-}
-.agent-card:hover { transform: translateY(-2px); }
-.agent-card.online { border-top: 3px solid #10b981; }
-.agent-card.offline { border-top: 3px solid #f59e0b; }
-.agent-card.disabled { border-top: 3px solid #94a3b8; opacity: 0.7; }
-
-.agent-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.agent-status {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #94a3b8;
-}
-.agent-status.online { background: #10b981; }
-.agent-status.offline { background: #f59e0b; }
-
-.agent-header h3 { margin: 0; font-size: 16px; flex: 1; }
-.agent-type { font-size: 12px; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; }
-
-.agent-details { margin-bottom: 12px; }
-.detail { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
-.detail .label { color: #64748b; }
-.detail .value { color: #1a1a2e; font-weight: 500; }
-
-.status-badge, .health-badge {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-}
-.status-badge.online { background: #d1fae5; color: #065f46; }
-.status-badge.offline { background: #fef3c7; color: #92400e; }
-.status-badge.disabled { background: #e2e8f0; color: #475569; }
-.health-badge.healthy { background: #d1fae5; color: #065f46; }
-.health-badge.degraded { background: #fef3c7; color: #92400e; }
-.health-badge.unhealthy { background: #fee2e2; color: #991b1b; }
-.health-badge.unknown { background: #e2e8f0; color: #475569; }
-
-.agent-actions {
-  display: flex;
-  gap: 6px;
-  padding-top: 12px;
-  border-top: 1px solid #f1f5f9;
-}
-
-/* Buttons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.btn-sm { padding: 4px 8px; font-size: 12px; }
-.btn-primary { background: #6366f1; color: white; }
-.btn-primary:hover { background: #4f46e5; }
-.btn-secondary { background: #e2e8f0; color: #475569; }
-.btn-success { background: #10b981; color: white; }
-.btn-warning { background: #f59e0b; color: white; }
-.btn-danger { background: #ef4444; color: white; }
-.btn-info { background: #3b82f6; color: white; }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* Modal */
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.modal {
-  background: white;
-  border-radius: 16px;
-  width: 90%;
-  max-width: 500px;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-.modal-lg { max-width: 700px; }
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #e2e8f0;
-}
-.modal-header h2 { margin: 0; font-size: 18px; }
-.close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b; }
-.modal-body { padding: 20px; }
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 16px 20px;
-  border-top: 1px solid #e2e8f0;
-}
-
-.form-group { margin-bottom: 16px; }
-.form-group label { display: block; margin-bottom: 4px; font-size: 14px; font-weight: 500; color: #374151; }
-.form-group input, .form-group select {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 14px;
-}
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-.secret-warning {
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 16px;
-}
-.secret-warning p { margin: 0; font-size: 13px; color: #92400e; }
-
-.secret-display {
-  background: #1e293b;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
-}
-.secret-display code {
-  color: #10b981;
-  font-family: monospace;
-  font-size: 14px;
-  word-break: break-all;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-.detail-item { padding: 8px; background: #f8fafc; border-radius: 6px; }
-.detail-item .label { display: block; font-size: 12px; color: #64748b; }
-.detail-item .value { font-size: 14px; font-weight: 500; color: #1a1a2e; }
-.detail-item .value.mono { font-family: monospace; font-size: 12px; }
-
-.details-tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 16px;
-  border-bottom: 2px solid #e2e8f0;
-}
-.details-tabs button {
-  padding: 8px 16px;
-  background: none;
-  border: none;
-  font-size: 14px;
-  cursor: pointer;
-  color: #64748b;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-}
-.details-tabs button.active {
-  color: #6366f1;
-  border-bottom-color: #6366f1;
-}
-
-.config-display pre {
-  background: #1e293b;
-  color: #e2e8f0;
-  padding: 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  overflow-x: auto;
-}
-
-.data-table { width: 100%; border-collapse: collapse; }
-.data-table th, .data-table td {
-  padding: 8px 12px;
-  text-align: left;
-  border-bottom: 1px solid #e2e8f0;
-  font-size: 13px;
-}
-.data-table th { font-weight: 600; color: #64748b; }
-.badge {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-}
-.badge.online { background: #d1fae5; color: #065f46; }
-.badge.healthy { background: #d1fae5; color: #065f46; }
-
-.loading-state, .empty-state, .empty-state-sm {
-  text-align: center;
-  padding: 48px 24px;
-  color: #64748b;
-}
-.empty-icon { font-size: 48px; margin-bottom: 12px; }
-.empty-state h3 { color: #1a1a2e; margin: 8px 0; }
-
-.spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid #e2e8f0;
-  border-top-color: #6366f1;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin: 0 auto 12px;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-</style>

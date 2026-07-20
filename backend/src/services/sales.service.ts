@@ -86,8 +86,8 @@ export async function syncTickets(
       }
 
       const ticketCheck = await client.query(
-        'SELECT id FROM sales_tickets WHERE department_id = $1 AND external_ticket_id = $2',
-        [deptId, external_ticket_id]
+        'SELECT id FROM sales_tickets WHERE department_id = $1 AND external_ticket_id = $2 AND tenant_id = $3',
+        [deptId, external_ticket_id, tid]
       );
       if (ticketCheck.rows.length > 0) continue;
 

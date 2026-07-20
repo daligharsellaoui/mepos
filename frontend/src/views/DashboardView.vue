@@ -1,18 +1,24 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useAppStore } from '../stores/app'
 import { api } from '../api'
 import { Chart, registerables } from 'chart.js'
 import ForecastPanel from '../components/forecast/ForecastPanel.vue'
+import PageContainer from '../components/base/PageContainer.vue'
+import EmptyState from '../components/base/EmptyState.vue'
 
 Chart.register(...registerables)
 
+const router = useRouter()
 const auth = useAuthStore()
 const app = useAppStore()
 
 const isAdmin = computed(() => auth.isAdmin)
+const isManager = computed(() => auth.isManager)
 const isCook = computed(() => auth.isCook)
+const canViewFinance = computed(() => isAdmin.value || isManager.value)
 
 // Chart refs
 const salesHistoryChartRef = ref(null)
@@ -41,8 +47,11 @@ const endDate = ref(todayStr)
 const filterHours = ref(false)
 const startHour = ref('00:00')
 const endHour = ref('23:59')
+const showAdvancedFilters = ref(false)
 
-// Find kitchen department
+// Cook search
+const cookMenuSearch = ref('')
+
 function findKitchenDept() {
   return app.departments.find(d =>
     d.name.toLowerCase().includes('cuisine') ||
@@ -53,7 +62,6 @@ function findKitchenDept() {
 const kitchenDept = computed(() => findKitchenDept())
 const kitchenId = computed(() => kitchenDept.value ? kitchenDept.value.id : 2)
 
-// Cook-specific computed
 const cookDeptStocks = computed(() => app.stocks.filter(s => s.department_id === kitchenId.value))
 const criticalCookStocks = computed(() =>
   cookDeptStocks.value.filter(s => parseFloat(s.quantity) <= parseFloat(s.alert_threshold))
@@ -65,15 +73,32 @@ const todayLosses = computed(() =>
 
 const selectedRecipe = ref(null)
 
+const filteredCookMenu = computed(() => {
+  if (!cookMenuSearch.value) return app.recipes
+  const q = cookMenuSearch.value.toLowerCase()
+  return app.recipes.filter(r => r.name.toLowerCase().includes(q))
+})
+
 function getLossReasonLabel(reason) {
   const labels = {
-    spoilage: '🗑️ Périmé / Avarié',
-    theft: '🔒 Vol',
-    preparation_error: '⚠️ Erreur prépa',
-    overproduction: '📦 Surproduction',
-    other: '📋 Autre'
+    spoilage: 'Périmé / Avarié',
+    theft: 'Vol',
+    preparation_error: 'Erreur prépa',
+    overproduction: 'Surproduction',
+    other: 'Autre'
   }
   return labels[reason] || reason
+}
+
+function getLossReasonBadge(reason) {
+  const classes = {
+    spoilage: 'badge-danger',
+    theft: 'badge-warn',
+    preparation_error: 'badge-info',
+    overproduction: 'badge-success',
+    other: 'badge'
+  }
+  return classes[reason] || 'badge'
 }
 
 function getStockPercent(s) {
@@ -90,7 +115,6 @@ function getBarColor(s) {
   return '#10b981'
 }
 
-// ── Admin: Fetch sales data via centralized API ──
 async function fetchSalesStats() {
   if (isCook.value) return
   isLoadingStats.value = true
@@ -136,7 +160,6 @@ function handlePeriodChange(newPeriod) {
   }
 }
 
-// ── Financial calculations (admin) ──
 const totalPurchaseValue = computed(() =>
   app.stocks.reduce((acc, s) => acc + (parseFloat(s.quantity) * parseFloat(s.purchase_price_per_unit)), 0)
 )
@@ -147,11 +170,12 @@ const totalOpportunityLoss = computed(() =>
   app.losses.reduce((acc, l) => acc + parseFloat(l.opportunity_loss), 0)
 )
 
-// ── Chart rendering ──
+// Skeleton helpers
+const skeletonItems = [1, 2, 3, 4, 5]
+
 function renderCharts() {
   if (!isAdmin.value) return
 
-  // 1. Sales History Line Chart
   if (salesHistoryChartRef.value && salesHistory.value.length > 0) {
     if (salesHistoryInstance) {
       salesHistoryInstance.data.labels = salesHistory.value.map(h => {
@@ -195,7 +219,6 @@ function renderCharts() {
     }
   }
 
-  // 2. Sales Distribution Doughnut
   if (salesDistributionChartRef.value && salesStats.value.items.length > 0) {
     const chartColors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6', '#f43f5e', '#14b8a6', '#f97316', '#a855f7', '#06b6d4', '#84cc16']
     if (salesDistributionInstance) {
@@ -216,7 +239,6 @@ function renderCharts() {
     }
   }
 
-  // 3. Loss Ingredients Bar Chart
   if (lossIngredientsChartRef.value && app.losses.length > 0) {
     const ingLoss = {}
     app.losses.forEach(l => {
@@ -240,7 +262,6 @@ function renderCharts() {
     }
   }
 
-  // 4. Loss Reasons Pie
   if (lossReasonsChartRef.value && app.losses.length > 0) {
     const reasonLoss = {}
     app.losses.forEach(l => {
@@ -290,21 +311,16 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
 </script>
 
 <template>
-  <!-- Cook Dashboard -->
+  <!-- ═══════════════════ COOK DASHBOARD ═══════════════════ -->
   <div
     v-if="isCook"
     style="display: flex; flex-direction: column; gap: 1.5rem;"
   >
-    <div class="view-title-section">
-      <div>
-        <h1 class="view-title">
-          👨‍🍳 Poste de Travail — {{ kitchenDept?.name || 'Cuisine' }}
-        </h1>
-        <p style="color: var(--text-secondary); margin-top: 0.25rem;">
-          Bonjour <strong>{{ auth.user?.first_name }}</strong> — Vue en temps réel de ton poste
-        </p>
-      </div>
-      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+    <PageContainer
+      :title="`Poste de Travail — ${kitchenDept?.name || 'Cuisine'}`"
+      :subtitle="`Bonjour ${auth.user?.first_name} — Vue en temps réel de ton poste`"
+    >
+      <template #actions>
         <span
           v-if="criticalCookStocks.length > 0"
           class="badge badge-danger"
@@ -319,10 +335,16 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
         >
           ⚠️ {{ todayLosses.length }} perte(s) aujourd'hui
         </span>
-      </div>
-    </div>
+        <button
+          class="touch-btn touch-btn-secondary"
+          style="padding: 0.4rem 1rem; min-height: 36px; font-size: 0.85rem;"
+          @click="router.push('/losses')"
+        >
+          + Déclarer perte
+        </button>
+      </template>
+    </PageContainer>
 
-    <!-- Critical alerts -->
     <div
       v-if="criticalCookStocks.length > 0"
       style="padding: 1rem 1.25rem; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; display: flex; flex-direction: column; gap: 0.5rem;"
@@ -341,22 +363,21 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
       </div>
     </div>
 
-    <!-- Grid: Stocks + Menu -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem;">
-      <!-- Kitchen Stocks -->
       <div
         class="glass-panel"
         style="padding: 1.5rem;"
       >
         <h2 style="font-size: 1.1rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
-          📦 Stocks de la Cuisine
+          Stock de la Cuisine
           <span style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-left: auto;">{{ cookDeptStocks.length }} réf(s)</span>
         </h2>
         <div
           v-if="cookDeptStocks.length === 0"
-          style="color: var(--text-secondary);"
+          class="empty-state"
+          style="padding: 2rem 0; text-align: center; color: var(--text-secondary);"
         >
-          Aucun stock disponible.
+          Aucun stock disponible dans ce dépôt.
         </div>
         <div
           v-else
@@ -381,27 +402,33 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
         </div>
       </div>
 
-      <!-- Menu -->
       <div
         class="glass-panel"
         style="padding: 1.5rem;"
       >
         <h2 style="font-size: 1.1rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
-          🍽️ Menu mePOS
+          Menu mePOS
           <span style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-left: auto;">{{ app.recipes.length }} produit(s)</span>
         </h2>
-        <div
-          v-if="app.recipes.length === 0"
-          style="color: var(--text-secondary);"
+        <input
+          v-model="cookMenuSearch"
+          class="form-input"
+          placeholder="Rechercher un produit..."
+          style="width: 100%; margin-bottom: 1rem;"
         >
-          Aucune recette configurée.
+        <div
+          v-if="filteredCookMenu.length === 0"
+          class="empty-state"
+          style="padding: 2rem 0; text-align: center; color: var(--text-secondary);"
+        >
+          {{ cookMenuSearch ? 'Aucun produit trouvé.' : 'Aucune recette configurée.' }}
         </div>
         <div
           v-else
           style="display: flex; flex-direction: column; gap: 0.6rem;"
         >
           <div
-            v-for="rec in app.recipes"
+            v-for="rec in filteredCookMenu"
             :key="rec.id"
           >
             <div
@@ -435,23 +462,20 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
       </div>
     </div>
 
-    <!-- Today's losses -->
     <div
       class="glass-panel"
       style="padding: 1.5rem;"
     >
       <h2 style="font-size: 1.1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-        📋 Pertes Enregistrées — Aujourd'hui
-        <span
-          v-if="todayLosses.length === 0"
-          style="font-size: 0.8rem; font-weight: 400; color: var(--emerald); margin-left: auto;"
-        >✅ Aucune perte ce jour</span>
+        Pertes Enregistrées — Aujourd'hui
       </h2>
       <div
         v-if="todayLosses.length === 0"
-        style="color: var(--text-secondary); font-size: 0.9rem;"
+        class="empty-state"
+        style="padding: 2rem; text-align: center;"
       >
-        Aucune perte déclarée ou détectée aujourd'hui.
+        <p style="color: var(--emerald); font-weight: 600; font-size: 1rem;">✅ Aucune perte déclarée aujourd'hui</p>
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.5rem;">Les pertes détectées apparaîtront ici automatiquement.</p>
       </div>
       <div
         v-else
@@ -465,7 +489,8 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
           <div>
             <strong style="font-size: 0.95rem;">{{ l.ingredient_name }}</strong>
             <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.1rem;">
-              {{ getLossReasonLabel(l.loss_reason) }} · {{ l.department_name }}
+              <span :class="['badge', getLossReasonBadge(l.loss_reason)]" style="margin-right: 0.4rem;">{{ getLossReasonLabel(l.loss_reason) }}</span>
+              {{ l.department_name }}
             </div>
           </div>
           <span style="font-weight: 700; color: var(--amber); font-size: 0.95rem;">-{{ parseFloat(l.quantity).toFixed(2) }} {{ l.unit }}</span>
@@ -474,21 +499,39 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
     </div>
   </div>
 
-  <!-- Admin/Manager Dashboard -->
+  <!-- ═══════════════════ ADMIN / MANAGER DASHBOARD ═══════════════════ -->
   <div
     v-else
     style="display: flex; flex-direction: column; gap: 1.5rem;"
   >
-    <div class="view-title-section">
-      <div>
-        <h1 class="view-title">
-          Tableau de bord
-        </h1>
-        <p style="color: var(--text-secondary); margin-top: 0.25rem;">
-          Bienvenue, {{ auth.user?.first_name }} {{ auth.user?.last_name }} ({{ auth.user?.role?.toUpperCase() }})
-        </p>
-      </div>
-    </div>
+    <PageContainer
+      title="Tableau de bord"
+      :subtitle="`Bienvenue, ${auth.user?.first_name} ${auth.user?.last_name} (${auth.user?.role === 'admin' ? 'Administrateur' : 'Gérant'})`"
+    >
+      <template #actions>
+        <button
+          class="touch-btn touch-btn-secondary"
+          style="padding: 0.4rem 1rem; min-height: 36px; font-size: 0.85rem;"
+          @click="router.push('/losses')"
+        >
+          + Déclarer perte
+        </button>
+        <button
+          class="touch-btn touch-btn-secondary"
+          style="padding: 0.4rem 1rem; min-height: 36px; font-size: 0.85rem;"
+          @click="router.push('/transfers')"
+        >
+          Transfert
+        </button>
+        <button
+          class="touch-btn touch-btn-secondary"
+          style="padding: 0.4rem 1rem; min-height: 36px; font-size: 0.85rem;"
+          @click="app.fetchData(auth.user)"
+        >
+          Actualiser
+        </button>
+      </template>
+    </PageContainer>
 
     <ForecastPanel
       v-if="isAdmin"
@@ -501,7 +544,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
       style="border: none; border-top: 1px solid var(--border-color); margin: 0.5rem 0;"
     >
 
-    <!-- Metrics -->
+    <!-- Metrics with skeleton loading -->
     <div class="metrics-grid">
       <div class="glass-panel metric-card">
         <span class="metric-title">Alertes Stock Bas</span>
@@ -509,46 +552,56 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
           class="metric-value"
           :style="{ color: app.lowStockAlerts.length > 0 ? '#ef4444' : 'var(--indigo)' }"
         >
-          {{ app.lowStockAlerts.length }} <span class="metric-unit">ingrédient(s)</span>
+          <span v-if="app.stocks.length === 0 && !app.isOffline">
+            <span class="skeleton" style="width: 60px; height: 2rem; border-radius: 4px; display: inline-block;" />
+          </span>
+          <span v-else>
+            {{ app.lowStockAlerts.length }} <span class="metric-unit">ingrédient(s)</span>
+          </span>
         </span>
         <span class="metric-desc">Sous le seuil d'alerte critique</span>
       </div>
       <div class="glass-panel metric-card">
         <span class="metric-title">Fiches Recettes</span>
-        <span class="metric-value">{{ app.recipes.length }} <span class="metric-unit">recettes</span></span>
+        <span class="metric-value">
+          <span v-if="app.recipes.length === 0 && !app.isOffline">
+            <span class="skeleton" style="width: 60px; height: 2rem; border-radius: 4px; display: inline-block;" />
+          </span>
+          <span v-else>
+            {{ app.recipes.length }} <span class="metric-unit">recettes</span>
+          </span>
+        </span>
         <span class="metric-desc">Actives au menu de mePOS</span>
       </div>
       <div class="glass-panel metric-card">
-        <span class="metric-title">{{ isAdmin ? 'Valeur Stock Central' : 'Matières Stockées' }}</span>
-        <span
-          v-if="isAdmin"
-          class="metric-value"
-          style="color: var(--blue);"
-        >
-          {{ totalPurchaseValue.toLocaleString('fr-TN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} <span class="metric-unit"> TND</span>
+        <span class="metric-title">{{ canViewFinance ? 'Valeur Stock Central' : 'Matières Stockées' }}</span>
+        <span class="metric-value" :style="{ color: canViewFinance ? 'var(--blue)' : undefined }">
+          <span v-if="app.stocks.length === 0 && !app.isOffline">
+            <span class="skeleton" style="width: 80px; height: 2rem; border-radius: 4px; display: inline-block;" />
+          </span>
+          <span v-else-if="canViewFinance">
+            {{ totalPurchaseValue.toLocaleString('fr-TN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} <span class="metric-unit"> TND</span>
+          </span>
+          <span v-else>{{ app.stocks.length }} <span class="metric-unit">références</span></span>
         </span>
-        <span
-          v-else
-          class="metric-value"
-        >{{ app.stocks.length }} <span class="metric-unit">références</span></span>
-        <span class="metric-desc">{{ isAdmin ? "Coût d'achat total des matières premières" : "Total d'ingrédients suivis en cuisine" }}</span>
+        <span class="metric-desc">{{ canViewFinance ? "Coût d'achat total des matières premières" : "Total d'ingrédients suivis en cuisine" }}</span>
       </div>
       <div class="glass-panel metric-card">
-        <span class="metric-title">{{ isAdmin ? 'Perte Sèche & Manque à Gagner' : 'Déclarations de Pertes' }}</span>
+        <span class="metric-title">{{ canViewFinance ? 'Perte Sèche & Manque à Gagner' : 'Déclarations de Pertes' }}</span>
         <span
-          v-if="isAdmin"
           class="metric-value"
-          style="color: #ef4444;"
+          :style="{ color: canViewFinance ? '#ef4444' : 'var(--amber)' }"
         >
-          {{ totalLossCost.toFixed(2) }} <span class="metric-unit"> TND</span>
+          <span v-if="app.losses.length === 0 && !app.isOffline">
+            <span class="skeleton" style="width: 80px; height: 2rem; border-radius: 4px; display: inline-block;" />
+          </span>
+          <span v-else-if="canViewFinance">
+            {{ totalLossCost.toFixed(2) }} <span class="metric-unit"> TND</span>
+          </span>
+          <span v-else>{{ app.losses.length }} <span class="metric-unit">incidents</span></span>
         </span>
         <span
-          v-else
-          class="metric-value"
-          style="color: var(--amber);"
-        >{{ app.losses.length }} <span class="metric-unit">incidents</span></span>
-        <span
-          v-if="isAdmin"
+          v-if="canViewFinance"
           class="metric-desc"
           style="color: #fca5a5;"
         >Opportunités perdues : <strong>{{ totalOpportunityLoss.toFixed(2) }} TND</strong></span>
@@ -569,9 +622,21 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
         style="padding: 1.5rem; height: 340px; display: flex; flex-direction: column;"
       >
         <h3 style="font-size: 1.05rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; font-weight: 700;">
-          📈 Évolution du CA (7 derniers jours)
+          Évolution du CA (7 derniers jours)
         </h3>
-        <div style="height: 230px; position: relative; width: 100%; min-height: 0;">
+        <div
+          v-if="salesHistory.length === 0 && !app.isOffline"
+          class="empty-state"
+          style="height: 230px; display: flex; align-items: center; justify-content: center;"
+        >
+          <p style="color: var(--text-secondary); text-align: center; font-size: 0.85rem;">
+            Aucune donnée de vente disponible pour la période.
+          </p>
+        </div>
+        <div
+          v-else
+          style="height: 230px; position: relative; width: 100%; min-height: 0;"
+        >
           <canvas ref="salesHistoryChartRef" />
         </div>
       </div>
@@ -580,9 +645,21 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
         style="padding: 1.5rem; height: 340px; display: flex; flex-direction: column;"
       >
         <h3 style="font-size: 1.05rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; font-weight: 700;">
-          🍕 Répartition des Ventes
+          Répartition des Ventes
         </h3>
-        <div style="height: 230px; position: relative; width: 100%; min-height: 0;">
+        <div
+          v-if="salesStats.items?.length === 0 && !isLoadingStats"
+          class="empty-state"
+          style="height: 230px; display: flex; align-items: center; justify-content: center;"
+        >
+          <p style="color: var(--text-secondary); text-align: center; font-size: 0.85rem;">
+            Aucune vente enregistrée pour cette période.
+          </p>
+        </div>
+        <div
+          v-else
+          style="height: 230px; position: relative; width: 100%; min-height: 0;"
+        >
           <canvas ref="salesDistributionChartRef" />
         </div>
       </div>
@@ -591,9 +668,21 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
         style="padding: 1.5rem; height: 340px; display: flex; flex-direction: column;"
       >
         <h3 style="font-size: 1.05rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; font-weight: 700;">
-          🗑️ Coût Perdu par Ingrédient
+          Coût Perdu par Ingrédient
         </h3>
-        <div style="height: 230px; position: relative; width: 100%; min-height: 0;">
+        <div
+          v-if="app.losses.length === 0"
+          class="empty-state"
+          style="height: 230px; display: flex; align-items: center; justify-content: center;"
+        >
+          <p style="color: var(--text-secondary); text-align: center; font-size: 0.85rem;">
+            Aucune perte déclarée. Les données apparaîtront ici.
+          </p>
+        </div>
+        <div
+          v-else
+          style="height: 230px; position: relative; width: 100%; min-height: 0;"
+        >
           <canvas ref="lossIngredientsChartRef" />
         </div>
       </div>
@@ -602,9 +691,21 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
         style="padding: 1.5rem; height: 340px; display: flex; flex-direction: column;"
       >
         <h3 style="font-size: 1.05rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; font-weight: 700;">
-          🎯 Pertes par Motif
+          Pertes par Motif
         </h3>
-        <div style="height: 230px; position: relative; width: 100%; min-height: 0;">
+        <div
+          v-if="app.losses.length === 0"
+          class="empty-state"
+          style="height: 230px; display: flex; align-items: center; justify-content: center;"
+        >
+          <p style="color: var(--text-secondary); text-align: center; font-size: 0.85rem;">
+            Aucune perte déclarée. Les données apparaîtront ici.
+          </p>
+        </div>
+        <div
+          v-else
+          style="height: 230px; position: relative; width: 100%; min-height: 0;"
+        >
           <canvas ref="lossReasonsChartRef" />
         </div>
       </div>
@@ -616,15 +717,25 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
         class="glass-panel"
         style="padding: 1.5rem;"
       >
-        <h2 style="font-size: 1.2rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
-          Alertes de Stock Critique
-        </h2>
-        <p
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+          <h2 style="font-size: 1.2rem; margin: 0;">
+            Alertes de Stock Critique
+          </h2>
+          <button
+            class="touch-btn touch-btn-secondary"
+            style="padding: 0.3rem 0.8rem; min-height: 32px; font-size: 0.78rem;"
+            @click="router.push('/inventory')"
+          >
+            Voir l'inventaire
+          </button>
+        </div>
+        <div
           v-if="app.lowStockAlerts.length === 0"
-          style="color: var(--text-secondary);"
+          class="empty-state"
+          style="padding: 2rem 0; text-align: center; color: var(--text-secondary);"
         >
           Aucune alerte de stock à signaler.
-        </p>
+        </div>
         <div
           v-else
           style="display: flex; flex-direction: column; gap: 0.75rem;"
@@ -637,7 +748,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
             <div>
               <strong style="font-size: 0.95rem;">{{ alert.ingredient_name }}</strong>
               <div style="font-size: 0.8rem; color: var(--text-secondary);">
-                Département: {{ alert.department_name }}
+                {{ alert.department_name }}
               </div>
             </div>
             <span
@@ -651,15 +762,25 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
         class="glass-panel"
         style="padding: 1.5rem;"
       >
-        <h2 style="font-size: 1.2rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
-          Pertes Récentes
-        </h2>
-        <p
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+          <h2 style="font-size: 1.2rem; margin: 0;">
+            Pertes Récentes
+          </h2>
+          <button
+            class="touch-btn touch-btn-secondary"
+            style="padding: 0.3rem 0.8rem; min-height: 32px; font-size: 0.78rem;"
+            @click="router.push('/losses')"
+          >
+            Voir tout
+          </button>
+        </div>
+        <div
           v-if="app.losses.length === 0"
-          style="color: var(--text-secondary);"
+          class="empty-state"
+          style="padding: 2rem 0; text-align: center; color: var(--text-secondary);"
         >
           Aucune perte déclarée récemment.
-        </p>
+        </div>
         <div
           v-else
           style="display: flex; flex-direction: column; gap: 0.75rem;"
@@ -672,11 +793,12 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
             <div>
               <strong style="font-size: 0.95rem;">{{ loss.ingredient_name }}</strong>
               <div style="font-size: 0.8rem; color: var(--text-secondary);">
-                Qté: {{ parseFloat(loss.quantity).toFixed(2) }} {{ loss.unit }} | Motif: {{ loss.loss_reason }}
+                Quantité: {{ parseFloat(loss.quantity).toFixed(2) }} {{ loss.unit }} |
+                <span :class="['badge', getLossReasonBadge(loss.loss_reason)]" style="margin-left: 0.25rem;">{{ getLossReasonLabel(loss.loss_reason) }}</span>
               </div>
             </div>
             <div style="text-align: right; font-size: 0.9rem; color: #ef4444; font-weight: 600;">
-              {{ isAdmin ? `-${parseFloat(loss.cost_loss).toFixed(2)} TND` : '*** TND' }}
+              {{ canViewFinance ? `-${parseFloat(loss.cost_loss).toFixed(2)} TND` : '*** TND' }}
             </div>
           </div>
         </div>
@@ -691,10 +813,10 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.5rem;">
         <div>
           <h2 style="font-size: 1.4rem;">
-            📊 Statistiques des Produits Vendus
+            Statistiques des Ventes
           </h2>
           <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.25rem;">
-            Visualisez les performances de vente.
+            Visualisez les performances de vente par période.
           </p>
         </div>
         <div
@@ -707,13 +829,16 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
             :class="['dept-pill', { active: period === p }]"
             @click="handlePeriodChange(p)"
           >
-            {{ p === 'today' ? "Aujourd'hui" : p === 'yesterday' ? 'Hier' : p === 'week' ? '7 derniers jours' : 'Personnalisé' }}
+            {{ p === 'today' ? 'Aujourd\'hui' : p === 'yesterday' ? 'Hier' : p === 'week' ? '7 jours' : 'Personnalisé' }}
           </div>
         </div>
       </div>
 
-      <!-- Filters -->
-      <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; background: rgba(255,255,255,0.01); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
+      <!-- Filters (collapsible) -->
+      <div
+        v-if="period === 'custom' || filterHours"
+        style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; background: rgba(255,255,255,0.01); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);"
+      >
         <div
           v-if="period === 'custom'"
           style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;"
@@ -725,7 +850,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
             <span
               class="form-label"
               style="margin-bottom: 0;"
-            >Date Début :</span>
+            >Du :</span>
             <input
               v-model="startDate"
               type="date"
@@ -740,7 +865,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
             <span
               class="form-label"
               style="margin-bottom: 0;"
-            >Date Fin :</span>
+            >Au :</span>
             <input
               v-model="endDate"
               type="date"
@@ -749,11 +874,11 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
             >
           </div>
           <button
-            class="touch-btn touch-btn-secondary"
-            style="min-height: 38px;"
+            class="touch-btn"
+            style="min-height: 38px; padding: 0.4rem 1.2rem;"
             @click="fetchSalesStats"
           >
-            Filtrer
+            Appliquer
           </button>
         </div>
         <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
@@ -776,7 +901,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
               <span
                 class="form-label"
                 style="margin-bottom: 0;"
-              >Heure Début :</span>
+              >Début :</span>
               <input
                 v-model="startHour"
                 type="time"
@@ -791,7 +916,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
               <span
                 class="form-label"
                 style="margin-bottom: 0;"
-              >Heure Fin :</span>
+              >Fin :</span>
               <input
                 v-model="endHour"
                 type="time"
@@ -806,25 +931,43 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
       <!-- Stats KPIs -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
         <div style="padding: 1.25rem; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px;">
-          <span style="color: var(--text-secondary); font-size: 0.85rem;">Chiffre d'Affaires de la période</span>
+          <span style="color: var(--text-secondary); font-size: 0.85rem;">Chiffre d'Affaires</span>
           <span style="font-size: 1.8rem; font-weight: 800; color: var(--emerald); margin-top: 0.5rem; display: block;">
-            {{ isAdmin ? `${salesStats.total_revenue?.toLocaleString('fr-TN', { minimumFractionDigits: 2 })} TND` : '*** TND' }}
+            <span v-if="isLoadingStats">
+              <span class="skeleton" style="width: 120px; height: 2rem; border-radius: 4px; display: inline-block;" />
+            </span>
+            <span v-else-if="canViewFinance">
+              {{ salesStats.total_revenue?.toLocaleString('fr-TN', { minimumFractionDigits: 2 }) }} TND
+            </span>
+            <span v-else>*** TND</span>
           </span>
         </div>
         <div style="padding: 1.25rem; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px;">
-          <span style="color: var(--text-secondary); font-size: 0.85rem;">Total Produits Vendus</span>
+          <span style="color: var(--text-secondary); font-size: 0.85rem;">Produits Vendus</span>
           <span style="font-size: 1.8rem; font-weight: 800; color: var(--indigo-light); margin-top: 0.5rem; display: block;">
-            {{ salesStats.total_items_sold?.toLocaleString() }} <span style="font-size: 1rem; font-weight: 400; color: var(--text-secondary);"> unité(s)</span>
+            <span v-if="isLoadingStats">
+              <span class="skeleton" style="width: 80px; height: 2rem; border-radius: 4px; display: inline-block;" />
+            </span>
+            <span v-else>
+              {{ salesStats.total_items_sold?.toLocaleString() }} <span style="font-size: 1rem; font-weight: 400; color: var(--text-secondary);"> unité(s)</span>
+            </span>
           </span>
         </div>
       </div>
 
       <!-- Items sold -->
       <div
-        v-if="salesStats.items?.length === 0"
+        v-if="isLoadingStats"
+        style="padding: 2rem; text-align: center; color: var(--text-secondary);"
+      >
+        Chargement des données de vente...
+      </div>
+      <div
+        v-else-if="salesStats.items?.length === 0"
+        class="empty-state"
         style="padding: 3rem; text-align: center; color: var(--text-secondary); border: 1px dashed var(--border-color); border-radius: 12px;"
       >
-        Aucune vente enregistrée pour cette période.
+        Aucune vente enregistrée pour la période sélectionnée.
       </div>
       <div
         v-else
@@ -832,7 +975,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
       >
         <div>
           <h3 style="font-size: 1.1rem; margin-bottom: 1.25rem;">
-            🏆 Top Ventes (Volumes)
+            Top Ventes (par volume)
           </h3>
           <div style="display: flex; flex-direction: column; gap: 1.25rem;">
             <div
@@ -842,7 +985,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
             >
               <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
                 <span style="font-weight: 600;">{{ item.recipe_name }}</span>
-                <span style="color: var(--text-secondary);"><strong>{{ item.quantity }}</strong> sold</span>
+                <span style="color: var(--text-secondary);"><strong>{{ item.quantity }}</strong> vendus</span>
               </div>
               <div style="height: 8px; background: rgba(255,255,255,0.03); border-radius: 4px; overflow: hidden;">
                 <div :style="{ height: '100%', width: (salesStats.total_items_sold > 0 ? (item.quantity / salesStats.total_items_sold * 100) : 0) + '%', background: 'linear-gradient(90deg, var(--indigo) 0%, var(--indigo-light) 100%)', borderRadius: '4px', transition: 'width 0.4s ease-out' }" />
@@ -852,7 +995,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
         </div>
         <div>
           <h3 style="font-size: 1.1rem; margin-bottom: 1.25rem;">
-            📝 Rapport Détaillé
+            Rapport Détaillé
           </h3>
           <div
             class="table-wrapper"
@@ -860,7 +1003,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
           >
             <table class="mepos-table">
               <thead>
-                <tr><th>Produit</th><th>Qté</th><th>Prix Unitaire</th><th>CA</th></tr>
+                <tr><th>Produit</th><th>Quantité</th><th>Prix Unitaire</th><th>CA</th></tr>
               </thead>
               <tbody>
                 <tr
@@ -869,11 +1012,11 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
                 >
                   <td><strong>{{ item.recipe_name }}</strong></td>
                   <td style="font-weight: 600;">
-                    {{ item.quantity }} pcs
+                    {{ item.quantity }}
                   </td>
                   <td>{{ parseFloat(item.unit_price).toFixed(2) }} TND</td>
                   <td style="color: var(--emerald); font-weight: 600;">
-                    {{ isAdmin ? `${parseFloat(item.total_revenue).toFixed(2)} TND` : '*** TND' }}
+                    {{ canViewFinance ? `${parseFloat(item.total_revenue).toFixed(2)} TND` : '*** TND' }}
                   </td>
                 </tr>
               </tbody>

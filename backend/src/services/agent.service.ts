@@ -441,7 +441,7 @@ export async function processHeartbeat(
     );
 
     // Get current config (agent may need to refresh)
-    const agentResult = await client.query('SELECT config FROM agents WHERE id = $1', [agentId]);
+    const agentResult = await client.query('SELECT config FROM agents WHERE id = $1 AND tenant_id = $2', [agentId, tenantId]);
     const config = agentResult.rows.length > 0 ? getDecryptedConfig(agentResult.rows[0].config) : {};
 
     await client.query('COMMIT');

@@ -288,8 +288,8 @@ export async function deleteDepartment(
   }
 
   const stockCheck = await query(
-    'SELECT COUNT(*) FROM inventory_stocks WHERE department_id = $1 AND quantity > 0',
-    [deptId]
+    'SELECT COUNT(*) FROM inventory_stocks WHERE department_id = $1 AND quantity > 0 AND tenant_id = $2',
+    [deptId, tid]
   );
   const hasStock = parseInt(stockCheck.rows[0].count, 10) > 0;
 
@@ -316,8 +316,8 @@ export async function deleteDepartment(
       await client.query('BEGIN');
 
       const stocksToTransfer = await client.query(
-        'SELECT ingredient_id, quantity FROM inventory_stocks WHERE department_id = $1 AND quantity > 0 FOR UPDATE',
-        [deptId]
+        'SELECT ingredient_id, quantity FROM inventory_stocks WHERE department_id = $1 AND quantity > 0 AND tenant_id = $2 FOR UPDATE',
+        [deptId, tid]
       );
 
       for (const row of stocksToTransfer.rows) {
@@ -334,13 +334,13 @@ export async function deleteDepartment(
         await client.query(
           `UPDATE inventory_stocks
            SET quantity = quantity + $1, updated_at = CURRENT_TIMESTAMP
-           WHERE department_id = $2 AND ingredient_id = $3`,
-          [qty.toString(), transferToId, ingId]
+           WHERE department_id = $2 AND ingredient_id = $3 AND tenant_id = $4`,
+          [qty.toString(), transferToId, ingId, tid]
         );
 
         await client.query(
-          'UPDATE inventory_stocks SET quantity = 0.0000, updated_at = CURRENT_TIMESTAMP WHERE department_id = $1 AND ingredient_id = $2',
-          [deptId, ingId]
+          'UPDATE inventory_stocks SET quantity = 0.0000, updated_at = CURRENT_TIMESTAMP WHERE department_id = $1 AND ingredient_id = $2 AND tenant_id = $3',
+          [deptId, ingId, tid]
         );
 
         const ref = `deletion-transfer-from-${deptId}-to-${transferToId}`;
@@ -356,7 +356,7 @@ export async function deleteDepartment(
         );
       }
 
-      await client.query('DELETE FROM departments WHERE id = $1', [deptId]);
+      await client.query('DELETE FROM departments WHERE id = $1 AND tenant_id = $2', [deptId, tid]);
       await client.query('COMMIT');
 
       return { success: true, message: 'Stocks transférés et dépôt supprimé avec succès.' };
@@ -495,6 +495,88 @@ export async function updateIngredient(
   return result.rows[0];
 }
 
+export async function deleteIngredient(
+  id: number,
+  tenantId?: number | null
+): Promise<{ success: boolean; message: string; dependencies?: { recipes: string[]; stocks: number } }> {
+  const tid = tenantId ?? 1;
+
+  if (isDemoMode) {
+    const idx = demoDb.ingredients.findIndex((i: any) => i.id === id && i.tenant_id === tid);
+    if (idx === -1) throw new Error('Ingredient not found');
+
+    const relatedRecipes = demoDb.recipe_ingredients
+      .filter((ri: any) => ri.ingredient_id === id)
+      .map((ri: any) => {
+        const recipe = demoDb.recipes.find((r: any) => r.id === ri.recipe_id);
+        return recipe ? recipe.name : 'Unknown';
+      });
+
+    const relatedStocks = demoDb.inventory_stocks.filter(
+      (s: any) => s.ingredient_id === id && parseFloat(s.quantity) > 0
+    ).length;
+
+    if (relatedRecipes.length > 0) {
+      return {
+        success: false,
+        message: 'Cet ingrédient est utilisé dans des recettes.',
+        dependencies: { recipes: [...new Set(relatedRecipes)], stocks: relatedStocks },
+      };
+    }
+
+    if (relatedStocks > 0) {
+      return {
+        success: false,
+        message: 'Cet ingrédient a du stock restant dans les dépôts.',
+        dependencies: { recipes: [], stocks: relatedStocks },
+      };
+    }
+
+    demoDb.ingredients.splice(idx, 1);
+    demoDb.inventory_stocks = demoDb.inventory_stocks.filter((s: any) => s.ingredient_id !== id);
+    return { success: true, message: 'Ingrédient supprimé avec succès.' };
+  }
+
+  const recipeCheck = await query(
+    `SELECT r.name FROM recipes r
+     JOIN recipe_ingredients ri ON r.id = ri.recipe_id
+     WHERE ri.ingredient_id = $1 AND r.tenant_id = $2`,
+    [id, tid]
+  );
+
+  const stockCheck = await query(
+    'SELECT COUNT(*) FROM inventory_stocks WHERE ingredient_id = $1 AND tenant_id = $2 AND quantity > 0',
+    [id, tid]
+  );
+
+  const relatedRecipes = recipeCheck.rows.map((r: any) => r.name);
+  const relatedStocks = parseInt(stockCheck.rows[0]?.count || '0', 10);
+
+  if (relatedRecipes.length > 0) {
+    return {
+      success: false,
+      message: 'Cet ingrédient est utilisé dans des recettes.',
+      dependencies: { recipes: relatedRecipes, stocks: relatedStocks },
+    };
+  }
+
+  if (relatedStocks > 0) {
+    return {
+      success: false,
+      message: 'Cet ingrédient a du stock restant dans les dépôts.',
+      dependencies: { recipes: [], stocks: relatedStocks },
+    };
+  }
+
+  const result = await query(
+    'DELETE FROM ingredients WHERE id = $1 AND tenant_id = $2 RETURNING id',
+    [id, tid]
+  );
+
+  if (result.rows.length === 0) throw new Error('Ingredient not found');
+  return { success: true, message: 'Ingrédient supprimé avec succès.' };
+}
+
 // ──────────────────────────────────────────────
 // RECIPES
 // ──────────────────────────────────────────────
@@ -577,6 +659,36 @@ export async function createRecipe(data: { name: string; sale_price: number }, t
   return result.rows[0];
 }
 
+export async function updateRecipe(
+  id: number,
+  data: { name?: string; sale_price?: number },
+  tenantId?: number | null
+): Promise<any> {
+  const { name, sale_price } = data;
+  const tid = tenantId ?? 1;
+
+  if (isDemoMode) {
+    const idx = demoDb.recipes.findIndex((r: any) => r.id === id && r.tenant_id === tid);
+    if (idx === -1) throw new Error('Recipe not found');
+    demoDb.recipes[idx] = {
+      ...demoDb.recipes[idx],
+      name: name || demoDb.recipes[idx].name,
+      sale_price: sale_price !== undefined ? sale_price : demoDb.recipes[idx].sale_price,
+    };
+    return demoDb.recipes[idx];
+  }
+
+  const result = await query(
+    `UPDATE recipes
+     SET name = COALESCE($1, name), sale_price = COALESCE($2, sale_price), updated_at = CURRENT_TIMESTAMP
+     WHERE id = $3 AND tenant_id = $4 RETURNING *`,
+    [name, sale_price, id, tid]
+  );
+
+  if (result.rows.length === 0) throw new Error('Recipe not found');
+  return result.rows[0];
+}
+
 export async function saveRecipeIngredients(
   recipeId: number,
   ingredients: Array<{ ingredient_id: number; quantity_needed: number }>,
@@ -609,7 +721,7 @@ export async function saveRecipeIngredients(
     throw new Error('Recipe not found for this tenant');
   }
 
-  await query('DELETE FROM recipe_ingredients WHERE recipe_id = $1', [recipeId]);
+  await query('DELETE FROM recipe_ingredients WHERE recipe_id = $1 AND tenant_id = $2', [recipeId, tid]);
   for (const item of ingredients) {
     await query(
       `INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity_needed, tenant_id) VALUES ($1, $2, $3, $4)`,
@@ -794,8 +906,8 @@ export async function adjustStock(data: {
     }
 
     let stockRes = await client.query(
-      'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 FOR UPDATE',
-      [effectiveDeptId, ingId]
+      'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 AND tenant_id = $3 FOR UPDATE',
+      [effectiveDeptId, ingId, tid]
     );
 
     let currentQty = 0;
@@ -812,8 +924,8 @@ export async function adjustStock(data: {
     const delta = newQty - currentQty;
 
     await client.query(
-      'UPDATE inventory_stocks SET quantity = $1, updated_at = CURRENT_TIMESTAMP WHERE department_id = $2 AND ingredient_id = $3',
-      [newQty, effectiveDeptId, ingId]
+      'UPDATE inventory_stocks SET quantity = $1, updated_at = CURRENT_TIMESTAMP WHERE department_id = $2 AND ingredient_id = $3 AND tenant_id = $4',
+      [newQty, effectiveDeptId, ingId, tid]
     );
 
     const ref = reference_id || (type === 'purchase' ? 'Approvisionnement manuel' : 'Réajustement manuel');

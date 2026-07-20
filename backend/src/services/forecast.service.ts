@@ -139,7 +139,7 @@ async function computeIngredientForecasts(
     }
   } else {
     for (const recipe of recipes) {
-      const result = await query('SELECT ingredient_id, quantity_needed FROM recipe_ingredients WHERE recipe_id = $1', [recipe.recipe_id]);
+      const result = await query('SELECT ingredient_id, quantity_needed FROM recipe_ingredients WHERE recipe_id = $1 AND tenant_id = $2', [recipe.recipe_id, filter ?? 1]);
       for (const row of result.rows) {
         const dailyUsage = new Decimal(row.quantity_needed).times(recipe.avg_daily_quantity);
         usageMap.set(row.ingredient_id, (usageMap.get(row.ingredient_id) || new Decimal(0)).plus(dailyUsage));
@@ -161,8 +161,8 @@ async function computeIngredientForecasts(
         SELECT is_t.*, i.name as ingredient_name, i.unit, i.alert_threshold
         FROM inventory_stocks is_t
         JOIN ingredients i ON is_t.ingredient_id = i.id
-        WHERE is_t.department_id = $1 ORDER BY i.name
-      `, [dept.id]);
+        WHERE is_t.department_id = $1 AND is_t.tenant_id = $2 ORDER BY i.name
+      `, [dept.id, filter ?? 1]);
       deptStocks = result.rows;
     }
 

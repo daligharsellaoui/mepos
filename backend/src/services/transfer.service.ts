@@ -51,7 +51,7 @@ export async function executeTransfer(
     await logMovement(null, sourceDepartmentId, ingredientId, transferQty.times(-1), 'transfer_out', ref);
     await logMovement(null, destinationDepartmentId, ingredientId, transferQty, 'transfer_in', ref);
 
-    const newSrcQty = await getSrcDestQties(sourceDepartmentId, destinationDepartmentId, ingredientId);
+    const newSrcQty = await getSrcDestQties(sourceDepartmentId, destinationDepartmentId, ingredientId, tid);
     return {
       ingredient_id: ingredientId, quantity: transferQty.toNumber(),
       source_department_id: sourceDepartmentId, destination_department_id: destinationDepartmentId,
@@ -77,8 +77,8 @@ export async function executeTransfer(
     await ensureStockRow(client, destinationDepartmentId, ingredientId, tid);
 
     const srcStockRes = await client.query(
-      'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 FOR UPDATE',
-      [sourceDepartmentId, ingredientId]
+      'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 AND tenant_id = $3 FOR UPDATE',
+      [sourceDepartmentId, ingredientId, tid]
     );
     const srcQty = new Decimal(srcStockRes.rows[0]?.quantity || 0);
     if (srcQty.lessThan(transferQty)) {
@@ -92,8 +92,8 @@ export async function executeTransfer(
     await logMovement(client, sourceDepartmentId, ingredientId, transferQty.times(-1), 'transfer_out', ref, tid);
     await logMovement(client, destinationDepartmentId, ingredientId, transferQty, 'transfer_in', ref, tid);
 
-    const srcEndRes = await client.query('SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2', [sourceDepartmentId, ingredientId]);
-    const destEndRes = await client.query('SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2', [destinationDepartmentId, ingredientId]);
+    const srcEndRes = await client.query('SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 AND tenant_id = $3', [sourceDepartmentId, ingredientId, tid]);
+    const destEndRes = await client.query('SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 AND tenant_id = $3', [destinationDepartmentId, ingredientId, tid]);
 
     await client.query('COMMIT');
     return {
@@ -175,8 +175,8 @@ export async function approveTransferRequest(
     await ensureStockRow(client, request.destination_department_id, request.ingredient_id, tid);
 
     const srcStockRes = await client.query(
-      'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 FOR UPDATE',
-      [request.source_department_id, request.ingredient_id]
+      'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 AND tenant_id = $3 FOR UPDATE',
+      [request.source_department_id, request.ingredient_id, tid]
     );
     const currentSrcQty = new Decimal(srcStockRes.rows[0]?.quantity || 0);
     if (currentSrcQty.lessThan(srcQty)) {
@@ -291,7 +291,7 @@ export async function getTransferRequests(tenantId?: number | null): Promise<any
 // ======================================================
 
 async function getSrcDestQties(
-  srcDeptId: number, destDeptId: number, ingId: number
+  srcDeptId: number, destDeptId: number, ingId: number, tenantId?: number
 ): Promise<{ srcQty: number; destQty: number }> {
   if (isDemoMode) {
     const srcStock = demoDb.inventory_stocks.find((s: any) => s.department_id === srcDeptId && s.ingredient_id === ingId);
@@ -299,9 +299,10 @@ async function getSrcDestQties(
     return { srcQty: srcStock?.quantity || 0, destQty: destStock?.quantity || 0 };
   }
 
+  const tid = tenantId ?? 1;
   const [srcRes, destRes] = await Promise.all([
-    query('SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2', [srcDeptId, ingId]),
-    query('SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2', [destDeptId, ingId])
+    query('SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 AND tenant_id = $3', [srcDeptId, ingId, tid]),
+    query('SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 AND tenant_id = $3', [destDeptId, ingId, tid])
   ]);
 
   return {

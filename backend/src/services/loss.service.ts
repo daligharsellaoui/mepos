@@ -26,8 +26,8 @@ export async function createLoss(
   const { costLoss, opportunityLoss } = await calculateLossCosts(ingredientId, qtyDecimal, tid);
 
   if (isDemoMode) {
-    const department = demoDb.departments.find((d: any) => d.id === departmentId);
-    const stockDeptId = department ? await getEffectiveDepartmentId(departmentId) : departmentId;
+    const department = demoDb.departments.find((d: any) => d.id === departmentId && d.tenant_id === tid);
+    const stockDeptId = department ? await getEffectiveDepartmentId(departmentId, tid) : departmentId;
 
     await ensureStockRow(null, stockDeptId, ingredientId);
     await updateStockQuantity(null, stockDeptId, ingredientId, qtyDecimal.times(-1));
@@ -46,19 +46,19 @@ export async function createLoss(
   const { client, release } = await getClient();
   try {
     await client.query('BEGIN');
-    const stockDeptId = await getEffectiveDepartmentId(departmentId);
+    const stockDeptId = await getEffectiveDepartmentId(departmentId, tid);
     await ensureStockRow(client, stockDeptId, ingredientId, tid);
 
     const stockRes = await client.query(
-      'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 FOR UPDATE',
-      [stockDeptId, ingredientId]
+      'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 AND tenant_id = $3 FOR UPDATE',
+      [stockDeptId, ingredientId, tid]
     );
     const currentQty = new Decimal(stockRes.rows[0]?.quantity || 0);
     const newQty = Decimal.max(0, currentQty.minus(qtyDecimal));
 
     await client.query(
-      'UPDATE inventory_stocks SET quantity = $1, updated_at = CURRENT_TIMESTAMP WHERE department_id = $2 AND ingredient_id = $3',
-      [newQty.toString(), stockDeptId, ingredientId]
+      'UPDATE inventory_stocks SET quantity = $1, updated_at = CURRENT_TIMESTAMP WHERE department_id = $2 AND ingredient_id = $3 AND tenant_id = $4',
+      [newQty.toString(), stockDeptId, ingredientId, tid]
     );
     await logMovement(client, stockDeptId, ingredientId, qtyDecimal.times(-1), 'loss', 'loss_report', tid);
 
