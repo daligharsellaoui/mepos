@@ -8,7 +8,7 @@ const router = useRouter()
 
 const username = ref('')
 const password = ref('')
-const logoSrc = '/logo.png'
+const logoSrc = `${import.meta.env.BASE_URL}logo.png`
 
 async function handleLogin() {
   if (!username.value || !password.value) return

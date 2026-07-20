@@ -6,7 +6,7 @@ import MobileNav from '../components/layout/MobileNav.vue'
 
 const auth = useAuthStore()
 const app = useAppStore()
-const logoSrc = '/logo.png'
+const logoSrc = `${import.meta.env.BASE_URL}logo.png`
 
 const getRoleText = (role) => {
   switch (role) {

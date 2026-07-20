@@ -7,7 +7,7 @@ import { useAppStore } from '../../stores/app'
 const route = useRoute()
 const auth = useAuthStore()
 const app = useAppStore()
-const logoSrc = '/logo.png'
+const logoSrc = `${import.meta.env.BASE_URL}logo.png`
 
 const getRoleText = (role) => {
   switch (role) {
