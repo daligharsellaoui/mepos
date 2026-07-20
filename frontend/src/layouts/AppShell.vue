@@ -6,6 +6,7 @@ import MobileNav from '../components/layout/MobileNav.vue'
 
 const auth = useAuthStore()
 const app = useAppStore()
+const logoSrc = '/logo.png'
 
 const getRoleText = (role) => {
   switch (role) {
@@ -27,9 +28,7 @@ const getRoleText = (role) => {
         class="brand-section"
         style="display: flex; align-items: center; gap: 0.75rem;"
       >
-        <span class="brand-logo">
-          <span class="brand-logo-dot" /> mePOS
-        </span>
+        <img :src="logoSrc" alt="mePOS" style="height: 28px;">
         <div
           v-if="app.isOffline"
           style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.15rem 0.45rem; border-radius: 12px; font-size: 0.65rem; font-weight: 600; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: #ef4444;"

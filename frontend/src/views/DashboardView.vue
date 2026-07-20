@@ -365,7 +365,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
 
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem;">
       <div
-        class="glass-panel"
+        class="glass-panel glass-panel-scroll"
         style="padding: 1.5rem;"
       >
         <h2 style="font-size: 1.1rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -403,7 +403,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
       </div>
 
       <div
-        class="glass-panel"
+        class="glass-panel glass-panel-scroll"
         style="padding: 1.5rem;"
       >
         <h2 style="font-size: 1.1rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -462,12 +462,12 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
       </div>
     </div>
 
-    <div
-      class="glass-panel"
-      style="padding: 1.5rem;"
-    >
-      <h2 style="font-size: 1.1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-        Pertes Enregistrées — Aujourd'hui
+      <div
+        class="glass-panel glass-panel-scroll"
+        style="padding: 1.5rem;"
+      >
+        <h2 style="font-size: 1.1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+          Pertes Enregistrées — Aujourd'hui
       </h2>
       <div
         v-if="todayLosses.length === 0"
@@ -714,12 +714,12 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
     <!-- Critical Stocks + Recent Losses -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
       <div
-        class="glass-panel"
+        class="glass-panel glass-panel-scroll"
         style="padding: 1.5rem;"
       >
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;">
           <h2 style="font-size: 1.2rem; margin: 0;">
-            Alertes de Stock Critique
+            Alertes de Stock
           </h2>
           <button
             class="touch-btn touch-btn-secondary"
@@ -759,7 +759,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
         </div>
       </div>
       <div
-        class="glass-panel"
+        class="glass-panel glass-panel-scroll"
         style="padding: 1.5rem;"
       >
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;">

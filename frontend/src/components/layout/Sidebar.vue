@@ -7,6 +7,7 @@ import { useAppStore } from '../../stores/app'
 const route = useRoute()
 const auth = useAuthStore()
 const app = useAppStore()
+const logoSrc = '/logo.png'
 
 const getRoleText = (role) => {
   switch (role) {
@@ -47,9 +48,7 @@ const toggleOffline = () => {
         style="display: flex; flex-direction: column; gap: 0.4rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);"
       >
         <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-          <span class="brand-logo">
-            <span class="brand-logo-dot" /> mePOS STOCK
-          </span>
+          <img :src="logoSrc" alt="mePOS" style="height: 32px;">
           <span class="brand-badge">v2.0</span>
         </div>
         <div

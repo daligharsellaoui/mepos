@@ -91,13 +91,11 @@ const burgerHouse: TenantDef = {
     { id: 12, name: 'Ketchup', unit: 'L', purchase_price_per_unit: 5.50, alert_threshold: 3, purchase_unit: 'bidon', purchase_unit_price: 55.00, conversion_factor: 10 },
     { id: 13, name: 'Moutarde', unit: 'L', purchase_price_per_unit: 7.00, alert_threshold: 2, purchase_unit: 'bidon', purchase_unit_price: 35.00, conversion_factor: 5 },
     { id: 14, name: 'Farine de Blé', unit: 'kg', purchase_price_per_unit: 1.80, alert_threshold: 10, purchase_unit: 'sac', purchase_unit_price: 36.00, conversion_factor: 20 },
-    { id: 15, name: 'Lait', unit: 'L', purchase_price_per_unit: 2.50, alert_threshold: 5, purchase_unit: 'carton', purchase_unit_price: 30.00, conversion_factor: 12 },
     { id: 16, name: 'Œufs', unit: 'pcs', purchase_price_per_unit: 0.40, alert_threshold: 24, purchase_unit: 'plateau', purchase_unit_price: 12.00, conversion_factor: 30 },
     { id: 17, name: 'Boissons Gazeuses', unit: 'pcs', purchase_price_per_unit: 1.20, alert_threshold: 48, purchase_unit: 'plateau', purchase_unit_price: 28.80, conversion_factor: 24 },
     { id: 18, name: 'Eau Minérale', unit: 'pcs', purchase_price_per_unit: 0.60, alert_threshold: 36, purchase_unit: 'fardeau', purchase_unit_price: 7.20, conversion_factor: 12 },
     { id: 19, name: 'Sel', unit: 'kg', purchase_price_per_unit: 1.00, alert_threshold: 2, purchase_unit: 'sac', purchase_unit_price: 10.00, conversion_factor: 10 },
     { id: 20, name: 'Poivre Noir', unit: 'kg', purchase_price_per_unit: 25.00, alert_threshold: 1, purchase_unit: 'sac', purchase_unit_price: 25.00, conversion_factor: 1 },
-    { id: 21, name: 'Café', unit: 'kg', purchase_price_per_unit: 30.00, alert_threshold: 2, purchase_unit: 'sac', purchase_unit_price: 30.00, conversion_factor: 1 },
     { id: 22, name: 'Pommes de Terre', unit: 'kg', purchase_price_per_unit: 2.50, alert_threshold: 10, purchase_unit: 'sac', purchase_unit_price: 50.00, conversion_factor: 20 },
   ],
   recipes: [
@@ -109,7 +107,6 @@ const burgerHouse: TenantDef = {
     { id: 6, name: 'Chicken Nuggets (6pcs)', sale_price: 11.00, ingredient_ids: [2, 14, 16, 10, 19], quantities: [0.20, 0.05, 1, 0.03, 0.003] },
     { id: 7, name: 'Soda', sale_price: 3.00, ingredient_ids: [17], quantities: [1] },
     { id: 8, name: 'Eau Minérale', sale_price: 1.50, ingredient_ids: [18], quantities: [1] },
-    { id: 9, name: 'Café', sale_price: 3.50, ingredient_ids: [21, 15], quantities: [0.01, 0.15] },
   ],
   suppliers: [
     { name: 'Fresh Meat Tunisia', contact: 'Hédi Ben Amor', phone: '+216 98 111 222' },
@@ -168,8 +165,6 @@ const pizzaPalace: TenantDef = {
     { id: 36, name: 'Levure', unit: 'kg', purchase_price_per_unit: 8.00, alert_threshold: 1, purchase_unit: 'boîte', purchase_unit_price: 24.00, conversion_factor: 3 },
     { id: 37, name: 'Boissons Gazeuses', unit: 'pcs', purchase_price_per_unit: 1.20, alert_threshold: 48, purchase_unit: 'plateau', purchase_unit_price: 28.80, conversion_factor: 24 },
     { id: 38, name: 'Eau Minérale', unit: 'pcs', purchase_price_per_unit: 0.60, alert_threshold: 24, purchase_unit: 'fardeau', purchase_unit_price: 7.20, conversion_factor: 12 },
-    { id: 39, name: 'Café', unit: 'kg', purchase_price_per_unit: 30.00, alert_threshold: 2, purchase_unit: 'sac', purchase_unit_price: 30.00, conversion_factor: 1 },
-    { id: 40, name: 'Lait', unit: 'L', purchase_price_per_unit: 2.50, alert_threshold: 5, purchase_unit: 'carton', purchase_unit_price: 30.00, conversion_factor: 12 },
     { id: 41, name: 'Sel', unit: 'kg', purchase_price_per_unit: 1.00, alert_threshold: 2, purchase_unit: 'sac', purchase_unit_price: 10.00, conversion_factor: 10 },
     { id: 42, name: 'Origan', unit: 'kg', purchase_price_per_unit: 20.00, alert_threshold: 1, purchase_unit: 'sac', purchase_unit_price: 20.00, conversion_factor: 1 },
     { id: 43, name: 'Basilic', unit: 'kg', purchase_price_per_unit: 35.00, alert_threshold: 1, purchase_unit: 'sac', purchase_unit_price: 35.00, conversion_factor: 1 },
@@ -182,7 +177,6 @@ const pizzaPalace: TenantDef = {
     { id: 13, name: 'French Fries', sale_price: 5.00, ingredient_ids: [33, 34, 41], quantities: [0.25, 0.04, 0.005] },
     { id: 14, name: 'Soda', sale_price: 3.00, ingredient_ids: [37], quantities: [1] },
     { id: 15, name: 'Eau Minérale', sale_price: 1.50, ingredient_ids: [38], quantities: [1] },
-    { id: 16, name: 'Café', sale_price: 3.50, ingredient_ids: [39, 40], quantities: [0.01, 0.15] },
     { id: 17, name: 'Pain à l\'Ail', sale_price: 4.50, ingredient_ids: [35, 32, 44], quantities: [0.08, 0.02, 0.01] },
   ],
   suppliers: [

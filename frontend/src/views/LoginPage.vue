@@ -8,6 +8,7 @@ const router = useRouter()
 
 const username = ref('')
 const password = ref('')
+const logoSrc = '/logo.png'
 
 async function handleLogin() {
   if (!username.value || !password.value) return
@@ -23,7 +24,7 @@ async function handleLogin() {
     <div class="glass-panel login-card">
       <div class="login-header">
         <h1 class="login-title">
-          <span style="color: var(--indigo);">mePOS</span> STOCK
+          <img :src="logoSrc" alt="mePOS" style="height: 42px; display: block; margin: 0 auto;">
         </h1>
         <p class="login-subtitle">
           Connexion au système de gestion

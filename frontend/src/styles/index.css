@@ -53,6 +53,7 @@ body {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-flat);
 }
+.glass-panel-scroll { max-height: 380px; overflow-y: auto; }
 
 .app-container {
   display: grid;
