@@ -1,62 +1,54 @@
 import { Decimal } from 'decimal.js';
 import { query, isDemoMode, demoDb, getClient } from '../database';
 import {
-  getEffectiveDepartmentId,
-  ensureStockRow,
-  updateStockQuantity,
-  logMovement,
-  calculateLossCosts
+  getEffectiveDepartmentId, ensureStockRow, updateStockQuantity, logMovement, calculateLossCosts
 } from './stock.service';
 
 /**
+ * Resolve tenant ID for queries.
+ * null = platform admin (no filtering) | undefined = no context (default to 1) | number = specific tenant
+ */
+function resolveTenantFilter(tenantId?: number | null): number | undefined {
+  if (tenantId === null) return undefined;
+  return tenantId ?? 1;
+}
+
+/**
  * Create a new ingredient loss record with full double-loss calculation.
- * Returns the created loss data with calculated financials.
  */
 export async function createLoss(
-  departmentId: number,
-  ingredientId: number,
-  quantity: number,
-  lossReason: string,
-  reportedBy: number | null
+  departmentId: number, ingredientId: number, quantity: number,
+  lossReason: string, reportedBy: number | null,
+  tenantId?: number | null
 ): Promise<any> {
   const qtyDecimal = new Decimal(quantity);
   const { costLoss, opportunityLoss } = await calculateLossCosts(ingredientId, qtyDecimal);
+  const tid = tenantId ?? 1;
 
   if (isDemoMode) {
     const department = demoDb.departments.find((d: any) => d.id === departmentId);
     const stockDeptId = department ? await getEffectiveDepartmentId(departmentId) : departmentId;
 
-    // Deduct stock
     await ensureStockRow(null, stockDeptId, ingredientId);
     await updateStockQuantity(null, stockDeptId, ingredientId, qtyDecimal.times(-1));
     await logMovement(null, stockDeptId, ingredientId, qtyDecimal.times(-1), 'loss', 'loss_report');
 
-    // Create loss record
     const lossRecord = {
-      id: demoDb.ingredient_losses.length + 1,
-      department_id: departmentId,
-      ingredient_id: ingredientId,
-      quantity: qtyDecimal.toNumber(),
-      loss_reason: lossReason,
-      cost_loss: costLoss.toNumber(),
-      opportunity_loss: opportunityLoss.toNumber(),
-      reported_by: reportedBy,
-      created_at: new Date()
+      id: demoDb.ingredient_losses.length + 1, department_id: departmentId, ingredient_id: ingredientId,
+      quantity: qtyDecimal.toNumber(), loss_reason: lossReason,
+      cost_loss: costLoss.toNumber(), opportunity_loss: opportunityLoss.toNumber(),
+      reported_by: reportedBy, created_at: new Date(), tenant_id: tid,
     };
     demoDb.ingredient_losses.push(lossRecord);
     return lossRecord;
   }
 
-  // PostgreSQL mode with transaction
   const { client, release } = await getClient();
   try {
     await client.query('BEGIN');
-
     const stockDeptId = await getEffectiveDepartmentId(departmentId);
+    await ensureStockRow(client, stockDeptId, ingredientId, tid);
 
-    await ensureStockRow(client, stockDeptId, ingredientId);
-
-    // Lock and update stock
     const stockRes = await client.query(
       'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 FOR UPDATE',
       [stockDeptId, ingredientId]
@@ -68,15 +60,12 @@ export async function createLoss(
       'UPDATE inventory_stocks SET quantity = $1, updated_at = CURRENT_TIMESTAMP WHERE department_id = $2 AND ingredient_id = $3',
       [newQty.toString(), stockDeptId, ingredientId]
     );
-
-    await logMovement(client, stockDeptId, ingredientId, qtyDecimal.times(-1), 'loss', 'loss_report');
+    await logMovement(client, stockDeptId, ingredientId, qtyDecimal.times(-1), 'loss', 'loss_report', tid);
 
     const insertLoss = await client.query(
-      `INSERT INTO ingredient_losses (department_id, ingredient_id, quantity, loss_reason, cost_loss, opportunity_loss, reported_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
-      [departmentId, ingredientId, qtyDecimal.toString(), lossReason,
-       costLoss.toFixed(2), opportunityLoss.toFixed(2), reportedBy]
+      `INSERT INTO ingredient_losses (department_id, ingredient_id, quantity, loss_reason, cost_loss, opportunity_loss, reported_by, tenant_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [departmentId, ingredientId, qtyDecimal.toString(), lossReason, costLoss.toFixed(2), opportunityLoss.toFixed(2), reportedBy, tid]
     );
 
     await client.query('COMMIT');
@@ -92,7 +81,9 @@ export async function createLoss(
 /**
  * Get all ingredient losses with joined data.
  */
-export async function getLosses(): Promise<any[]> {
+export async function getLosses(tenantId?: number | null): Promise<any[]> {
+  const filter = resolveTenantFilter(tenantId);
+
   if (isDemoMode) {
     return demoDb.ingredient_losses.map((il: any) => {
       const ing = demoDb.ingredients.find((i: any) => i.id === il.ingredient_id);
@@ -100,12 +91,24 @@ export async function getLosses(): Promise<any[]> {
       const reporter = demoDb.users.find((u: any) => u.id === il.reported_by);
       return {
         ...il,
-        ingredient_name: ing ? ing.name : 'Unknown',
-        unit: ing ? ing.unit : '',
+        ingredient_name: ing ? ing.name : 'Unknown', unit: ing ? ing.unit : '',
         department_name: dept ? dept.name : 'Unknown',
         reported_by_username: reporter ? reporter.username : 'Unknown'
       };
-    });
+    }).filter((l: any) => !filter || l.tenant_id === filter);
+  }
+
+  if (filter) {
+    const result = await query(`
+      SELECT il.*, i.name as ingredient_name, i.unit, d.name as department_name, u.username as reported_by_username
+      FROM ingredient_losses il
+      JOIN ingredients i ON il.ingredient_id = i.id
+      JOIN departments d ON il.department_id = d.id
+      LEFT JOIN users u ON il.reported_by = u.id
+      WHERE il.tenant_id = $1
+      ORDER BY il.created_at DESC
+    `, [filter]);
+    return result.rows;
   }
 
   const result = await query(`

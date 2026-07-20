@@ -10,7 +10,7 @@ import { query, isDemoMode, demoDb, getClient } from '../database';
  * Resolve the effective department ID for stock operations.
  * If department has 'inherited' stock type, route to central department.
  */
-export async function getEffectiveDepartmentId(departmentId: number): Promise<number> {
+export async function getEffectiveDepartmentId(departmentId: number, tenantId?: number): Promise<number> {
   if (isDemoMode) {
     const department = demoDb.departments.find(d => d.id === departmentId);
     if (!department) return departmentId;
@@ -24,18 +24,29 @@ export async function getEffectiveDepartmentId(departmentId: number): Promise<nu
     return centralDept ? centralDept.id : 1;
   }
 
-  const deptResult = await query('SELECT stock_type FROM departments WHERE id = $1', [departmentId]);
+  const deptResult = tenantId
+    ? await query('SELECT stock_type FROM departments WHERE id = $1 AND tenant_id = $2', [departmentId, tenantId])
+    : await query('SELECT stock_type FROM departments WHERE id = $1', [departmentId]);
   if (deptResult.rows.length === 0) return departmentId;
   if (deptResult.rows[0].stock_type !== 'inherited') return departmentId;
 
-  const centralDeptRes = await query(
-    `SELECT id FROM departments
-     WHERE LOWER(name) LIKE '%central%' OR LOWER(name) LIKE '%principal%' OR LOWER(name) LIKE '%main%'
-     LIMIT 1`
-  );
+  const centralDeptRes = tenantId
+    ? await query(
+        `SELECT id FROM departments
+         WHERE (LOWER(name) LIKE '%central%' OR LOWER(name) LIKE '%principal%' OR LOWER(name) LIKE '%main%')
+         AND tenant_id = $1 LIMIT 1`,
+        [tenantId]
+      )
+    : await query(
+        `SELECT id FROM departments
+         WHERE LOWER(name) LIKE '%central%' OR LOWER(name) LIKE '%principal%' OR LOWER(name) LIKE '%main%'
+         LIMIT 1`
+      );
   if (centralDeptRes.rows.length > 0) return centralDeptRes.rows[0].id;
 
-  const firstDeptRes = await query('SELECT id FROM departments ORDER BY id LIMIT 1');
+  const firstDeptRes = tenantId
+    ? await query('SELECT id FROM departments WHERE tenant_id = $1 ORDER BY id LIMIT 1', [tenantId])
+    : await query('SELECT id FROM departments ORDER BY id LIMIT 1');
   return firstDeptRes.rows.length > 0 ? firstDeptRes.rows[0].id : 1;
 }
 
@@ -45,7 +56,8 @@ export async function getEffectiveDepartmentId(departmentId: number): Promise<nu
 export async function ensureStockRow(
   clientOrDb: any,
   departmentId: number,
-  ingredientId: number
+  ingredientId: number,
+  tenantId?: number
 ): Promise<void> {
   if (isDemoMode) {
     const exists = demoDb.inventory_stocks.find(
@@ -62,11 +74,12 @@ export async function ensureStockRow(
     return;
   }
 
+  const tid = tenantId || 1;
   await clientOrDb.query(
-    `INSERT INTO inventory_stocks (department_id, ingredient_id, quantity)
-     VALUES ($1, $2, 0.0000)
+    `INSERT INTO inventory_stocks (department_id, ingredient_id, quantity, tenant_id)
+     VALUES ($1, $2, 0.0000, $3)
      ON CONFLICT (department_id, ingredient_id) DO NOTHING`,
-    [departmentId, ingredientId]
+    [departmentId, ingredientId, tid]
   );
 }
 
@@ -102,7 +115,8 @@ export async function updateStockQuantity(
   clientOrDb: any,
   departmentId: number,
   ingredientId: number,
-  delta: Decimal
+  delta: Decimal,
+  tenantId?: number
 ): Promise<Decimal> {
   if (isDemoMode) {
     const stock = demoDb.inventory_stocks.find(
@@ -137,7 +151,8 @@ export async function logMovement(
   ingredientId: number,
   quantity: Decimal,
   type: string,
-  referenceId: string
+  referenceId: string,
+  tenantId?: number
 ): Promise<void> {
   const timestamp = isDemoMode ? new Date() : undefined;
 
@@ -154,10 +169,11 @@ export async function logMovement(
     return;
   }
 
+  const tid = tenantId || 1;
   await clientOrDb.query(
-    `INSERT INTO stock_movements (department_id, ingredient_id, quantity, type, reference_id)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [departmentId, ingredientId, quantity.toString(), type, referenceId]
+    `INSERT INTO stock_movements (department_id, ingredient_id, quantity, type, reference_id, tenant_id)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [departmentId, ingredientId, quantity.toString(), type, referenceId, tid]
   );
 }
 
@@ -168,7 +184,8 @@ export async function getStockWarning(
   departmentId: number,
   ingredientId: number,
   departmentName: string,
-  client?: any
+  client?: any,
+  tenantId?: number
 ): Promise<string | null> {
   let ingredientInfo: any = null;
   let newQty: Decimal;
@@ -214,10 +231,13 @@ export async function processSaleDeduction(
   stockDeptId: number,
   departmentName: string,
   items: any[],
-  ticketId: number | string
+  ticketId: number | string,
+  tenantId?: number
 ): Promise<{ deductedStocks: any[]; warnings: string[] }> {
+  if (!tenantId) tenantId = 1;
   const deductedStocks: any[] = [];
   const warnings: string[] = [];
+  const tid = tenantId;
 
   for (const item of items) {
     const { recipe_id, quantity: itemQty } = item;
@@ -272,21 +292,21 @@ export async function processSaleDeduction(
           });
         } else {
           await clientOrDb.query(
-            `INSERT INTO ingredient_losses (department_id, ingredient_id, quantity, loss_reason, cost_loss, opportunity_loss, reported_by)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            `INSERT INTO ingredient_losses (department_id, ingredient_id, quantity, loss_reason, cost_loss, opportunity_loss, reported_by, tenant_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
             [departmentId, ingredientId, excessQty.toString(), 'Écart de préparation (Caisse Tactile)',
-             costLoss.toFixed(2), opportunityLoss.toFixed(2), null]
+             costLoss.toFixed(2), opportunityLoss.toFixed(2), null, tid]
           );
         }
 
-        await ensureStockRow(clientOrDb, stockDeptId, ingredientId);
-        await logMovement(clientOrDb, stockDeptId, ingredientId, excessQty.times(-1), 'loss', `ticket-loss-${ticketId}`);
+        await ensureStockRow(clientOrDb, stockDeptId, ingredientId, tid);
+        await logMovement(clientOrDb, stockDeptId, ingredientId, excessQty.times(-1), 'loss', `ticket-loss-${ticketId}`, tid);
       }
 
       // Standard deduction
-      await ensureStockRow(clientOrDb, stockDeptId, ingredientId);
-      await updateStockQuantity(clientOrDb, stockDeptId, ingredientId, finalSaleDeduction.times(-1));
-      await logMovement(clientOrDb, stockDeptId, ingredientId, finalSaleDeduction.times(-1), 'sale_deduction', `ticket-${ticketId}`);
+      await ensureStockRow(clientOrDb, stockDeptId, ingredientId, tid);
+      await updateStockQuantity(clientOrDb, stockDeptId, ingredientId, finalSaleDeduction.times(-1), tid);
+      await logMovement(clientOrDb, stockDeptId, ingredientId, finalSaleDeduction.times(-1), 'sale_deduction', `ticket-${ticketId}`, tid);
 
       // Get ingredient info for response
       let ingredientInfo: any;

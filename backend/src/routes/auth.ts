@@ -9,6 +9,7 @@ import {
   updateUser,
   deleteUser,
 } from '../services/auth.service';
+import { tenantContextMiddleware } from '../middleware/tenantContext';
 
 const router = Router();
 
@@ -19,9 +20,9 @@ const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'mepos_jwt_dev_secret_change_in_production';
 const JWT_EXPIRES_IN = '24h';
 /** Sign a JWT token for a user */
-export function signToken(user: { id: number; username: string; role: string }): string {
+export function signToken(user: { id: number; username: string; role: string; tenantId?: number }): string {
   return jwt.sign(
-    { id: user.id, username: user.username, role: user.role },
+    { id: user.id, username: user.username, role: user.role, tenantId: user.tenantId },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN }
   );
@@ -130,11 +131,12 @@ router.post('/login', async (req: Request, res: Response) => {
 
 /**
  * GET /api/v1/auth/users
- * Retrieve list of all users (JWT required)
+ * Retrieve list of all users for the current tenant (JWT required)
  */
-router.get('/users', jwtAuthMiddleware, async (_req: Request, res: Response) => {
+router.get('/users', jwtAuthMiddleware, tenantContextMiddleware, async (req: Request, res: Response) => {
   try {
-    const users = await getAllUsers();
+    const tenantId = req.tenantId ?? 1;
+    const users = await getAllUsers(tenantId);
     res.json({ status: 'success', data: users });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: error.message });
@@ -143,9 +145,9 @@ router.get('/users', jwtAuthMiddleware, async (_req: Request, res: Response) => 
 
 /**
  * POST /api/v1/auth/users
- * Create a new user (JWT required, admin only via RBAC)
+ * Create a new user for the current tenant (JWT required, admin only via RBAC)
  */
-router.post('/users', jwtAuthMiddleware, async (req: Request, res: Response) => {
+router.post('/users', jwtAuthMiddleware, tenantContextMiddleware, async (req: Request, res: Response) => {
   const { username, password, role, first_name, last_name } = req.body;
 
   if (!username || !password || !role) {
@@ -153,7 +155,8 @@ router.post('/users', jwtAuthMiddleware, async (req: Request, res: Response) => 
   }
 
   try {
-    const user = await createUser({ username, password, role, first_name, last_name });
+    const tenantId = req.tenantId ?? 1;
+    const user = await createUser({ username, password, role, first_name, last_name, tenantId });
     res.json({ status: 'success', data: user });
   } catch (error: any) {
     const status = error.message.includes('existe déjà') || error.message.includes('Invalid role') ? 400 : 500;
@@ -165,7 +168,7 @@ router.post('/users', jwtAuthMiddleware, async (req: Request, res: Response) => 
  * PUT /api/v1/auth/users/:id
  * Update an existing user (JWT required)
  */
-router.put('/users/:id', jwtAuthMiddleware, async (req: Request, res: Response) => {
+router.put('/users/:id', jwtAuthMiddleware, tenantContextMiddleware, async (req: Request, res: Response) => {
   const userId = parseInt(req.params.id, 10);
   const { username, password, role, first_name, last_name } = req.body;
 
@@ -182,7 +185,7 @@ router.put('/users/:id', jwtAuthMiddleware, async (req: Request, res: Response) 
  * DELETE /api/v1/auth/users/:id
  * Delete a user (preventing primary admin deletion) — JWT required
  */
-router.delete('/users/:id', jwtAuthMiddleware, async (req: Request, res: Response) => {
+router.delete('/users/:id', jwtAuthMiddleware, tenantContextMiddleware, async (req: Request, res: Response) => {
   const userId = parseInt(req.params.id, 10);
 
   try {

@@ -7,13 +7,31 @@ import { getEffectiveDepartmentId } from './stock.service';
 // Departments, Ingredients, Recipes, and Stock management
 // ======================================================
 
+/**
+ * Resolve tenant ID for queries.
+ * null = platform admin (no filtering)
+ * undefined = no context (default to 1)
+ * number = specific tenant
+ */
+function resolveTenantFilter(tenantId?: number | null): number | undefined {
+  if (tenantId === null) return undefined; // platform admin: no filter
+  return tenantId ?? 1; // default to tenant 1
+}
+
 // ──────────────────────────────────────────────
 // DEPARTMENTS
 // ──────────────────────────────────────────────
 
-export async function getAllDepartments(): Promise<any[]> {
+export async function getAllDepartments(tenantId?: number | null): Promise<any[]> {
+  const filter = resolveTenantFilter(tenantId);
   if (isDemoMode) {
-    return demoDb.departments;
+    return filter
+      ? demoDb.departments.filter((d: any) => d.tenant_id === filter)
+      : demoDb.departments;
+  }
+  if (filter) {
+    const result = await query('SELECT * FROM departments WHERE tenant_id = $1 ORDER BY id', [filter]);
+    return result.rows;
   }
   const result = await query('SELECT * FROM departments ORDER BY id');
   return result.rows;
@@ -23,8 +41,9 @@ export async function createDepartment(data: {
   name: string;
   stock_type: string;
   description?: string;
-}): Promise<any> {
+}, tenantId?: number | null): Promise<any> {
   const { name, stock_type, description } = data;
+  const tid = tenantId ?? 1;
 
   if (stock_type !== 'isolated' && stock_type !== 'inherited') {
     throw new Error('Politique de stock invalide.');
@@ -32,7 +51,7 @@ export async function createDepartment(data: {
 
   if (isDemoMode) {
     const nameExists = demoDb.departments.some(
-      (d: any) => d.name.toLowerCase() === name.toLowerCase()
+      (d: any) => d.name.toLowerCase() === name.toLowerCase() && d.tenant_id === tid
     );
     if (nameExists) {
       throw new Error('Un dépôt avec ce nom existe déjà.');
@@ -43,10 +62,9 @@ export async function createDepartment(data: {
         ? Math.max(...demoDb.departments.map((d: any) => d.id)) + 1
         : 1;
 
-    const newDept = { id: newId, name, stock_type, description: description || '' };
+    const newDept = { id: newId, name, stock_type, description: description || '', tenant_id: tid };
     demoDb.departments.push(newDept);
 
-    // Auto-create stocks of 0 for all existing ingredients
     demoDb.ingredients.forEach((ing: any) => {
       const stockId =
         demoDb.inventory_stocks.length > 0
@@ -63,10 +81,9 @@ export async function createDepartment(data: {
     return newDept;
   }
 
-  // PostgreSQL mode
   const nameCheck = await query(
-    'SELECT id FROM departments WHERE LOWER(name) = LOWER($1)',
-    [name]
+    'SELECT id FROM departments WHERE tenant_id = $1 AND LOWER(name) = LOWER($2)',
+    [tid, name]
   );
   if (nameCheck.rows.length > 0) {
     throw new Error('Un dépôt avec ce nom existe déjà.');
@@ -77,18 +94,17 @@ export async function createDepartment(data: {
     await client.query('BEGIN');
 
     const result = await client.query(
-      `INSERT INTO departments (name, stock_type, description)
-       VALUES ($1, $2, $3) RETURNING *`,
-      [name, stock_type, description || null]
+      `INSERT INTO departments (name, stock_type, description, tenant_id)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [name, stock_type, description || null, tid]
     );
     const newDept = result.rows[0];
 
-    // Auto-create stocks for all existing ingredients
     await client.query(
-      `INSERT INTO inventory_stocks (department_id, ingredient_id, quantity)
-       SELECT $1, id, 0.0000 FROM ingredients
+      `INSERT INTO inventory_stocks (department_id, ingredient_id, quantity, tenant_id)
+       SELECT $1, id, 0.0000, $2 FROM ingredients WHERE tenant_id = $2
        ON CONFLICT (department_id, ingredient_id) DO NOTHING`,
-      [newDept.id]
+      [newDept.id, tid]
     );
 
     await client.query('COMMIT');
@@ -103,22 +119,24 @@ export async function createDepartment(data: {
 
 export async function updateDepartment(
   deptId: number,
-  data: { name: string; stock_type: string; description?: string }
+  data: { name: string; stock_type: string; description?: string },
+  tenantId?: number | null
 ): Promise<any> {
   const { name, stock_type, description } = data;
+  const tid = tenantId ?? 1;
 
   if (stock_type !== 'isolated' && stock_type !== 'inherited') {
     throw new Error('Politique de stock invalide.');
   }
 
   if (isDemoMode) {
-    const deptIndex = demoDb.departments.findIndex((d: any) => d.id === deptId);
+    const deptIndex = demoDb.departments.findIndex((d: any) => d.id === deptId && d.tenant_id === tid);
     if (deptIndex === -1) {
       throw new Error('Dépôt introuvable.');
     }
 
     const nameExists = demoDb.departments.some(
-      (d: any) => d.id !== deptId && d.name.toLowerCase() === name.toLowerCase()
+      (d: any) => d.id !== deptId && d.tenant_id === tid && d.name.toLowerCase() === name.toLowerCase()
     );
     if (nameExists) {
       throw new Error('Un dépôt avec ce nom existe déjà.');
@@ -134,10 +152,9 @@ export async function updateDepartment(
     return updatedDept;
   }
 
-  // PostgreSQL mode
   const nameCheck = await query(
-    'SELECT id FROM departments WHERE id != $1 AND LOWER(name) = LOWER($2)',
-    [deptId, name]
+    'SELECT id FROM departments WHERE tenant_id = $1 AND id != $2 AND LOWER(name) = LOWER($3)',
+    [tid, deptId, name]
   );
   if (nameCheck.rows.length > 0) {
     throw new Error('Un dépôt avec ce nom existe déjà.');
@@ -146,8 +163,8 @@ export async function updateDepartment(
   const result = await query(
     `UPDATE departments
      SET name = $1, stock_type = $2, description = $3
-     WHERE id = $4 RETURNING *`,
-    [name, stock_type, description || null, deptId]
+     WHERE id = $4 AND tenant_id = $5 RETURNING *`,
+    [name, stock_type, description || null, deptId, tid]
   );
 
   if (result.rows.length === 0) {
@@ -159,33 +176,33 @@ export async function updateDepartment(
 
 export async function deleteDepartment(
   deptId: number,
-  transferToId?: number | null
+  transferToId?: number | null,
+  tenantId?: number | null
 ): Promise<{ success: boolean; requiresTransfer?: boolean; message: string }> {
   if (isNaN(deptId)) {
     throw new Error('ID de dépôt invalide.');
   }
+  const tid = tenantId ?? 1;
 
-  // Check if central / principal
   if (isDemoMode) {
-    const deptIndex = demoDb.departments.findIndex((d: any) => d.id === deptId);
+    const deptIndex = demoDb.departments.findIndex((d: any) => d.id === deptId && d.tenant_id === tid);
     if (deptIndex === -1) {
       throw new Error('Dépôt introuvable.');
     }
     const dept = demoDb.departments[deptIndex];
-    const isCentral = deptId === 1 || /central|principal|main/i.test(dept.name);
+    const isCentral = /central|principal|main/i.test(dept.name);
     if (isCentral) {
       throw new Error('Le dépôt principal ne peut pas être supprimé.');
     }
 
-    const hasSales = demoDb.sales_tickets.some((t: any) => t.department_id === deptId);
-    const hasLosses = demoDb.ingredient_losses.some((l: any) => l.department_id === deptId);
+    const hasSales = demoDb.sales_tickets.some((t: any) => t.department_id === deptId && t.tenant_id === tid);
+    const hasLosses = demoDb.ingredient_losses.some((l: any) => l.department_id === deptId && l.tenant_id === tid);
     if (hasSales || hasLosses) {
       throw new Error(
         'Ce dépôt est lié à des transactions historiques (ventes ou pertes) et ne peut pas être supprimé.'
       );
     }
 
-    // Check non-zero stock
     const nonZeroStocks = demoDb.inventory_stocks.filter(
       (s: any) => s.department_id === deptId && parseFloat(s.quantity) > 0
     );
@@ -200,7 +217,7 @@ export async function deleteDepartment(
         };
       }
 
-      const targetDept = demoDb.departments.find((d: any) => d.id === transferToId);
+      const targetDept = demoDb.departments.find((d: any) => d.id === transferToId && d.tenant_id === tid);
       if (!targetDept) {
         throw new Error('Dépôt de destination introuvable.');
       }
@@ -208,7 +225,6 @@ export async function deleteDepartment(
         throw new Error('Le dépôt de destination doit être différent du dépôt à supprimer.');
       }
 
-      // Move stocks
       nonZeroStocks.forEach((s: any) => {
         let targetStock = demoDb.inventory_stocks.find(
           (ts: any) => ts.department_id === targetDept.id && ts.ingredient_id === s.ingredient_id
@@ -235,6 +251,7 @@ export async function deleteDepartment(
           type: 'transfer_out',
           reference_id: ref,
           created_at: new Date(),
+          tenant_id: tid,
         });
         demoDb.stock_movements.push({
           id: demoDb.stock_movements.length + 1,
@@ -244,6 +261,7 @@ export async function deleteDepartment(
           type: 'transfer_in',
           reference_id: ref,
           created_at: new Date(),
+          tenant_id: tid,
         });
       });
     }
@@ -260,13 +278,12 @@ export async function deleteDepartment(
     return { success: true, message: 'Dépôt supprimé avec succès.' };
   }
 
-  // PostgreSQL mode
-  const deptCheck = await query('SELECT name FROM departments WHERE id = $1', [deptId]);
+  const deptCheck = await query('SELECT name FROM departments WHERE id = $1 AND tenant_id = $2', [deptId, tid]);
   if (deptCheck.rows.length === 0) {
     throw new Error('Dépôt introuvable.');
   }
   const deptName = deptCheck.rows[0].name;
-  if (deptId === 1 || /central|principal|main/i.test(deptName)) {
+  if (/central|principal|main/i.test(deptName)) {
     throw new Error('Le dépôt principal ne peut pas être supprimé.');
   }
 
@@ -286,7 +303,7 @@ export async function deleteDepartment(
       };
     }
 
-    const targetCheck = await query('SELECT id FROM departments WHERE id = $1', [transferToId]);
+    const targetCheck = await query('SELECT id FROM departments WHERE id = $1 AND tenant_id = $2', [transferToId, tid]);
     if (targetCheck.rows.length === 0) {
       throw new Error('Dépôt de destination introuvable.');
     }
@@ -308,10 +325,10 @@ export async function deleteDepartment(
         const qty = new Decimal(row.quantity);
 
         await client.query(
-          `INSERT INTO inventory_stocks (department_id, ingredient_id, quantity)
-           VALUES ($1, $2, 0.0000)
+          `INSERT INTO inventory_stocks (department_id, ingredient_id, quantity, tenant_id)
+           VALUES ($1, $2, 0.0000, $3)
            ON CONFLICT (department_id, ingredient_id) DO NOTHING`,
-          [transferToId, ingId]
+          [transferToId, ingId, tid]
         );
 
         await client.query(
@@ -328,14 +345,14 @@ export async function deleteDepartment(
 
         const ref = `deletion-transfer-from-${deptId}-to-${transferToId}`;
         await client.query(
-          `INSERT INTO stock_movements (department_id, ingredient_id, quantity, type, reference_id)
-           VALUES ($1, $2, $3, 'transfer_out', $4)`,
-          [deptId, ingId, qty.times(-1).toString(), ref]
+          `INSERT INTO stock_movements (department_id, ingredient_id, quantity, type, reference_id, tenant_id)
+           VALUES ($1, $2, $3, 'transfer_out', $4, $5)`,
+          [deptId, ingId, qty.times(-1).toString(), ref, tid]
         );
         await client.query(
-          `INSERT INTO stock_movements (department_id, ingredient_id, quantity, type, reference_id)
-           VALUES ($1, $2, $3, 'transfer_in', $4)`,
-          [transferToId, ingId, qty.toString(), ref]
+          `INSERT INTO stock_movements (department_id, ingredient_id, quantity, type, reference_id, tenant_id)
+           VALUES ($1, $2, $3, 'transfer_in', $4, $5)`,
+          [transferToId, ingId, qty.toString(), ref, tid]
         );
       }
 
@@ -351,7 +368,7 @@ export async function deleteDepartment(
     }
   }
 
-  const result = await query('DELETE FROM departments WHERE id = $1 RETURNING id', [deptId]);
+  const result = await query('DELETE FROM departments WHERE id = $1 AND tenant_id = $2 RETURNING id', [deptId, tid]);
   if (result.rows.length === 0) {
     throw new Error('Dépôt introuvable.');
   }
@@ -363,9 +380,16 @@ export async function deleteDepartment(
 // INGREDIENTS
 // ──────────────────────────────────────────────
 
-export async function getAllIngredients(): Promise<any[]> {
+export async function getAllIngredients(tenantId?: number | null): Promise<any[]> {
+  const filter = resolveTenantFilter(tenantId);
   if (isDemoMode) {
-    return demoDb.ingredients;
+    return filter
+      ? demoDb.ingredients.filter((i: any) => i.tenant_id === filter)
+      : demoDb.ingredients;
+  }
+  if (filter) {
+    const result = await query('SELECT * FROM ingredients WHERE tenant_id = $1 ORDER BY id', [filter]);
+    return result.rows;
   }
   const result = await query('SELECT * FROM ingredients ORDER BY id');
   return result.rows;
@@ -378,34 +402,28 @@ export async function createIngredient(data: {
   purchase_unit_price: number;
   conversion_factor: number;
   alert_threshold?: number;
-}): Promise<any> {
+}, tenantId?: number | null): Promise<any> {
   const {
-    name,
-    unit,
-    purchase_unit,
-    purchase_unit_price,
-    conversion_factor,
-    alert_threshold,
+    name, unit, purchase_unit, purchase_unit_price, conversion_factor, alert_threshold,
   } = data;
+  const tid = tenantId ?? 1;
 
   const basePrice = purchase_unit_price / conversion_factor;
 
   if (isDemoMode) {
     const newIng = {
       id: demoDb.ingredients.length + 1,
-      name,
-      unit,
+      name, unit,
       purchase_price_per_unit: basePrice,
       alert_threshold: alert_threshold || 0.0,
       purchase_unit: purchase_unit || 'paquet',
-      purchase_unit_price,
-      conversion_factor,
+      purchase_unit_price, conversion_factor,
+      tenant_id: tid,
     };
     demoDb.ingredients.push(newIng);
 
-    // Initialize stocks to 0 for all departments
     demoDb.departments.forEach((d: any) => {
-      if (d.stock_type === 'isolated') {
+      if (d.stock_type === 'isolated' && d.tenant_id === tid) {
         demoDb.inventory_stocks.push({
           id: demoDb.inventory_stocks.length + 1,
           department_id: d.id,
@@ -419,27 +437,18 @@ export async function createIngredient(data: {
   }
 
   const result = await query(
-    `INSERT INTO ingredients (name, unit, purchase_price_per_unit, alert_threshold, purchase_unit, purchase_unit_price, conversion_factor)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-    [
-      name,
-      unit,
-      basePrice,
-      alert_threshold || 0,
-      purchase_unit || 'paquet',
-      purchase_unit_price,
-      conversion_factor,
-    ]
+    `INSERT INTO ingredients (name, unit, purchase_price_per_unit, alert_threshold, purchase_unit, purchase_unit_price, conversion_factor, tenant_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+    [name, unit, basePrice, alert_threshold || 0, purchase_unit || 'paquet', purchase_unit_price, conversion_factor, tid]
   );
 
-  // Initialize stocks to 0 for isolated departments
   const newIngId = result.rows[0].id;
-  const depts = await query("SELECT id FROM departments WHERE stock_type = 'isolated'");
+  const depts = await query("SELECT id FROM departments WHERE stock_type = 'isolated' AND tenant_id = $1", [tid]);
   for (const d of depts.rows) {
     await query(
-      `INSERT INTO inventory_stocks (department_id, ingredient_id, quantity)
-       VALUES ($1, $2, 0.0000) ON CONFLICT DO NOTHING`,
-      [d.id, newIngId]
+      `INSERT INTO inventory_stocks (department_id, ingredient_id, quantity, tenant_id)
+       VALUES ($1, $2, 0.0000, $3) ON CONFLICT DO NOTHING`,
+      [d.id, newIngId, tid]
     );
   }
 
@@ -449,44 +458,26 @@ export async function createIngredient(data: {
 export async function updateIngredient(
   id: number,
   data: {
-    name?: string;
-    unit?: string;
-    purchase_unit?: string;
-    purchase_unit_price?: number;
-    conversion_factor?: number;
-    alert_threshold?: number;
-  }
+    name?: string; unit?: string; purchase_unit?: string;
+    purchase_unit_price?: number; conversion_factor?: number; alert_threshold?: number;
+  },
+  tenantId?: number | null
 ): Promise<any> {
-  const {
-    name,
-    unit,
-    purchase_unit,
-    purchase_unit_price,
-    conversion_factor,
-    alert_threshold,
-  } = data;
-
-  const basePrice = purchase_unit_price
-    ? purchase_unit_price / (conversion_factor || 1)
-    : 0;
+  const { name, unit, purchase_unit, purchase_unit_price, conversion_factor, alert_threshold } = data;
+  const tid = tenantId ?? 1;
+  const basePrice = purchase_unit_price ? purchase_unit_price / (conversion_factor || 1) : 0;
 
   if (isDemoMode) {
-    const idx = demoDb.ingredients.findIndex((i: any) => i.id === id);
-    if (idx === -1) {
-      throw new Error('Ingredient not found');
-    }
+    const idx = demoDb.ingredients.findIndex((i: any) => i.id === id && i.tenant_id === tid);
+    if (idx === -1) throw new Error('Ingredient not found');
     demoDb.ingredients[idx] = {
       ...demoDb.ingredients[idx],
       name: name || demoDb.ingredients[idx].name,
       unit: unit || demoDb.ingredients[idx].unit,
       purchase_price_per_unit: basePrice || demoDb.ingredients[idx].purchase_price_per_unit,
-      alert_threshold:
-        alert_threshold !== undefined ? alert_threshold : demoDb.ingredients[idx].alert_threshold,
+      alert_threshold: alert_threshold !== undefined ? alert_threshold : demoDb.ingredients[idx].alert_threshold,
       purchase_unit: purchase_unit || demoDb.ingredients[idx].purchase_unit,
-      purchase_unit_price:
-        purchase_unit_price !== undefined
-          ? purchase_unit_price
-          : demoDb.ingredients[idx].purchase_unit_price,
+      purchase_unit_price: purchase_unit_price !== undefined ? purchase_unit_price : demoDb.ingredients[idx].purchase_unit_price,
       conversion_factor: conversion_factor || demoDb.ingredients[idx].conversion_factor,
     };
     return demoDb.ingredients[idx];
@@ -496,14 +487,11 @@ export async function updateIngredient(
     `UPDATE ingredients
      SET name = $1, unit = $2, purchase_price_per_unit = $3, alert_threshold = $4,
          purchase_unit = $5, purchase_unit_price = $6, conversion_factor = $7, updated_at = CURRENT_TIMESTAMP
-     WHERE id = $8 RETURNING *`,
-    [name, unit, basePrice, alert_threshold, purchase_unit, purchase_unit_price, conversion_factor, id]
+     WHERE id = $8 AND tenant_id = $9 RETURNING *`,
+    [name, unit, basePrice, alert_threshold, purchase_unit, purchase_unit_price, conversion_factor, id, tid]
   );
 
-  if (result.rows.length === 0) {
-    throw new Error('Ingredient not found');
-  }
-
+  if (result.rows.length === 0) throw new Error('Ingredient not found');
   return result.rows[0];
 }
 
@@ -511,9 +499,14 @@ export async function updateIngredient(
 // RECIPES
 // ──────────────────────────────────────────────
 
-export async function getAllRecipes(): Promise<any[]> {
+export async function getAllRecipes(tenantId?: number | null): Promise<any[]> {
+  const filter = resolveTenantFilter(tenantId);
   if (isDemoMode) {
-    return demoDb.recipes.map((r: any) => {
+    const recipes = filter
+      ? demoDb.recipes.filter((r: any) => r.tenant_id === filter)
+      : demoDb.recipes;
+
+    return recipes.map((r: any) => {
       const ingredients = demoDb.recipe_ingredients
         .filter((ri: any) => ri.recipe_id === r.id)
         .map((ri: any) => {
@@ -529,49 +522,65 @@ export async function getAllRecipes(): Promise<any[]> {
     });
   }
 
+  if (filter) {
+    const result = await query(`
+      SELECT r.*,
+             COALESCE(
+               json_agg(
+                 json_build_object(
+                   'ingredient_id', ri.ingredient_id, 'name', i.name,
+                   'quantity_needed', ri.quantity_needed, 'unit', i.unit
+                 )
+               ) FILTER (WHERE ri.id IS NOT NULL), '[]'
+             ) as ingredients
+      FROM recipes r
+      LEFT JOIN recipe_ingredients ri ON r.id = ri.recipe_id
+      LEFT JOIN ingredients i ON ri.ingredient_id = i.id
+      WHERE r.tenant_id = $1
+      GROUP BY r.id ORDER BY r.id
+    `, [filter]);
+    return result.rows;
+  }
+
   const result = await query(`
     SELECT r.*,
            COALESCE(
              json_agg(
                json_build_object(
-                 'ingredient_id', ri.ingredient_id,
-                 'name', i.name,
-                 'quantity_needed', ri.quantity_needed,
-                 'unit', i.unit
+                 'ingredient_id', ri.ingredient_id, 'name', i.name,
+                 'quantity_needed', ri.quantity_needed, 'unit', i.unit
                )
              ) FILTER (WHERE ri.id IS NOT NULL), '[]'
            ) as ingredients
     FROM recipes r
     LEFT JOIN recipe_ingredients ri ON r.id = ri.recipe_id
     LEFT JOIN ingredients i ON ri.ingredient_id = i.id
-    GROUP BY r.id
-    ORDER BY r.id
+    GROUP BY r.id ORDER BY r.id
   `);
   return result.rows;
 }
 
-export async function createRecipe(data: {
-  name: string;
-  sale_price: number;
-}): Promise<any> {
+export async function createRecipe(data: { name: string; sale_price: number }, tenantId?: number | null): Promise<any> {
   const { name, sale_price } = data;
+  const tid = tenantId ?? 1;
 
   if (isDemoMode) {
-    const newRec = { id: demoDb.recipes.length + 1, name, sale_price, is_active: true };
+    const newRec = { id: demoDb.recipes.length + 1, name, sale_price, is_active: true, tenant_id: tid };
     demoDb.recipes.push(newRec);
     return newRec;
   }
 
   const result = await query(
-    'INSERT INTO recipes (name, sale_price) VALUES ($1, $2) RETURNING *',
-    [name, sale_price]
+    'INSERT INTO recipes (name, sale_price, tenant_id) VALUES ($1, $2, $3) RETURNING *',
+    [name, sale_price, tid]
   );
   return result.rows[0];
 }
 
 export async function saveRecipeIngredients(
   recipeId: number,
-  ingredients: Array<{ ingredient_id: number; quantity_needed: number }>
+  ingredients: Array<{ ingredient_id: number; quantity_needed: number }>,
+  tenantId?: number | null
 ): Promise<void> {
   if (!ingredients || !Array.isArray(ingredients)) {
     throw new Error('Missing ingredients array');
@@ -595,8 +604,7 @@ export async function saveRecipeIngredients(
   await query('DELETE FROM recipe_ingredients WHERE recipe_id = $1', [recipeId]);
   for (const item of ingredients) {
     await query(
-      `INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity_needed)
-       VALUES ($1, $2, $3)`,
+      `INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity_needed) VALUES ($1, $2, $3)`,
       [recipeId, item.ingredient_id, item.quantity_needed]
     );
   }
@@ -606,7 +614,8 @@ export async function saveRecipeIngredients(
 // STOCKS
 // ──────────────────────────────────────────────
 
-export async function getAllStocks(): Promise<any[]> {
+export async function getAllStocks(tenantId?: number | null): Promise<any[]> {
+  const filter = resolveTenantFilter(tenantId);
   if (isDemoMode) {
     return demoDb.inventory_stocks.map((st: any) => {
       const ing = demoDb.ingredients.find((i: any) => i.id === st.ingredient_id);
@@ -622,7 +631,25 @@ export async function getAllStocks(): Promise<any[]> {
         department_name: dept ? dept.name : 'Unknown',
         stock_type: dept ? dept.stock_type : 'isolated',
       };
+    }).filter((st: any) => {
+      if (!filter) return true;
+      const dept = demoDb.departments.find((d: any) => d.id === st.department_id);
+      return dept && dept.tenant_id === filter;
     });
+  }
+
+  if (filter) {
+    const result = await query(`
+      SELECT is_t.*, i.name as ingredient_name, i.unit, i.purchase_price_per_unit,
+             i.alert_threshold, i.purchase_unit, i.conversion_factor,
+             d.name as department_name, d.stock_type
+      FROM inventory_stocks is_t
+      JOIN ingredients i ON is_t.ingredient_id = i.id
+      JOIN departments d ON is_t.department_id = d.id
+      WHERE d.tenant_id = $1
+      ORDER BY d.id, i.id
+    `, [filter]);
+    return result.rows;
   }
 
   const result = await query(`
@@ -641,7 +668,8 @@ export async function getAllStocks(): Promise<any[]> {
 // MOVEMENTS
 // ──────────────────────────────────────────────
 
-export async function getAllMovements(): Promise<any[]> {
+export async function getAllMovements(tenantId?: number | null): Promise<any[]> {
+  const filter = resolveTenantFilter(tenantId);
   if (isDemoMode) {
     const movements = demoDb.stock_movements.map((sm: any) => {
       const ing = demoDb.ingredients.find((i: any) => i.id === sm.ingredient_id);
@@ -652,12 +680,25 @@ export async function getAllMovements(): Promise<any[]> {
         unit: ing ? ing.unit : '',
         department_name: dept ? dept.name : 'Unknown',
       };
+    }).filter((m: any) => {
+      if (!filter) return true;
+      const dept = demoDb.departments.find((d: any) => d.id === m.department_id);
+      return dept && dept.tenant_id === filter;
     });
-    movements.sort(
-      (a: any, b: any) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+    movements.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     return movements;
+  }
+
+  if (filter) {
+    const result = await query(`
+      SELECT sm.*, i.name as ingredient_name, i.unit, d.name as department_name
+      FROM stock_movements sm
+      JOIN ingredients i ON sm.ingredient_id = i.id
+      JOIN departments d ON sm.department_id = d.id
+      WHERE sm.tenant_id = $1
+      ORDER BY sm.created_at DESC
+    `, [filter]);
+    return result.rows;
   }
 
   const result = await query(`
@@ -680,8 +721,9 @@ export async function adjustStock(data: {
   quantity: number;
   type: 'purchase' | 'reconciliation';
   reference_id?: string;
-}): Promise<{ new_quantity: number; movement: any }> {
+}, tenantId?: number | null): Promise<{ new_quantity: number; movement: any }> {
   const { department_id, ingredient_id, quantity, type, reference_id } = data;
+  const tid = tenantId ?? 1;
 
   const deptId = typeof department_id === 'string' ? parseInt(department_id, 10) : department_id;
   const ingId = typeof ingredient_id === 'string' ? parseInt(ingredient_id, 10) : ingredient_id;
@@ -692,7 +734,7 @@ export async function adjustStock(data: {
   }
 
   if (isDemoMode) {
-    const department = demoDb.departments.find((d: any) => d.id === deptId);
+    const department = demoDb.departments.find((d: any) => d.id === deptId && d.tenant_id === tid);
     if (!department) throw new Error('Department not found');
 
     const targetDeptId = await getEffectiveDepartmentId(deptId);
@@ -702,63 +744,43 @@ export async function adjustStock(data: {
     );
 
     if (!stock) {
-      stock = {
-        id: demoDb.inventory_stocks.length + 1,
-        department_id: targetDeptId,
-        ingredient_id: ingId,
-        quantity: 0,
-      };
+      stock = { id: demoDb.inventory_stocks.length + 1, department_id: targetDeptId, ingredient_id: ingId, quantity: 0 };
       demoDb.inventory_stocks.push(stock);
     }
 
     const currentQty = stock.quantity;
-    let newQty = 0;
-
-    if (type === 'reconciliation') {
-      newQty = Math.max(0, qtyVal);
-    } else {
-      newQty = Math.max(0, currentQty + qtyVal);
-    }
-
+    const newQty = type === 'reconciliation' ? Math.max(0, qtyVal) : Math.max(0, currentQty + qtyVal);
     const delta = newQty - currentQty;
     stock.quantity = newQty;
 
-    const ref =
-      reference_id ||
-      (type === 'purchase' ? 'Approvisionnement manuel' : 'Réajustement manuel');
+    const ref = reference_id || (type === 'purchase' ? 'Approvisionnement manuel' : 'Réajustement manuel');
     const movement = {
       id: demoDb.stock_movements.length + 1,
-      department_id: targetDeptId,
-      ingredient_id: ingId,
-      quantity: delta,
-      type,
-      reference_id: ref,
-      created_at: new Date().toISOString(),
+      department_id: targetDeptId, ingredient_id: ingId,
+      quantity: delta, type, reference_id: ref,
+      created_at: new Date().toISOString(), tenant_id: tid,
     };
     demoDb.stock_movements.push(movement);
 
     return { new_quantity: newQty, movement };
-  }    // PostgreSQL mode
+  }
+
   const { client, release } = await getClient();
   try {
     await client.query('BEGIN');
 
-    const deptRes = await client.query('SELECT stock_type FROM departments WHERE id = $1', [deptId]);
-    if (deptRes.rows.length === 0) {
-      throw new Error('Department not found');
-    }
+    const deptRes = await client.query('SELECT stock_type FROM departments WHERE id = $1 AND tenant_id = $2', [deptId, tid]);
+    if (deptRes.rows.length === 0) throw new Error('Department not found');
 
     let effectiveDeptId = deptId;
     if (deptRes.rows[0].stock_type === 'inherited') {
       const centralDeptRes = await client.query(
-        `SELECT id FROM departments
-         WHERE LOWER(name) LIKE '%central%' OR LOWER(name) LIKE '%principal%' OR LOWER(name) LIKE '%main%'
-         LIMIT 1`
+        `SELECT id FROM departments WHERE tenant_id = $1 AND (LOWER(name) LIKE '%central%' OR LOWER(name) LIKE '%principal%' OR LOWER(name) LIKE '%main%') LIMIT 1`, [tid]
       );
       if (centralDeptRes.rows.length > 0) {
         effectiveDeptId = centralDeptRes.rows[0].id;
       } else {
-        const firstDeptRes = await client.query('SELECT id FROM departments ORDER BY id LIMIT 1');
+        const firstDeptRes = await client.query('SELECT id FROM departments WHERE tenant_id = $1 ORDER BY id LIMIT 1', [tid]);
         effectiveDeptId = firstDeptRes.rows.length > 0 ? firstDeptRes.rows[0].id : 1;
       }
     }
@@ -771,20 +793,14 @@ export async function adjustStock(data: {
     let currentQty = 0;
     if (stockRes.rows.length === 0) {
       await client.query(
-        'INSERT INTO inventory_stocks (department_id, ingredient_id, quantity) VALUES ($1, $2, 0.0000)',
-        [effectiveDeptId, ingId]
+        'INSERT INTO inventory_stocks (department_id, ingredient_id, quantity, tenant_id) VALUES ($1, $2, 0.0000, $3)',
+        [effectiveDeptId, ingId, tid]
       );
     } else {
       currentQty = parseFloat(stockRes.rows[0].quantity);
     }
 
-    let newQty = 0;
-    if (type === 'reconciliation') {
-      newQty = Math.max(0, qtyVal);
-    } else {
-      newQty = Math.max(0, currentQty + qtyVal);
-    }
-
+    const newQty = type === 'reconciliation' ? Math.max(0, qtyVal) : Math.max(0, currentQty + qtyVal);
     const delta = newQty - currentQty;
 
     await client.query(
@@ -792,13 +808,11 @@ export async function adjustStock(data: {
       [newQty, effectiveDeptId, ingId]
     );
 
-    const ref =
-      reference_id ||
-      (type === 'purchase' ? 'Approvisionnement manuel' : 'Réajustement manuel');
+    const ref = reference_id || (type === 'purchase' ? 'Approvisionnement manuel' : 'Réajustement manuel');
     const movementInsert = await client.query(
-      `INSERT INTO stock_movements (department_id, ingredient_id, quantity, type, reference_id)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [effectiveDeptId, ingId, delta, type, ref]
+      `INSERT INTO stock_movements (department_id, ingredient_id, quantity, type, reference_id, tenant_id)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [effectiveDeptId, ingId, delta, type, ref, tid]
     );
 
     await client.query('COMMIT');

@@ -22,7 +22,8 @@ router.post('/', async (req: Request, res: Response) => {
       parseInt(source_department_id, 10),
       parseInt(destination_department_id, 10),
       parseInt(ingredient_id, 10),
-      parseFloat(quantity)
+      parseFloat(quantity),
+      req.tenantId
     );
 
     res.json({
@@ -42,7 +43,7 @@ router.post('/', async (req: Request, res: Response) => {
  */
 router.get('/requests', async (req: Request, res: Response) => {
   try {
-    const data = await getTransferRequests();
+    const data = await getTransferRequests(req.tenantId);
     res.json({ status: 'success', data });
   } catch (error: any) {
     console.error('Error fetching transfer requests:', error);
@@ -67,7 +68,8 @@ router.post('/requests', async (req: Request, res: Response) => {
       parseInt(destination_department_id, 10),
       parseInt(ingredient_id, 10),
       parseFloat(quantity),
-      requested_by ? parseInt(requested_by, 10) : null
+      requested_by ? parseInt(requested_by, 10) : null,
+      req.tenantId
     );
     res.json({ status: 'success', data });
   } catch (error: any) {
@@ -87,7 +89,8 @@ router.post('/requests/:id/validate', async (req: Request, res: Response) => {
   try {
     const data = await approveTransferRequest(
       parseInt(id, 10),
-      validated_by ? parseInt(validated_by, 10) : null
+      validated_by ? parseInt(validated_by, 10) : null,
+      req.tenantId
     );
     res.json({ status: 'success', message: 'Request approved and stock transferred successfully', data });
   } catch (error: any) {
@@ -107,7 +110,8 @@ router.post('/requests/:id/reject', async (req: Request, res: Response) => {
   try {
     const data = await rejectTransferRequest(
       parseInt(id, 10),
-      validated_by ? parseInt(validated_by, 10) : null
+      validated_by ? parseInt(validated_by, 10) : null,
+      req.tenantId
     );
     res.json({ status: 'success', message: 'Transfer request rejected', data });
   } catch (error: any) {

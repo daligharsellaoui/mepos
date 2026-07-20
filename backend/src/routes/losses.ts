@@ -8,7 +8,7 @@ router.use(authMiddleware);
 
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const data = await getLosses();
+    const data = await getLosses(req.tenantId);
     res.json({ status: 'success', data });
   } catch (error: any) {
     console.error('Error fetching losses:', error);
@@ -29,7 +29,8 @@ router.post('/', async (req: Request, res: Response) => {
       parseInt(ingredient_id, 10),
       parseFloat(quantity),
       loss_reason,
-      reported_by ? parseInt(reported_by, 10) : null
+      reported_by ? parseInt(reported_by, 10) : null,
+      req.tenantId
     );
     res.json({ status: 'success', data });
   } catch (error: any) {

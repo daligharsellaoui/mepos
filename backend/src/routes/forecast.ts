@@ -10,9 +10,9 @@ router.use(authMiddleware);
  * GET /api/v1/forecast
  * Returns a 7-day moving average forecast with depletion analysis and reorder suggestions.
  */
-router.get('/', async (_req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const forecast = await getForecast();
+    const forecast = await getForecast(req.tenantId);
     res.json({ status: 'success', data: forecast });
   } catch (error: any) {
     console.error('Error generating forecast:', error);

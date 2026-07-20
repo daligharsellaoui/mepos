@@ -10,6 +10,8 @@ import path from 'path';
 import { checkConnection, isDemoMode } from './database';
 import { initializeDatabase } from './schema';
 import { startSalesSimulator } from './simulator';
+import { authMiddleware } from './routes/auth';
+import { tenantContextMiddleware } from './middleware/tenantContext';
 
 // Import Routes
 import authRouter from './routes/auth';
@@ -71,12 +73,16 @@ const authLimiter = rateLimit({
 });
 
 // Mount API routes
+// Auth routes: login is public, protected routes use tenantContextMiddleware
 app.use('/api/v1/auth', authLimiter, authRouter);
-app.use('/api/v1/sales', salesRouter);
-app.use('/api/v1/losses', lossesRouter);
-app.use('/api/v1/transfers', transfersRouter);
-app.use('/api/v1', inventoryRouter); // /departments, /ingredients, /recipes, /stocks
-app.use('/api/v1/forecast', forecastRouter);
+// All other routes: auth + tenant context middleware
+// authMiddleware extracts user from JWT/API key
+// tenantContextMiddleware extracts tenant_id and injects into req.tenantId
+app.use('/api/v1/sales', authMiddleware, tenantContextMiddleware, salesRouter);
+app.use('/api/v1/losses', authMiddleware, tenantContextMiddleware, lossesRouter);
+app.use('/api/v1/transfers', authMiddleware, tenantContextMiddleware, transfersRouter);
+app.use('/api/v1', authMiddleware, tenantContextMiddleware, inventoryRouter);
+app.use('/api/v1/forecast', authMiddleware, tenantContextMiddleware, forecastRouter);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {

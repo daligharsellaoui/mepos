@@ -24,6 +24,7 @@ export interface SafeUser {
   role: string;
   first_name: string;
   last_name: string;
+  tenantId?: number;
 }
 
 /** Strip password_hash from user object */
@@ -34,6 +35,7 @@ function safeUser(user: any): SafeUser {
     role: user.role,
     first_name: user.first_name || '',
     last_name: user.last_name || '',
+    tenantId: user.tenant_id || undefined,
   };
 }
 
@@ -66,7 +68,7 @@ export async function authenticateUser(
   }
 
   const result = await query(
-    'SELECT id, username, role, first_name, last_name, password_hash FROM users WHERE username = $1',
+    'SELECT id, username, role, first_name, last_name, password_hash, tenant_id FROM users WHERE username = $1',
     [username]
   );
 
@@ -87,14 +89,24 @@ export async function authenticateUser(
 // LIST USERS
 // ──────────────────────────────────────────────
 
-export async function getAllUsers(): Promise<SafeUser[]> {
+export async function getAllUsers(tenantId?: number): Promise<SafeUser[]> {
   if (isDemoMode) {
-    return demoDb.users.map((u: any) => safeUser(u));
+    let users = demoDb.users;
+    if (tenantId !== undefined) {
+      users = users.filter((u: any) => u.tenant_id === tenantId);
+    }
+    return users.map((u: any) => safeUser(u));
   }
 
-  const result = await query(
-    'SELECT id, username, role, first_name, last_name FROM users ORDER BY id'
-  );
+  let sql = 'SELECT id, username, role, first_name, last_name, tenant_id FROM users';
+  const params: any[] = [];
+  if (tenantId !== undefined) {
+    sql += ' WHERE tenant_id = $1';
+    params.push(tenantId);
+  }
+  sql += ' ORDER BY id';
+
+  const result = await query(sql, params);
   return result.rows.map((u: any) => safeUser(u));
 }
 
@@ -108,8 +120,9 @@ export async function createUser(data: {
   role: string;
   first_name?: string;
   last_name?: string;
+  tenantId?: number;
 }): Promise<SafeUser> {
-  const { username, password, role, first_name, last_name } = data;
+  const { username, password, role, first_name, last_name, tenantId } = data;
 
   if (!['admin', 'manager', 'cook'].includes(role)) {
     throw new Error('Invalid role');
@@ -118,13 +131,14 @@ export async function createUser(data: {
   const hashed = await hashPassword(password);
 
   if (isDemoMode) {
-    const exists = demoDb.users.some((u: any) => u.username === username);
+    const exists = demoDb.users.some((u: any) => u.username === username && u.tenant_id === (tenantId || 1));
     if (exists) {
       throw new Error("Le nom d'utilisateur existe déjà");
     }
 
     const newUser = {
       id: demoDb.users.length + 1,
+      tenant_id: tenantId || 1,
       username,
       password_hash: hashed,
       role,
@@ -135,15 +149,19 @@ export async function createUser(data: {
     return safeUser(newUser);
   }
 
-  const existsRes = await query('SELECT id FROM users WHERE username = $1', [username]);
+  const resolvedTenantId = tenantId || 1;
+  const existsRes = await query(
+    'SELECT id FROM users WHERE username = $1 AND tenant_id = $2',
+    [username, resolvedTenantId]
+  );
   if (existsRes.rows.length > 0) {
     throw new Error("Le nom d'utilisateur existe déjà");
   }
 
   const result = await query(
-    `INSERT INTO users (username, password_hash, role, first_name, last_name)
-     VALUES ($1, $2, $3, $4, $5) RETURNING id, username, role, first_name, last_name`,
-    [username, hashed, role, first_name || '', last_name || '']
+    `INSERT INTO users (username, password_hash, role, first_name, last_name, tenant_id)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, username, role, first_name, last_name, tenant_id`,
+    [username, hashed, role, first_name || '', last_name || '', resolvedTenantId]
   );
 
   return safeUser(result.rows[0]);

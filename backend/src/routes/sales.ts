@@ -14,7 +14,7 @@ router.post('/sync', async (req: Request, res: Response) => {
   }
 
   try {
-    const result = await syncTickets(department_id, tickets);
+    const result = await syncTickets(department_id, tickets, req.tenantId);
     res.json({
       status: 'success',
       synced_tickets_count: result.syncedTicketsCount,
@@ -46,7 +46,7 @@ router.get('/stats', async (req: Request, res: Response) => {
   const endHour = req.query.endHour ? String(req.query.endHour) : '23:59';
 
   try {
-    const data = await getSalesStats(startDate, endDate, startHour, endHour);
+    const data = await getSalesStats(startDate, endDate, startHour, endHour, req.tenantId);
     res.json({
       status: 'success',
       data: {
@@ -67,7 +67,7 @@ router.get('/stats', async (req: Request, res: Response) => {
  */
 router.get('/history', async (req: Request, res: Response) => {
   try {
-    const data = await getSalesHistory();
+    const data = await getSalesHistory(req.tenantId);
     res.json({ status: 'success', data });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: error.message });
