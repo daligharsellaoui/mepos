@@ -21,6 +21,8 @@ import transfersRouter from './routes/transfers';
 import inventoryRouter from './routes/inventory';
 import forecastRouter from './routes/forecast';
 import agentsRouter from './routes/agents';
+import settingsRouter from './routes/settings';
+import tenantsRouter from './routes/tenants';
 
 dotenv.config();
 
@@ -86,6 +88,10 @@ app.use('/api/v1', authMiddleware, tenantContextMiddleware, inventoryRouter);
 app.use('/api/v1/forecast', authMiddleware, tenantContextMiddleware, forecastRouter);
 // Agent routes: /authenticate is public, /heartbeat uses agent JWT, rest uses user JWT
 app.use('/api/v1/agents', agentsRouter);
+// Tenant management routes (platform admin)
+app.use('/api/v1/tenants', authMiddleware, tenantContextMiddleware, tenantsRouter);
+// Tenant settings routes
+app.use('/api/v1/settings', authMiddleware, tenantContextMiddleware, settingsRouter);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {

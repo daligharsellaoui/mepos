@@ -34,6 +34,7 @@ export const demoDb: {
   transfer_requests: any[];
   agents: any[];
   agent_heartbeats: any[];
+  tenant_settings: any[];
 } = {
   tenants: [
     { id: 1, uuid: '00000000-0000-0000-0000-000000000001', name: 'Restaurant Demo', slug: 'restaurant-demo', email: 'admin@restaurant-demo.com', country: 'Tunisia', timezone: 'Africa/Tunis', language: 'fr', currency: 'TND', status: 'active', subscription_plan: 'starter' }
@@ -145,7 +146,8 @@ export const demoDb: {
     }
   ],
   agents: [],
-  agent_heartbeats: []
+  agent_heartbeats: [],
+  tenant_settings: []
 };
 
 // Check DB Connection
