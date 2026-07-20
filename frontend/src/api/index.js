@@ -19,8 +19,6 @@ client.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('mepos_token')
       localStorage.removeItem('mepos_user')
-      // Use Vue Router instead of window.location.href to avoid full page reload
-      // Import router lazily to avoid circular dependency
       import('../router/index.js').then(({ default: router }) => {
         router.push('/login')
       }).catch(() => {
@@ -73,7 +71,40 @@ export const api = {
     client.post(`/transfers/requests/${id}/reject`, { validated_by: validatedBy }),
 
   // Forecast
-  getForecast: () => client.get('/forecast')
+  getForecast: () => client.get('/forecast'),
+
+  // Agents
+  getAgents: () => client.get('/agents'),
+  getAgent: (id) => client.get(`/agents/${id}`),
+  createAgent: (data) => client.post('/agents', data),
+  updateAgent: (id, data) => client.put(`/agents/${id}`, data),
+  deleteAgent: (id) => client.delete(`/agents/${id}`),
+  enableAgent: (id) => client.post(`/agents/${id}/enable`),
+  disableAgent: (id) => client.post(`/agents/${id}/disable`),
+  rotateAgentSecret: (id) => client.post(`/agents/${id}/rotate-secret`),
+  getAgentHeartbeats: (id, limit) => client.get(`/agents/${id}/heartbeats`, { params: { limit } }),
+  getAgentSyncStatus: (id) => client.get(`/agents/${id}/sync-status`),
+  updateAgentConfig: (id, config) => client.put(`/agents/${id}/config`, config),
+
+  // Tenant Settings
+  getSettings: () => client.get('/settings'),
+  getSettingsByCategory: (category) => client.get(`/settings/${category}`),
+  getSetting: (category, key) => client.get(`/settings/${category}/${key}`),
+  updateSettings: (category, settings, encryptKeys) =>
+    client.put(`/settings/${category}`, { settings, encrypt_keys: encryptKeys }),
+  updateSetting: (category, key, value, encrypt) =>
+    client.put(`/settings/${category}/${key}`, { value, encrypt }),
+  deleteSetting: (category, key) => client.delete(`/settings/${category}/${key}`),
+
+  // Tenants
+  getTenants: () => client.get('/tenants'),
+  getTenant: (id) => client.get(`/tenants/${id}`),
+  getTenantStats: (id) => client.get(`/tenants/${id}/stats`),
+  createTenant: (data) => client.post('/tenants', data),
+  updateTenant: (id, data) => client.put(`/tenants/${id}`, data),
+  deleteTenant: (id) => client.delete(`/tenants/${id}`),
+  suspendTenant: (id) => client.post(`/tenants/${id}/suspend`),
+  activateTenant: (id) => client.post(`/tenants/${id}/activate`),
 }
 
 export default client

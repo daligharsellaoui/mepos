@@ -36,6 +36,18 @@ const routes = [
         name: 'Settings',
         component: () => import('../views/SettingsView.vue'),
         meta: { requiresAdmin: true }
+      },
+      {
+        path: 'tenant-settings',
+        name: 'TenantSettings',
+        component: () => import('../views/TenantSettings.vue'),
+        meta: { requiresAdmin: true }
+      },
+      {
+        path: 'agents',
+        name: 'Agents',
+        component: () => import('../views/AgentManagement.vue'),
+        meta: { requiresAdmin: true }
       }
     ]
   }
