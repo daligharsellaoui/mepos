@@ -75,8 +75,8 @@ export function decrypt(ciphertext: string): string {
 export function isEncrypted(value: string): boolean {
   const parts = value.split(':');
   if (parts.length !== 3) return false;
-  // Check if each part is valid hex
-  return parts.every(part => /^[0-9a-f]+$/i.test(part));
+  // Check if each part is valid hex (allow empty — empty plaintext encrypts to empty hex)
+  return parts.every(part => /^[0-9a-f]*$/i.test(part));
 }
 
 /**
