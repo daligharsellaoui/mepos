@@ -195,14 +195,6 @@ const testimonials = [
             La solution tout-en-un de gestion de stock et d'inventaire conçue pour les commerces modernes.
           </p>
         </div>
-        <div class="landing-hero-actions landing-hero-stagger">
-          <button class="landing-hero-btn-primary">
-            Commencer gratuitement
-          </button>
-          <button class="landing-hero-btn-secondary">
-            Voir la démo
-          </button>
-        </div>
         <div class="landing-hero-features landing-hero-stagger">
           <div class="landing-hero-feature">
             <div class="landing-hero-feature-icon">
@@ -212,7 +204,7 @@ const testimonials = [
           </div>
           <div class="landing-hero-feature">
             <div class="landing-hero-feature-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8l-8 8"/><path d="M8 8h8v8"/></svg>
             </div>
             <span class="landing-hero-feature-label">Gestion de pertes</span>
           </div>
