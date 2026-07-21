@@ -1,11 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useAuthStore } from '../stores/auth'
 import { api } from '../api'
 import PageContainer from '../components/base/PageContainer.vue'
 import EmptyState from '../components/base/EmptyState.vue'
 
-const auth = useAuthStore()
 const recipes = ref([])
 const isLoading = ref(true)
 const search = ref('')
@@ -17,8 +15,6 @@ const form = ref({ name: '', sale_price: '' })
 const saving = ref(false)
 const error = ref('')
 const detailRecipe = ref(null)
-const detailIngredients = ref([])
-const loadingDetail = ref(false)
 
 const filtered = computed(() => {
   let list = recipes.value
@@ -45,7 +41,9 @@ async function fetchRecipes() {
     if (res.data.status === 'success') {
       recipes.value = res.data.data || []
     }
-  } catch { /* noop */ }
+  } catch (err) {
+    console.error('[Recipes] fetch error:', err)
+  }
   finally { isLoading.value = false }
 }
 
@@ -71,42 +69,23 @@ async function saveRecipe() {
   saving.value = true
   error.value = ''
   try {
+    const payload = { name: form.value.name.trim(), sale_price: parseFloat(form.value.sale_price) || 0 }
     if (editingRecipe.value) {
-      await api.updateRecipe(editingRecipe.value.id, form.value)
+      await api.updateRecipe(editingRecipe.value.id, payload)
     } else {
-      await api.createRecipe(form.value)
+      await api.createRecipe(payload)
     }
     showForm.value = false
     await fetchRecipes()
   } catch (err) {
+    console.error('[Recipes] save error:', err)
     error.value = err?.response?.data?.message || 'Erreur lors de l\'enregistrement.'
   }
   finally { saving.value = false }
 }
 
-async function deleteRecipe(recipe) {
-  if (!confirm(`Supprimer la recette "${recipe.name}" ?`)) return
-  try {
-    await api.deleteRecipe(recipe.id)
-    await fetchRecipes()
-    if (detailRecipe.value?.id === recipe.id) {
-      detailRecipe.value = null
-      detailIngredients.value = []
-    }
-  } catch { /* noop */ }
-}
-
-async function showDetail(recipe) {
+function showDetail(recipe) {
   detailRecipe.value = recipe
-  loadingDetail.value = true
-  detailIngredients.value = []
-  try {
-    const res = await api.getRecipeIngredients(recipe.id)
-    if (res.data.status === 'success') {
-      detailIngredients.value = res.data.data || []
-    }
-  } catch { /* noop */ }
-  finally { loadingDetail.value = false }
 }
 </script>
 
@@ -120,7 +99,7 @@ async function showDetail(recipe) {
     </template>
 
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-      <!-- Search + filters -->
+      <!-- Search + count -->
       <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
         <input v-model="search" class="form-input" placeholder="Rechercher une recette..." style="flex: 1; min-width: 200px;">
         <span style="font-size: 0.85rem; color: var(--text-secondary);">{{ filtered.length }} recette(s)</span>
@@ -140,7 +119,7 @@ async function showDetail(recipe) {
               <th>Nom</th>
               <th>Prix de vente</th>
               <th>Ingrédients</th>
-              <th style="width: 160px;">Actions</th>
+              <th style="width: 200px;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -149,15 +128,14 @@ async function showDetail(recipe) {
               <td>{{ parseFloat(rec.sale_price || 0).toFixed(3) }} TND</td>
               <td>{{ rec.ingredients?.length || 0 }} ingrédient(s)</td>
               <td>
-                <div style="display: flex; gap: 0.4rem;">
-                  <button class="touch-btn touch-btn-sm" title="Détails" @click="showDetail(rec)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <div style="display: flex; gap: 0.5rem;">
+                  <button class="touch-btn touch-btn-secondary" style="padding: 0.35rem 1rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.35rem;" @click="showDetail(rec)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Détails
                   </button>
-                  <button class="touch-btn touch-btn-sm" title="Modifier" @click="openEdit(rec)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                  </button>
-                  <button class="touch-btn touch-btn-sm touch-btn-danger" title="Supprimer" @click="deleteRecipe(rec)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  <button class="touch-btn touch-btn-secondary" style="padding: 0.35rem 1rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.35rem;" @click="openEdit(rec)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Modifier
                   </button>
                 </div>
               </td>
@@ -168,85 +146,84 @@ async function showDetail(recipe) {
 
       <!-- Pagination -->
       <div v-if="totalPages > 1" style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; padding: 1rem 0;">
-        <button class="touch-btn touch-btn-sm" :disabled="page <= 1" @click="page = Math.max(1, page - 1)">← Précédent</button>
+        <button class="touch-btn touch-btn-secondary" style="padding: 0.35rem 1rem; font-size: 0.8rem;" :disabled="page <= 1" @click="page = Math.max(1, page - 1)">← Précédent</button>
         <span style="font-size: 0.85rem; color: var(--text-secondary);">Page {{ page }} / {{ totalPages }}</span>
-        <button class="touch-btn touch-btn-sm" :disabled="page >= totalPages" @click="page = Math.min(totalPages, page + 1)">Suivant →</button>
+        <button class="touch-btn touch-btn-secondary" style="padding: 0.35rem 1rem; font-size: 0.8rem;" :disabled="page >= totalPages" @click="page = Math.min(totalPages, page + 1)">Suivant →</button>
       </div>
     </div>
 
     <!-- Recipe Form Modal -->
     <Teleport to="body">
-      <div v-if="showForm" class="modal-backdrop" @click="showForm = false" />
-      <div v-if="showForm" class="modal-panel" style="max-width: 480px;">
-        <div class="modal-header">
-          <h3>{{ editingRecipe ? 'Modifier la recette' : 'Nouvelle recette' }}</h3>
-          <button class="modal-close" @click="showForm = false">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-        <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem; padding: 1.5rem;">
-          <div v-if="error" style="padding: 0.75rem; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; color: #fca5a5; font-size: 0.85rem;">
-            {{ error }}
+      <div v-if="showForm" class="modal-overlay" @click.self="showForm = false">
+        <div class="glass-panel modal-content" style="max-width: 480px;">
+          <div class="modal-header">
+            <h3 class="modal-title">{{ editingRecipe ? 'Modifier la recette' : 'Nouvelle recette' }}</h3>
+            <button class="btn-close" @click="showForm = false">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
           </div>
-          <div>
-            <label class="form-label">Nom de la recette</label>
-            <input v-model="form.name" class="form-input" placeholder="Ex: Pizza Margherita" @keyup.enter="saveRecipe">
+          <div class="modal-body-scroll" style="display: flex; flex-direction: column; gap: 1rem;">
+            <div v-if="error" style="padding: 0.75rem; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; color: #fca5a5; font-size: 0.85rem;">
+              {{ error }}
+            </div>
+            <div>
+              <label class="form-label">Nom de la recette</label>
+              <input v-model="form.name" class="form-input" placeholder="Ex: Pizza Margherita">
+            </div>
+            <div>
+              <label class="form-label">Prix de vente (TND)</label>
+              <input v-model="form.sale_price" class="form-input" type="number" step="0.001" min="0" placeholder="0.000">
+            </div>
           </div>
-          <div>
-            <label class="form-label">Prix de vente (TND)</label>
-            <input v-model="form.sale_price" class="form-input" type="number" step="0.001" min="0" placeholder="0.000" @keyup.enter="saveRecipe">
+          <div class="modal-footer">
+            <button class="touch-btn touch-btn-secondary" @click="showForm = false">Annuler</button>
+            <button class="touch-btn" :disabled="saving" @click="saveRecipe">
+              {{ saving ? 'Enregistrement...' : (editingRecipe ? 'Modifier' : 'Créer') }}
+            </button>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button class="touch-btn touch-btn-secondary" @click="showForm = false">Annuler</button>
-          <button class="touch-btn touch-btn-primary" :disabled="saving" @click="saveRecipe">
-            {{ saving ? 'Enregistrement...' : (editingRecipe ? 'Modifier' : 'Créer') }}
-          </button>
         </div>
       </div>
     </Teleport>
 
     <!-- Recipe Detail Modal -->
     <Teleport to="body">
-      <div v-if="detailRecipe" class="modal-backdrop" @click="detailRecipe = null" />
-      <div v-if="detailRecipe" class="modal-panel" style="max-width: 520px;">
-        <div class="modal-header">
-          <h3>{{ detailRecipe.name }}</h3>
-          <button class="modal-close" @click="detailRecipe = null">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-        <div class="modal-body" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
-          <div style="display: flex; gap: 1.5rem; font-size: 0.9rem;">
-            <span style="color: var(--text-secondary);">Prix de vente : <strong style="color: var(--emerald);">{{ parseFloat(detailRecipe.sale_price || 0).toFixed(3) }} TND</strong></span>
-            <span style="color: var(--text-secondary);">Ingrédients : <strong>{{ detailIngredients.length }}</strong></span>
+      <div v-if="detailRecipe" class="modal-overlay" @click.self="detailRecipe = null">
+        <div class="glass-panel modal-content" style="max-width: 520px;">
+          <div class="modal-header">
+            <h3 class="modal-title">{{ detailRecipe.name }}</h3>
+            <button class="btn-close" @click="detailRecipe = null">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
           </div>
-          <div v-if="loadingDetail" style="display: flex; justify-content: center; padding: 2rem;">
-            <div class="spinner" />
+          <div class="modal-body-scroll" style="display: flex; flex-direction: column; gap: 1rem;">
+            <div style="display: flex; gap: 1.5rem; font-size: 0.9rem; flex-wrap: wrap;">
+              <span style="color: var(--text-secondary);">Prix de vente : <strong style="color: var(--emerald);">{{ parseFloat(detailRecipe.sale_price || 0).toFixed(3) }} TND</strong></span>
+              <span style="color: var(--text-secondary);">Ingrédients : <strong>{{ detailRecipe.ingredients?.length || 0 }}</strong></span>
+            </div>
+            <div v-if="!detailRecipe.ingredients || detailRecipe.ingredients.length === 0" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+              Aucun ingrédient configuré pour cette recette.
+            </div>
+            <div v-else class="table-wrapper">
+              <table class="mepos-table">
+                <thead>
+                  <tr><th>Ingrédient</th><th>Quantité</th><th>Unité</th></tr>
+                </thead>
+                <tbody>
+                  <tr v-for="ing in detailRecipe.ingredients" :key="ing.ingredient_id">
+                    <td data-label="Ingrédient">{{ ing.name || ing.ingredient_name || `#${ing.ingredient_id}` }}</td>
+                    <td data-label="Quantité">{{ parseFloat(ing.quantity_needed).toFixed(2) }}</td>
+                    <td data-label="Unité">{{ ing.unit || '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div v-else-if="detailIngredients.length === 0" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-            Aucun ingrédient configuré pour cette recette.
+          <div class="modal-footer">
+            <button class="touch-btn touch-btn-secondary" @click="detailRecipe = null">Fermer</button>
+            <button class="touch-btn" @click="openEdit(detailRecipe); detailRecipe = null">
+              Modifier
+            </button>
           </div>
-          <div v-else class="table-wrapper">
-            <table class="mepos-table">
-              <thead>
-                <tr><th>Ingrédient</th><th>Quantité</th><th>Unité</th></tr>
-              </thead>
-              <tbody>
-                <tr v-for="ing in detailIngredients" :key="ing.ingredient_id">
-                  <td>{{ ing.name || ing.ingredient_name || `#${ing.ingredient_id}` }}</td>
-                  <td>{{ parseFloat(ing.quantity_needed).toFixed(2) }}</td>
-                  <td>{{ ing.unit || '—' }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="touch-btn touch-btn-secondary" @click="detailRecipe = null">Fermer</button>
-          <button class="touch-btn touch-btn-primary" @click="openEdit(detailRecipe); detailRecipe = null">
-            Modifier
-          </button>
         </div>
       </div>
     </Teleport>

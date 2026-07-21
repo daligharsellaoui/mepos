@@ -302,4 +302,19 @@ function iconSvg(icon) {
 .pref-option input {
   accent-color: var(--indigo);
 }
+
+@media (max-width: 600px) {
+  .preferences-page {
+    padding: 0;
+  }
+  .page-title {
+    font-size: 1.25rem;
+  }
+  .pref-header {
+    padding: 0.75rem 1rem;
+  }
+  .pref-options {
+    padding: 0 1rem 0.75rem;
+  }
+}
 </style>

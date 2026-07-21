@@ -630,6 +630,7 @@ async function handleDeleteDeptConfirm() {
     <!-- ══════════════ INGREDIENTS TAB ══════════════ -->
     <div
       v-if="subTab === 'ingredients'"
+      class="settings-ingredients-grid"
       style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 2rem; align-items: start;"
     >
       <div
@@ -1795,3 +1796,32 @@ async function handleDeleteDeptConfirm() {
     @close="showDeptDeleteDialog = false"
   />
 </template>
+
+<style scoped>
+@media (max-width: 600px) {
+  .view-title-section {
+    margin-bottom: 1rem;
+  }
+  .view-title-section .touch-btn {
+    width: 100%;
+  }
+  .dept-filter-section {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-search-bar .form-input {
+    font-size: 16px;
+  }
+  .pagination-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+@media (max-width: 900px) {
+  .settings-ingredients-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+</style>

@@ -1,9 +1,10 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 
 const props = defineProps({
   actions: { type: Array, required: true },
-  disabled: { type: Boolean, default: false }
+  disabled: { type: Boolean, default: false },
+  align: { type: String, default: 'right' }
 })
 
 const emit = defineEmits(['action'])
@@ -11,12 +12,28 @@ const emit = defineEmits(['action'])
 const isOpen = ref(false)
 const menuRef = ref(null)
 const triggerRef = ref(null)
+const menuStyle = ref({})
 
 const visibleActions = computed(() => props.actions.filter(a => !a.hidden))
 
 function toggle() {
   if (!props.disabled && visibleActions.value.length > 0) {
     isOpen.value = !isOpen.value
+    if (!isOpen.value) return
+    nextTick(() => {
+      if (!menuRef.value) return
+      const rect = menuRef.value.getBoundingClientRect()
+      const style = {}
+      if (rect.right > window.innerWidth) {
+        style.right = '0'
+        style.left = 'auto'
+      }
+      if (rect.bottom > window.innerHeight) {
+        style.top = 'auto'
+        style.bottom = 'calc(100% + 4px)'
+      }
+      menuStyle.value = style
+    })
   }
 }
 
@@ -62,6 +79,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
         v-if="isOpen"
         ref="menuRef"
         class="row-action-dropdown"
+        :style="menuStyle"
         role="menu"
         @click.stop
       >
@@ -99,7 +117,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
   font-weight: 600;
   font-family: var(--font-sans);
   transition: all 0.15s ease;
-  min-height: 32px;
+  min-height: 36px;
 }
 .row-action-trigger:hover {
   background: rgba(255,255,255,0.04);
@@ -119,14 +137,12 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
   opacity: 0.35;
   cursor: not-allowed;
 }
-.row-action-label {
-  font-size: 0.75rem;
-}
 .row-action-dropdown {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
   min-width: 220px;
+  max-width: 90vw;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -136,6 +152,8 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
   display: flex;
   flex-direction: column;
   gap: 2px;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 .row-action-item {
   display: flex;
@@ -153,6 +171,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
   width: 100%;
   font-family: var(--font-sans);
   transition: background 0.12s ease;
+  min-height: 36px;
 }
 .row-action-item:hover:not(.is-disabled) {
   background: rgba(255,255,255,0.04);
@@ -184,15 +203,6 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 .action-text {
   flex: 1;
 }
-.action-disabled-reason {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  max-width: 80px;
-  text-align: right;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .menu-fade-enter-active,
 .menu-fade-leave-active {
   transition: opacity 0.12s ease, transform 0.12s ease;
@@ -201,5 +211,26 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 .menu-fade-leave-to {
   opacity: 0;
   transform: translateY(-4px);
+}
+
+@media (max-width: 600px) {
+  .row-action-dropdown {
+    position: fixed;
+    top: auto !important;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    min-width: auto;
+    max-width: none;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 50vh;
+    padding: 0.75rem;
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.5);
+    transform: none !important;
+  }
+  .row-action-item {
+    padding: 0.75rem;
+    min-height: 44px;
+  }
 }
 </style>

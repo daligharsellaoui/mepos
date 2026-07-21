@@ -22,7 +22,7 @@
           <label class="form-label">Nom du restaurant</label>
           <input v-model="settings.restaurant.name" type="text" class="form-input" />
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div class="tenant-settings-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
             <label class="form-label">Devise</label>
             <select v-model="settings.restaurant.currency" class="form-select">
@@ -199,3 +199,14 @@ async function saveAll() {
   }
 }
 </script>
+
+<style scoped>
+@media (max-width: 600px) {
+  .tenant-settings-row {
+    grid-template-columns: 1fr !important;
+  }
+  .view-title-section .touch-btn {
+    width: 100%;
+  }
+}
+</style>

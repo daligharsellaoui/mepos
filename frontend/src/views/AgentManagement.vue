@@ -14,7 +14,7 @@
     </template>
 
     <!-- Stats Cards -->
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
       <div class="glass-panel" style="padding: 1.25rem; text-align: center; border-left: 4px solid #10b981;">
         <div style="font-size: 2rem; font-weight: 800; color: var(--text-primary);">{{ agentStore.onlineAgents.length }}</div>
         <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.2rem;">En ligne</div>

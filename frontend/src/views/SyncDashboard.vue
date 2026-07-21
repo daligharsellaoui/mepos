@@ -24,7 +24,7 @@
 
     <template v-else>
       <!-- Overview Stats -->
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
         <div class="glass-panel" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #10b981;">
           <span style="font-size: 1.75rem;">🟢</span>
           <div>

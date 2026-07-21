@@ -129,7 +129,7 @@ function getCriticalIngredients() {
       class="glass-panel"
       style="padding: 1.5rem; border-left: 4px solid var(--coral);"
     >
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+      <div class="critical-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; gap: 1rem;">
         <div>
           <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--coral); margin: 0;">
             🚨 {{ getCriticalIngredients().length }} ingrédient(s) critique(s)
@@ -138,7 +138,7 @@ function getCriticalIngredients() {
             Stock bas ou épuisement imminent (≤ 3 jours)
           </p>
         </div>
-        <div style="text-align: right; font-size: 0.8rem; color: var(--text-secondary);">
+        <div style="text-align: right; font-size: 0.8rem; color: var(--text-secondary); flex-shrink: 0;">
           <div>Coût réappro. estimé</div>
           <div style="font-weight: 700; color: var(--amber); font-size: 1rem;">
             {{ forecast.summary.total_reorder_cost.toFixed(3) }} TND
@@ -150,6 +150,7 @@ function getCriticalIngredients() {
         <div
           v-for="ing in getCriticalIngredients()"
           :key="`${ing.department_id}-${ing.ingredient_id}`"
+          class="critical-item"
           style="padding: 0.85rem 1rem; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; gap: 1rem;"
           :style="{
             background: ing.days_until_depletion !== null && ing.days_until_depletion <= 1 ? 'rgba(239,68,68,0.08)' : 'rgba(251,191,36,0.06)',
@@ -192,7 +193,7 @@ function getCriticalIngredients() {
     </div>
 
     <!-- Depletion Timeline + Reorder Suggestions Grid -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 1.5rem;">
+    <div class="forecast-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); gap: 1.5rem;">
       <!-- Depletion Timeline -->
       <div
         class="glass-panel"

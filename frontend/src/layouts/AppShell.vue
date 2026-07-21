@@ -14,6 +14,7 @@ const app = useAppStore()
 const notifStore = useNotificationStore()
 
 const showDropdown = ref(false)
+const showMobileSidebar = ref(false)
 const addToast = inject('addToast')
 
 let pollInterval = null
@@ -49,11 +50,37 @@ const getRoleText = (role) => {
 function toggleDropdown() {
   showDropdown.value = !showDropdown.value
 }
+
+function toggleMobileSidebar() {
+  showMobileSidebar.value = !showMobileSidebar.value
+}
+
+function closeMobileSidebar() {
+  showMobileSidebar.value = false
+}
+
+function handleMobileSidebarKeydown(e) {
+  if (e.key === 'Escape') closeMobileSidebar()
+}
 </script>
 
 <template>
-  <div class="app-container">
-    <Sidebar />
+  <div
+    class="app-container"
+    @keydown="handleMobileSidebarKeydown"
+  >
+    <Sidebar
+      :class="{ 'mobile-sidebar-open': showMobileSidebar }"
+    />
+
+    <!-- Mobile Sidebar Backdrop -->
+    <Transition name="fade">
+      <div
+        v-if="showMobileSidebar"
+        class="sidebar-backdrop"
+        @click="closeMobileSidebar"
+      />
+    </Transition>
 
     <!-- Mobile Top Header -->
     <header class="mobile-header-bar">
@@ -61,7 +88,14 @@ function toggleDropdown() {
         class="brand-section"
         style="display: flex; align-items: center; gap: 0.75rem;"
       >
-        <img :src="logoSrc" alt="mePOS" style="height: 28px;">
+        <button
+          class="mobile-menu-btn"
+          aria-label="Menu"
+          @click="toggleMobileSidebar"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <img :src="logoSrc" alt="mePOS" style="height: 24px;">
         <div
           v-if="app.isOffline"
           style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.15rem 0.45rem; border-radius: 12px; font-size: 0.65rem; font-weight: 600; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: #ef4444;"
@@ -81,7 +115,7 @@ function toggleDropdown() {
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <NotificationBell @click="toggleDropdown" />
+        <NotificationBell @click="toggleDropdown" />
         <div class="user-profile">
           <button
             class="btn-logout"
@@ -99,12 +133,7 @@ function toggleDropdown() {
               stroke-linecap="round"
               stroke-linejoin="round"
             >
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line
-                x1="21"
-                y1="12"
-                x2="9"
-                y2="12"
-              />
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
             </svg>
           </button>
         </div>
@@ -112,13 +141,6 @@ function toggleDropdown() {
     </header>
 
     <main class="main-content">
-      <div class="app-topbar">
-        <div />
-        <div>
-          <NotificationBell @click="toggleDropdown" />
-        </div>
-      </div>
-      <div class="topbar-spacer" />
       <div class="page-enter">
         <router-view />
       </div>
@@ -151,17 +173,7 @@ function toggleDropdown() {
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><line
-              x1="12"
-              y1="9"
-              x2="12"
-              y2="13"
-            /><line
-              x1="12"
-              y1="17"
-              x2="12.01"
-              y2="17"
-            />
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
         </div>
         <div class="notification-content">
@@ -203,149 +215,76 @@ function toggleDropdown() {
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <line
-              x1="18"
-              y1="6"
-              x2="6"
-              y2="18"
-            /><line
-              x1="6"
-              y1="6"
-              x2="18"
-              y2="18"
-            />
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
       </div>
     </div>
-
-
   </div>
 </template>
 
 <style scoped>
-.notification-container {
-  position: fixed;
-  top: 1.5rem;
-  right: 1.5rem;
-  z-index: 10000;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  width: 100%;
-  max-width: 420px;
-  pointer-events: none;
-}
-.notification-toast {
-  pointer-events: auto;
-  background: rgba(21, 26, 41, 0.95);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-left: 4px solid var(--coral);
-  border-radius: var(--radius-md);
-  padding: 1rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  display: flex;
-  gap: 0.85rem;
-  position: relative;
-  overflow: hidden;
-  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transition: all 0.3s ease;
-}
-.notification-toast.fade-out {
-  opacity: 0;
-  transform: translateX(50px);
-}
-.notification-icon {
-  color: var(--coral);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  background: rgba(239, 68, 68, 0.1);
-  border-radius: 50%;
-  margin-top: 0.15rem;
-}
-.notification-content {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-.notification-title {
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--text-primary);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.notification-time {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-weight: normal;
-}
-.notification-body {
-  font-size: 0.825rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-.notification-financials {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
-  font-size: 0.8rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  padding-top: 0.5rem;
-}
-.notification-close-btn {
+.mobile-menu-btn {
   background: transparent;
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  padding: 0.25rem;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s;
-  align-self: flex-start;
-  margin-top: -0.25rem;
-  margin-right: -0.25rem;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  min-width: 44px;
+  min-height: 44px;
 }
-.notification-close-btn:hover {
+.mobile-menu-btn:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
 }
-.app-topbar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 0 1.5rem;
-  height: 56px;
-  z-index: 100;
-  pointer-events: none;
+.sidebar-backdrop {
+  display: none;
 }
-.app-topbar > * {
-  pointer-events: auto;
-}
-.topbar-spacer {
-  height: 56px;
-  flex-shrink: 0;
-}
-@media (max-width: 768px) {
-  .app-topbar {
-    display: none;
-  }
-}
+
 @keyframes slideInRight {
   from { opacity: 0; transform: translateX(100%); }
   to { opacity: 1; transform: translateX(0); }
+}
+
+@media (max-width: 900px) {
+  .mobile-menu-btn {
+    display: flex;
+  }
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 9;
+    animation: fadeIn 0.2s ease;
+  }
+  .sidebar.mobile-sidebar-open {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    max-width: 80vw;
+    height: 100dvh;
+    z-index: 20;
+    animation: slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes slideInLeft {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+}
+
+@media (min-width: 901px) {
+  .mobile-menu-btn {
+    display: none !important;
+  }
 }
 </style>

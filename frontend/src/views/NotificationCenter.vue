@@ -680,4 +680,44 @@ const groupedItems = computed(() => {
   gap: 0.5rem;
   flex-wrap: wrap;
 }
+
+@media (max-width: 600px) {
+  .notification-center {
+    padding: 0;
+  }
+  .page-header {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .page-title {
+    font-size: 1.25rem;
+  }
+  .header-actions {
+    width: 100%;
+  }
+  .header-actions .touch-btn {
+    width: 100%;
+  }
+  .filter-pills {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 0.25rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  .category-bar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 0.25rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  .category-chip {
+    white-space: nowrap;
+  }
+  .notifications-list {
+    max-height: none;
+  }
+  .detail-meta {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
