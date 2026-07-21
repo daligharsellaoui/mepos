@@ -7,6 +7,10 @@ import Modal from '../components/base/Modal.vue'
 import ConfirmDialog from '../components/base/ConfirmDialog.vue'
 import PageContainer from '../components/base/PageContainer.vue'
 import ActionToolbar from '../components/base/ActionToolbar.vue'
+import EmptyState from '../components/base/EmptyState.vue'
+import RowActionMenu from '../components/base/RowActionMenu.vue'
+import InventoryHistoryModal from '../components/base/InventoryHistoryModal.vue'
+import RecipeUsageModal from '../components/base/RecipeUsageModal.vue'
 
 const auth = useAuthStore()
 const app = useAppStore()
@@ -49,6 +53,15 @@ const ingSortBy = ref('name')
 const ingSortDir = ref('asc')
 const ingPage = ref(1)
 const ingPerPage = ref(5)
+
+// ── Additional Ingredient Dialogs ──
+const showInventoryHistory = ref(false)
+const inventoryHistoryIngredient = ref(null)
+const showRecipeUsage = ref(false)
+const recipeUsageIngredient = ref(null)
+const showStockMovements = ref(false)
+const stockMovementsIngredient = ref(null)
+const ingredientLoading = ref(false)
 
 const filteredIngredients = computed(() => {
   let list = [...app.ingredients]
@@ -299,6 +312,95 @@ async function handleDeleteIngredient() {
     }
   } catch { deleteError.value = "Impossible de contacter l'API." }
   finally { deleteLoading.value = false }
+}
+
+function handleRowClick(ing, event) {
+  const target = event.target
+  if (target.closest('button') || target.closest('.row-action-trigger') || target.closest('.row-action-dropdown') || target.closest('input') || target.closest('select') || target.closest('label') || target.closest('.row-action-menu-wrap')) return
+  openEditModal(ing)
+}
+
+async function handleDuplicate(ing) {
+  try {
+    const { data: res } = await api.createIngredient({
+      name: `${ing.name} (Copie)`,
+      unit: ing.unit,
+      purchase_unit: ing.purchase_unit || 'paquet',
+      purchase_unit_price: parseFloat(ing.purchase_unit_price) || 0,
+      conversion_factor: parseFloat(ing.conversion_factor) || 1,
+      alert_threshold: parseFloat(ing.alert_threshold) || 0
+    })
+    if (res.status === 'success') {
+      app.fetchData(auth.user)
+      openEditModal({ ...res.data, id: res.data.id })
+    }
+  } catch { /* ignore */ }
+}
+
+function openInventoryHistory(ing) {
+  inventoryHistoryIngredient.value = ing
+  showInventoryHistory.value = true
+}
+
+function openRecipeUsage(ing) {
+  recipeUsageIngredient.value = ing
+  showRecipeUsage.value = true
+}
+
+function openStockMovements(ing) {
+  stockMovementsIngredient.value = ing
+  showStockMovements.value = true
+}
+
+function getRowActions(ing) {
+  return [
+    {
+      key: 'edit',
+      label: 'Modifier',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+      hidden: !auth.isAdmin && !auth.isManager
+    },
+    {
+      key: 'duplicate',
+      label: 'Dupliquer',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+      hidden: !auth.isAdmin && !auth.isManager
+    },
+    {
+      key: 'inventory_history',
+      label: 'Historique des Stocks',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+      hidden: auth.isCook
+    },
+    {
+      key: 'recipe_usage',
+      label: 'Recettes liées',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>',
+      hidden: auth.isCook
+    },
+    {
+      key: 'stock_movements',
+      label: 'Mouvements de Stock',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+      hidden: auth.isCook
+    },
+    {
+      key: 'delete',
+      label: 'Supprimer',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+      danger: true,
+      hidden: !auth.isAdmin
+    }
+  ]
+}
+
+function handleRowAction(key, ing) {
+  if (key === 'edit') openEditModal(ing)
+  else if (key === 'duplicate') handleDuplicate(ing)
+  else if (key === 'inventory_history') openInventoryHistory(ing)
+  else if (key === 'recipe_usage') openRecipeUsage(ing)
+  else if (key === 'stock_movements') openStockMovements(ing)
+  else if (key === 'delete') openDeleteDialog(ing)
 }
 
 // ── Recipe CRUD ──
@@ -655,122 +757,146 @@ async function handleDeleteDeptConfirm() {
           Catalogue des Ingrédients ({{ app.ingredients.length }})
         </h2>
 
-        <input
-          v-model="ingSearch"
-          class="form-input"
-          placeholder="Rechercher par nom ou unité d'achat..."
-          style="width: 100%; margin-bottom: 1rem;"
-        >
+        <div class="table-search-bar">
+          <input
+            v-model="ingSearch"
+            class="form-input"
+            placeholder="Rechercher par nom ou unité d'achat..."
+            aria-label="Rechercher un ingrédient"
+          >
+          <span v-if="ingSearch" class="search-clear-btn" @click="ingSearch = ''" aria-label="Effacer la recherche">&times;</span>
+        </div>
 
         <div
-          v-if="app.ingredients.length === 0"
-          style="padding: 2rem 0;"
+          v-if="ingredientLoading"
+          style="display: flex; flex-direction: column; gap: 0.75rem; padding: 0.5rem 0;"
         >
-          <p style="color: var(--text-secondary); text-align: center;">
-            Aucun ingrédient. Créez-en un premier.
-          </p>
+          <div
+            v-for="n in 5"
+            :key="n"
+            class="skeleton"
+            style="height: 52px; width: 100%; border-radius: var(--radius-sm);"
+          />
+        </div>
+        <div
+          v-else-if="app.ingredients.length === 0"
+          style="padding: 2.5rem 0;"
+        >
+          <EmptyState
+            title="Aucun ingrédient"
+            description="Créez votre premier ingrédient pour commencer à gérer vos matières premières."
+            compact
+          />
         </div>
         <div
           v-else-if="filteredIngredients.length === 0"
-          style="padding: 2rem 0;"
+          style="padding: 2.5rem 0;"
         >
-          <p style="color: var(--text-secondary); text-align: center;">
-            Aucun ingrédient ne correspond à votre recherche.
-          </p>
+          <EmptyState
+            title="Aucun résultat"
+            description="Aucun ingrédient ne correspond à votre recherche."
+            compact
+          />
         </div>
         <div
           v-else
           class="table-wrapper"
         >
-          <table class="mepos-table">
+          <table
+            class="mepos-table ing-table"
+            role="grid"
+            aria-label="Liste des ingrédients"
+          >
             <thead>
               <tr>
                 <th
-                  style="cursor: pointer; user-select: none;"
+                  class="sortable-th"
+                  aria-sort="ascending"
                   @click="toggleSort('name')"
                 >
                   Nom{{ sortIcon('name') }}
                 </th>
                 <th
-                  style="cursor: pointer; user-select: none;"
+                  class="sortable-th"
                   @click="toggleSort('purchase_unit')"
                 >
                   Unité Achat{{ sortIcon('purchase_unit') }}
                 </th>
                 <th
-                  style="cursor: pointer; user-select: none;"
+                  class="sortable-th"
                   @click="toggleSort('conversion_factor')"
                 >
                   Capacité{{ sortIcon('conversion_factor') }}
                 </th>
                 <th
-                  style="cursor: pointer; user-select: none;"
+                  class="sortable-th"
                   @click="toggleSort('purchase_unit_price')"
                 >
                   Prix Colis{{ sortIcon('purchase_unit_price') }}
                 </th>
                 <th>Coût Cuisine</th>
-                <th>Actions</th>
+                <th class="actions-th">Actions</th>
               </tr>
             </thead>
             <tbody>
               <tr
                 v-for="ing in paginatedIngredients"
                 :key="ing.id"
+                class="ing-row"
+                tabindex="0"
+                :aria-label="`${ing.name} — cliquer pour modifier`"
+                @click="handleRowClick(ing, $event)"
+                @keydown.enter="openEditModal(ing)"
               >
-                <td><strong style="color: var(--text-primary);">{{ ing.name }}</strong></td>
-                <td><span class="badge badge-success">{{ ing.purchase_unit }}</span></td>
-                <td>{{ parseFloat(ing.conversion_factor).toLocaleString() }} {{ ing.unit }}</td>
-                <td>{{ parseFloat(ing.purchase_unit_price).toFixed(2) }} TND</td>
-                <td style="color: var(--indigo-light); font-weight: 600;">
+                <td class="cell-name">
+                  <strong style="color: var(--text-primary);">{{ ing.name }}</strong>
+                </td>
+                <td><span class="badge badge-success">{{ ing.purchase_unit || '—' }}</span></td>
+                <td class="cell-num">{{ parseFloat(ing.conversion_factor).toLocaleString() }} {{ ing.unit }}</td>
+                <td class="cell-num">{{ parseFloat(ing.purchase_unit_price).toFixed(2) }} TND</td>
+                <td class="cell-cost">
                   {{ parseFloat(ing.purchase_price_per_unit).toFixed(4) }} TND/{{ ing.unit }}
                 </td>
-                <td>
-                  <div style="display: flex; gap: 0.4rem;">
-                    <button
-                      class="badge badge-info"
-                      style="border: none; cursor: pointer; padding: 0.35rem 0.6rem;"
-                      aria-label="Modifier"
-                      @click="openEditModal(ing)"
-                    >
-                      Modifier
-                    </button>
-                    <button
-                      class="badge badge-danger"
-                      style="border: none; cursor: pointer; padding: 0.35rem 0.6rem;"
-                      aria-label="Supprimer"
-                      @click="openDeleteDialog(ing)"
-                    >
-                      Supprimer
-                    </button>
-                  </div>
+                <td class="cell-actions" @click.stop>
+                  <RowActionMenu
+                    class="row-action-menu-wrap"
+                    :actions="getRowActions(ing)"
+                    @action="(key) => handleRowAction(key, ing)"
+                  />
                 </td>
               </tr>
             </tbody>
           </table>
           <div
             v-if="totalIngPages > 1"
-            style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1.25rem; border-top: 1px solid var(--border-color);"
+            class="pagination-bar"
           >
-            <span style="font-size: 0.82rem; color: var(--text-secondary);">
+            <span class="pagination-info">
               {{ filteredIngredients.length }} résultat(s) — Page {{ ingPage }} / {{ totalIngPages }}
             </span>
-            <div style="display: flex; gap: 0.4rem;">
+            <div style="display: flex; gap: 0.3rem;">
               <button
-                class="touch-btn touch-btn-secondary"
-                style="padding: 0.3rem 0.8rem; min-height: 32px; font-size: 0.8rem;"
+                class="touch-btn touch-btn-secondary pagination-btn"
                 :disabled="ingPage <= 1"
+                aria-label="Page précédente"
                 @click="ingPage = Math.max(1, ingPage - 1)"
               >
-                ←
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
               </button>
+              <span
+                v-for="p in totalIngPages"
+                :key="p"
+                class="pagination-dot"
+                :class="{ active: p === ingPage }"
+                @click="ingPage = p"
+              >{{ p }}</span>
               <button
-                class="touch-btn touch-btn-secondary"
-                style="padding: 0.3rem 0.8rem; min-height: 32px; font-size: 0.8rem;"
+                class="touch-btn touch-btn-secondary pagination-btn"
                 :disabled="ingPage >= totalIngPages"
+                aria-label="Page suivante"
                 @click="ingPage = Math.min(totalIngPages, ingPage + 1)"
               >
-                →
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
             </div>
           </div>
@@ -1560,6 +1686,27 @@ async function handleDeleteDeptConfirm() {
     @confirm="handleDeleteIngredient"
     @cancel="closeDeleteDialog"
     @close="closeDeleteDialog"
+  />
+
+  <!-- ══════════════ INVENTORY HISTORY MODAL ══════════════ -->
+  <InventoryHistoryModal
+    :is-open="showInventoryHistory"
+    :ingredient="inventoryHistoryIngredient"
+    @close="showInventoryHistory = false"
+  />
+
+  <!-- ══════════════ RECIPE USAGE MODAL ══════════════ -->
+  <RecipeUsageModal
+    :is-open="showRecipeUsage"
+    :ingredient="recipeUsageIngredient"
+    @close="showRecipeUsage = false"
+  />
+
+  <!-- ══════════════ STOCK MOVEMENTS MODAL ══════════════ -->
+  <InventoryHistoryModal
+    :is-open="showStockMovements"
+    :ingredient="stockMovementsIngredient"
+    @close="showStockMovements = false"
   />
 
   <!-- ══════════════ EDIT RECIPE MODAL ══════════════ -->

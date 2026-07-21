@@ -47,12 +47,12 @@ export const api = {
   createIngredient: (data) => client.post('/ingredients', data),
   updateIngredient: (id, data) => client.put(`/ingredients/${id}`, data),
   deleteIngredient: (id) => client.delete(`/ingredients/${id}`),
-  getRecipes: () => client.get('/recipes'),
+  getRecipes: (params) => client.get('/recipes', { params }),
   createRecipe: (data) => client.post('/recipes', data),
   updateRecipe: (id, data) => client.put(`/recipes/${id}`, data),
   saveRecipeIngredients: (recipeId, ingredients) =>
     client.post(`/recipes/${recipeId}/ingredients`, { ingredients }),
-  getMovements: () => client.get('/movements'),
+  getMovements: (params) => client.get('/movements', { params }),
   adjustStock: (data) => client.post('/inventory/adjust', data),
 
   // Losses

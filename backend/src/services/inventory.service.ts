@@ -581,12 +581,19 @@ export async function deleteIngredient(
 // RECIPES
 // ──────────────────────────────────────────────
 
-export async function getAllRecipes(tenantId?: number | null): Promise<any[]> {
+export async function getAllRecipes(tenantId?: number | null, ingredientId?: number): Promise<any[]> {
   const filter = resolveTenantFilter(tenantId);
   if (isDemoMode) {
-    const recipes = filter
+    let recipes = filter
       ? demoDb.recipes.filter((r: any) => r.tenant_id === filter)
       : demoDb.recipes;
+
+    if (ingredientId !== undefined) {
+      const recipeIdsWithIngredient = demoDb.recipe_ingredients
+        .filter((ri: any) => ri.ingredient_id === ingredientId)
+        .map((ri: any) => ri.recipe_id);
+      recipes = recipes.filter((r: any) => recipeIdsWithIngredient.includes(r.id));
+    }
 
     return recipes.map((r: any) => {
       const ingredients = demoDb.recipe_ingredients
@@ -604,27 +611,7 @@ export async function getAllRecipes(tenantId?: number | null): Promise<any[]> {
     });
   }
 
-  if (filter) {
-    const result = await query(`
-      SELECT r.*,
-             COALESCE(
-               json_agg(
-                 json_build_object(
-                   'ingredient_id', ri.ingredient_id, 'name', i.name,
-                   'quantity_needed', ri.quantity_needed, 'unit', i.unit
-                 )
-               ) FILTER (WHERE ri.id IS NOT NULL), '[]'
-             ) as ingredients
-      FROM recipes r
-      LEFT JOIN recipe_ingredients ri ON r.id = ri.recipe_id
-      LEFT JOIN ingredients i ON ri.ingredient_id = i.id
-      WHERE r.tenant_id = $1
-      GROUP BY r.id ORDER BY r.id
-    `, [filter]);
-    return result.rows;
-  }
-
-  const result = await query(`
+  let queryStr = `
     SELECT r.*,
            COALESCE(
              json_agg(
@@ -637,8 +624,27 @@ export async function getAllRecipes(tenantId?: number | null): Promise<any[]> {
     FROM recipes r
     LEFT JOIN recipe_ingredients ri ON r.id = ri.recipe_id
     LEFT JOIN ingredients i ON ri.ingredient_id = i.id
-    GROUP BY r.id ORDER BY r.id
-  `);
+  `;
+  const params: any[] = [];
+  const conditions: string[] = [];
+
+  if (filter) {
+    params.push(filter);
+    conditions.push(`r.tenant_id = $${params.length}`);
+  }
+
+  if (ingredientId !== undefined) {
+    params.push(ingredientId);
+    conditions.push(`ri.ingredient_id = $${params.length}`);
+  }
+
+  if (conditions.length > 0) {
+    queryStr += ' WHERE ' + conditions.join(' AND ');
+  }
+
+  queryStr += ' GROUP BY r.id ORDER BY r.id';
+
+  const result = await query(queryStr, params);
   return result.rows;
 }
 
@@ -788,10 +794,10 @@ export async function getAllStocks(tenantId?: number | null): Promise<any[]> {
 // MOVEMENTS
 // ──────────────────────────────────────────────
 
-export async function getAllMovements(tenantId?: number | null): Promise<any[]> {
+export async function getAllMovements(tenantId?: number | null, ingredientId?: number): Promise<any[]> {
   const filter = resolveTenantFilter(tenantId);
   if (isDemoMode) {
-    const movements = demoDb.stock_movements.map((sm: any) => {
+    let movements = demoDb.stock_movements.map((sm: any) => {
       const ing = demoDb.ingredients.find((i: any) => i.id === sm.ingredient_id);
       const dept = demoDb.departments.find((d: any) => d.id === sm.department_id);
       return {
@@ -805,29 +811,41 @@ export async function getAllMovements(tenantId?: number | null): Promise<any[]> 
       const dept = demoDb.departments.find((d: any) => d.id === m.department_id);
       return dept && dept.tenant_id === filter;
     });
+
+    if (ingredientId !== undefined) {
+      movements = movements.filter(m => m.ingredient_id === ingredientId);
+    }
+
     movements.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     return movements;
   }
 
-  if (filter) {
-    const result = await query(`
-      SELECT sm.*, i.name as ingredient_name, i.unit, d.name as department_name
-      FROM stock_movements sm
-      JOIN ingredients i ON sm.ingredient_id = i.id
-      JOIN departments d ON sm.department_id = d.id
-      WHERE sm.tenant_id = $1
-      ORDER BY sm.created_at DESC
-    `, [filter]);
-    return result.rows;
-  }
-
-  const result = await query(`
+  let queryStr = `
     SELECT sm.*, i.name as ingredient_name, i.unit, d.name as department_name
     FROM stock_movements sm
     JOIN ingredients i ON sm.ingredient_id = i.id
     JOIN departments d ON sm.department_id = d.id
-    ORDER BY sm.created_at DESC
-  `);
+  `;
+  const params: any[] = [];
+  const conditions: string[] = [];
+
+  if (filter) {
+    params.push(filter);
+    conditions.push(`sm.tenant_id = $${params.length}`);
+  }
+
+  if (ingredientId !== undefined) {
+    params.push(ingredientId);
+    conditions.push(`sm.ingredient_id = $${params.length}`);
+  }
+
+  if (conditions.length > 0) {
+    queryStr += ' WHERE ' + conditions.join(' AND ');
+  }
+
+  queryStr += ' ORDER BY sm.created_at DESC';
+
+  const result = await query(queryStr, params);
   return result.rows;
 }
 

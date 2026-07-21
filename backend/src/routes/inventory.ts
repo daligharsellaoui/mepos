@@ -163,7 +163,8 @@ router.delete('/ingredients/:id', async (req: Request, res: Response) => {
 
 router.get('/recipes', async (req: Request, res: Response) => {
   try {
-    const data = await getAllRecipes(req.tenantId);
+    const ingredientId = req.query.ingredient_id ? parseInt(req.query.ingredient_id as string, 10) : undefined;
+    const data = await getAllRecipes(req.tenantId, ingredientId);
     res.json({ status: 'success', data });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: error.message });
@@ -233,7 +234,8 @@ router.get('/stocks', async (req: Request, res: Response) => {
 
 router.get('/movements', async (req: Request, res: Response) => {
   try {
-    const data = await getAllMovements(req.tenantId);
+    const ingredientId = req.query.ingredient_id ? parseInt(req.query.ingredient_id as string, 10) : undefined;
+    const data = await getAllMovements(req.tenantId, ingredientId);
     res.json({ status: 'success', data });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: error.message });
