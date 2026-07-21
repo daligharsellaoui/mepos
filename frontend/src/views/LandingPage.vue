@@ -1,11 +1,14 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import sideLogoSrc from '../assets/sidelogo.png'
 import sectionSrc from '../assets/section.png'
 import '../styles/landing.css'
 
 const router = useRouter()
+const auth = useAuthStore()
+const isLoggedIn = computed(() => auth.isLoggedIn)
 
 const scrolled = ref(false)
 const mobileOpen = ref(false)
@@ -46,7 +49,11 @@ function scrollTo(id) {
 }
 
 function goLogin() {
-  router.push('/login')
+  if (isLoggedIn.value) {
+    router.push('/app')
+  } else {
+    router.push('/login')
+  }
 }
 
 function observeSections() {
@@ -174,7 +181,7 @@ const testimonials = [
           <button class="landing-nav-link" @click="scrollTo('features')">Fonctionnalités</button>
           <button class="landing-nav-link" @click="scrollTo('how-it-works')">Comment ça marche</button>
           <button class="landing-nav-link" @click="scrollTo('faq')">FAQ</button>
-          <button class="landing-nav-login" @click="goLogin">Connexion</button>
+          <button class="landing-nav-login" @click="goLogin">{{ isLoggedIn ? 'Mon compte' : 'Connexion' }}</button>
         </div>
         <button class="landing-hamburger" @click="mobileOpen = !mobileOpen" aria-label="Menu">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -191,7 +198,7 @@ const testimonials = [
       <button class="landing-mobile-link" @click="scrollTo('features')">Fonctionnalités</button>
       <button class="landing-mobile-link" @click="scrollTo('how-it-works')">Comment ça marche</button>
       <button class="landing-mobile-link" @click="scrollTo('faq')">FAQ</button>
-      <button class="landing-mobile-link" @click="goLogin">Connexion</button>
+      <button class="landing-mobile-link" @click="goLogin">{{ isLoggedIn ? 'Mon compte' : 'Connexion' }}</button>
     </div>
 
     <!-- 1. HERO -->
@@ -545,7 +552,7 @@ const testimonials = [
         <p class="landing-cta-desc">Rejoignez les centaines de restaurants qui font confiance à mePOS Inventory Intel.</p>
         <div class="landing-cta-actions">
           <button class="landing-hero-btn-primary" @click="goLogin">
-            Connexion
+            {{ isLoggedIn ? 'Mon compte' : 'Connexion' }}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </button>
         </div>

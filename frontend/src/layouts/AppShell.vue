@@ -6,14 +6,14 @@ import { useNotificationStore } from '../stores/notifications'
 import Sidebar from '../components/layout/Sidebar.vue'
 import MobileNav from '../components/layout/MobileNav.vue'
 import NotificationBell from '../components/notifications/NotificationBell.vue'
-import NotificationDrawer from '../components/notifications/NotificationDrawer.vue'
+import NotificationDropdown from '../components/notifications/NotificationDropdown.vue'
 import logoSrc from '../assets/sidelogo.png'
 
 const auth = useAuthStore()
 const app = useAppStore()
 const notifStore = useNotificationStore()
 
-const showDrawer = ref(false)
+const showDropdown = ref(false)
 const addToast = inject('addToast')
 
 let pollInterval = null
@@ -46,8 +46,8 @@ const getRoleText = (role) => {
   }
 }
 
-function toggleDrawer() {
-  showDrawer.value = !showDrawer.value
+function toggleDropdown() {
+  showDropdown.value = !showDropdown.value
 }
 </script>
 
@@ -81,7 +81,10 @@ function toggleDrawer() {
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <NotificationBell @click="toggleDrawer" />
+        <div style="position: relative;">
+          <NotificationBell @click="toggleDropdown" />
+          <NotificationDropdown v-if="showDropdown" @close="showDropdown = false" />
+        </div>
         <div class="user-profile">
           <span
             :class="['user-role', `user-role-${auth.user?.role}`]"
@@ -215,11 +218,7 @@ function toggleDrawer() {
       </div>
     </div>
 
-    <!-- Notification Drawer -->
-    <NotificationDrawer
-      v-if="showDrawer"
-      @close="showDrawer = false"
-    />
+
   </div>
 </template>
 

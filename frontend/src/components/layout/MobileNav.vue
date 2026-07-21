@@ -7,19 +7,22 @@ const route = useRoute()
 const auth = useAuthStore()
 
 const navItems = [
-  { path: '/', label: 'Dashboard', icon: 'dashboard' },
-  { path: '/inventory', label: 'Stocks', icon: 'inventory' },
-  { path: '/losses', label: 'Pertes', icon: 'losses' },
-  { path: '/forecast', label: 'Prévisions', icon: 'forecast', adminOnly: true },
-  { path: '/transfers', label: 'Transferts', icon: 'transfers' },
-  { path: '/settings', label: 'Config', icon: 'settings', adminOnly: true },
+  { path: '/app', label: 'Dashboard', icon: 'dashboard' },
+  { path: '/app/inventory', label: 'Stocks', icon: 'inventory' },
+  { path: '/app/losses', label: 'Pertes', icon: 'losses' },
+  { path: '/app/forecast', label: 'Prévisions', icon: 'forecast', adminOnly: true },
+  { path: '/app/transfers', label: 'Transferts', icon: 'transfers' },
+  { path: '/app/settings', label: 'Config', icon: 'settings', adminOnly: true },
 ]
 
 const visibleItems = computed(() =>
   navItems.filter(item => !item.adminOnly || auth.user?.role === 'admin')
 )
 
-const isActive = (path) => path === '/' ? route.path === '/' : route.path === path || route.path.startsWith(path + '/')
+const isActive = (path) => {
+  if (path === '/app') return route.path === '/app'
+  return route.path === path || route.path.startsWith(path + '/')
+}
 </script>
 
 <template>

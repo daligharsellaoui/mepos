@@ -173,8 +173,6 @@ export const useNotificationStore = defineStore('notifications', () => {
     const token = localStorage.getItem('mepos_token')
     if (!token) return
 
-    requestDesktopPermission()
-
     if (eventSource) {
       eventSource.close()
     }

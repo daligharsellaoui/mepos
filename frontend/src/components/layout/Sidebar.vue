@@ -21,24 +21,26 @@ const getRoleText = (role) => {
 }
 
 const navItems = [
-  { path: '/', label: 'Tableau de Bord', icon: 'dashboard' },
-  { path: '/notifications', label: 'Notifications', icon: 'notifications' },
-  { path: '/inventory', label: 'Inventaire', icon: 'inventory' },
-  { path: '/inventory', label: 'Inventaire', icon: 'inventory' },
-  { path: '/losses', label: 'Pertes & Gâche', icon: 'losses' },
-  { path: '/forecast', label: 'Prévisions', icon: 'forecast', adminOnly: true },
-  { path: '/transfers', label: 'Transfert Dépôt', icon: 'transfers' },
-  { path: '/settings', label: 'Paramétrage', icon: 'settings', adminOnly: true },
-  { path: '/agents', label: 'Agents Sync', icon: 'agents', adminOnly: true },
-  { path: '/sync', label: 'Sync Dashboard', icon: 'sync', adminOnly: true },
-  { path: '/tenant-settings', label: 'Paramètres Restaurant', icon: 'tenant', adminOnly: true },
+  { path: '/app', label: 'Tableau de Bord', icon: 'dashboard' },
+  { path: '/app/notifications', label: 'Notifications', icon: 'notifications' },
+  { path: '/app/inventory', label: 'Inventaire', icon: 'inventory' },
+  { path: '/app/losses', label: 'Pertes & Gâche', icon: 'losses' },
+  { path: '/app/forecast', label: 'Prévisions', icon: 'forecast', adminOnly: true },
+  { path: '/app/transfers', label: 'Transfert Dépôt', icon: 'transfers' },
+  { path: '/app/settings', label: 'Paramétrage', icon: 'settings', adminOnly: true },
+  { path: '/app/agents', label: 'Agents Sync', icon: 'agents', adminOnly: true },
+  { path: '/app/sync', label: 'Sync Dashboard', icon: 'sync', adminOnly: true },
+  { path: '/app/tenant-settings', label: 'Paramètres Restaurant', icon: 'tenant', adminOnly: true },
 ]
 
 const visibleItems = computed(() =>
   navItems.filter(item => !item.adminOnly || auth.user?.role === 'admin')
 )
 
-const isActive = (path) => path === '/' ? route.path === '/' : route.path === path || route.path.startsWith(path + '/')
+const isActive = (path) => {
+  if (path === '/app') return route.path === '/app'
+  return route.path === path || route.path.startsWith(path + '/')
+}
 
 const toggleOffline = () => {
   app.isOffline = !app.isOffline
