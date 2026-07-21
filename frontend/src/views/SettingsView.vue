@@ -48,7 +48,7 @@ const ingSearch = ref('')
 const ingSortBy = ref('name')
 const ingSortDir = ref('asc')
 const ingPage = ref(1)
-const ingPerPage = ref(10)
+const ingPerPage = ref(5)
 
 const filteredIngredients = computed(() => {
   let list = [...app.ingredients]
