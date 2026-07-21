@@ -17,7 +17,7 @@ const app = useAppStore()
 const isAdmin = computed(() => auth.isAdmin)
 const isManager = computed(() => auth.isManager)
 const isCook = computed(() => auth.isCook)
-const canViewFinance = computed(() => isAdmin.value || isManager.value)
+const canViewFinance = computed(() => isAdmin.value)
 
 // Chart refs
 const salesHistoryChartRef = ref(null)
@@ -1053,7 +1053,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
                   <td style="font-weight: 600;">
                     {{ item.quantity }}
                   </td>
-                  <td>{{ parseFloat(item.unit_price).toFixed(3) }} TND</td>
+                  <td>{{ canViewFinance ? `${parseFloat(item.unit_price).toFixed(3)} TND` : '*** TND' }}</td>
                   <td style="color: var(--emerald); font-weight: 600;">
                     {{ canViewFinance ? `${parseFloat(item.total_revenue).toFixed(3)} TND` : '*** TND' }}
                   </td>

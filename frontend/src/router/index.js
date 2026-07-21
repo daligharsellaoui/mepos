@@ -67,6 +67,11 @@ const routes = [
         meta: { requiresAdmin: true }
       },
       {
+        path: 'recipes',
+        name: 'Recipes',
+        component: () => import('../views/RecipesView.vue')
+      },
+      {
         path: 'notifications',
         name: 'NotificationCenter',
         component: () => import('../views/NotificationCenter.vue')

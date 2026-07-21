@@ -50,8 +50,10 @@ export const api = {
   getRecipes: (params) => client.get('/recipes', { params }),
   createRecipe: (data) => client.post('/recipes', data),
   updateRecipe: (id, data) => client.put(`/recipes/${id}`, data),
+  deleteRecipe: (id) => client.delete(`/recipes/${id}`),
   saveRecipeIngredients: (recipeId, ingredients) =>
     client.post(`/recipes/${recipeId}/ingredients`, { ingredients }),
+  getRecipeIngredients: (id) => client.get(`/recipes/${id}/ingredients`),
   getMovements: (params) => client.get('/movements', { params }),
   adjustStock: (data) => client.post('/inventory/adjust', data),
 
