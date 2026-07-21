@@ -1,11 +1,12 @@
 <script setup>
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useAppStore } from '../../stores/app'
 import logoSrc from '../../assets/sidelogo.png'
 
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const app = useAppStore()
 
@@ -264,7 +265,7 @@ const toggleOffline = () => {
         <button
           class="btn-logout"
           title="Se déconnecter"
-          @click="auth.logout()"
+          @click="auth.logout(); router.push('/login')"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

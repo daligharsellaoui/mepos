@@ -58,7 +58,7 @@ const getRoleText = (role) => {
         <button
           class="btn-logout"
           title="Se déconnecter"
-          @click="auth.logout()"
+          @click="auth.logout(); $router.push('/login')"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

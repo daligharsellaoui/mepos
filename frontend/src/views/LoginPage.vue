@@ -15,7 +15,7 @@ async function handleLogin() {
   if (!username.value || !password.value) return
   const success = await auth.login(username.value, password.value)
   if (success) {
-    router.push('/')
+    router.push('/app')
   }
 }
 </script>
