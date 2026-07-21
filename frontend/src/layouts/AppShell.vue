@@ -83,12 +83,6 @@ function toggleDropdown() {
       <div style="display: flex; align-items: center; gap: 0.5rem;">
           <NotificationBell @click="toggleDropdown" />
         <div class="user-profile">
-          <span
-            :class="['user-role', `user-role-${auth.user?.role}`]"
-            style="margin-right: 0.25rem;"
-          >
-            {{ getRoleText(auth.user?.role) }}
-          </span>
           <button
             class="btn-logout"
             title="Se déconnecter"
