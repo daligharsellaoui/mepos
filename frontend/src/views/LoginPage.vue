@@ -47,7 +47,7 @@ async function handleLogin() {
             v-model="username"
             type="text"
             class="form-input"
-            placeholder="ahmed, mohamed, sami, aymen..."
+            placeholder="ahmed, sami, youssef..."
             autocomplete="username"
             required
           >
@@ -77,8 +77,7 @@ async function handleLogin() {
 
       <div style="text-align: center; margin-top: 0.75rem;">
         <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
-          <strong>Burger House</strong> : ahmed/admin123 · sami/manager123 · youssef/cook123<br>
-          <strong>Pizza Palace</strong> : mohamed/admin123 · aymen/manager123 · walid/cook123
+          <strong>Burger House</strong> : ahmed/admin123 · sami/manager123 · youssef/cook123
         </p>
       </div>
     </div>

@@ -129,76 +129,7 @@ const burgerHouse: TenantDef = {
   ],
 };
 
-const pizzaPalace: TenantDef = {
-  id: 2,
-  name: 'Pizza Palace Sousse',
-  slug: 'pizza-palace-sousse',
-  business: 'Pizzeria',
-  email: 'contact@pizzapalace.tn',
-  phone: '+216 73 456 789',
-  address: '28 Boulevard de la Corniche, Sousse',
-  connectorType: 'api',
-  users: [
-    { id: 4, username: 'mohamed', role: 'admin', first_name: 'Mohamed', last_name: 'Jaziri', password: 'admin123' },
-    { id: 5, username: 'aymen', role: 'manager', first_name: 'Aymen', last_name: 'Kefi', password: 'manager123' },
-    { id: 6, username: 'walid', role: 'cook', first_name: 'Walid', last_name: 'Hamdi', password: 'cook123' }
-  ],
-  departments: [
-    { id: 4, name: 'Dépôt Central', stock_type: 'isolated', description: 'Stockage principal des ingrédients' },
-    { id: 5, name: 'Cuisine', stock_type: 'isolated', description: 'Zone de préparation des pizzas' },
-    { id: 6, name: 'Chambre Froide', stock_type: 'isolated', description: 'Stockage réfrigéré' },
-  ],
-  ingredients: [
-    { id: 23, name: 'Pâte à Pizza', unit: 'kg', purchase_price_per_unit: 3.00, alert_threshold: 10, purchase_unit: 'carton', purchase_unit_price: 60.00, conversion_factor: 20 },
-    { id: 24, name: 'Mozzarella', unit: 'kg', purchase_price_per_unit: 18.00, alert_threshold: 8, purchase_unit: 'carton', purchase_unit_price: 180.00, conversion_factor: 10 },
-    { id: 25, name: 'Sauce Tomate', unit: 'kg', purchase_price_per_unit: 4.50, alert_threshold: 6, purchase_unit: 'bidon', purchase_unit_price: 45.00, conversion_factor: 10 },
-    { id: 26, name: 'Pepperoni', unit: 'kg', purchase_price_per_unit: 28.00, alert_threshold: 3, purchase_unit: 'barquette', purchase_unit_price: 56.00, conversion_factor: 2 },
-    { id: 27, name: 'Champignons', unit: 'kg', purchase_price_per_unit: 12.00, alert_threshold: 3, purchase_unit: 'caisse', purchase_unit_price: 60.00, conversion_factor: 5 },
-    { id: 28, name: 'Poivrons', unit: 'kg', purchase_price_per_unit: 5.00, alert_threshold: 4, purchase_unit: 'caisse', purchase_unit_price: 50.00, conversion_factor: 10 },
-    { id: 29, name: 'Olives Noires', unit: 'kg', purchase_price_per_unit: 14.00, alert_threshold: 2, purchase_unit: 'pot', purchase_unit_price: 28.00, conversion_factor: 2 },
-    { id: 30, name: 'Oignons', unit: 'kg', purchase_price_per_unit: 2.00, alert_threshold: 5, purchase_unit: 'sac', purchase_unit_price: 20.00, conversion_factor: 10 },
-    { id: 31, name: 'Tomates Cerises', unit: 'kg', purchase_price_per_unit: 6.00, alert_threshold: 3, purchase_unit: 'caisse', purchase_unit_price: 30.00, conversion_factor: 5 },
-    { id: 32, name: 'Huile d\'Olive', unit: 'L', purchase_price_per_unit: 15.00, alert_threshold: 3, purchase_unit: 'bidon', purchase_unit_price: 75.00, conversion_factor: 5 },
-    { id: 33, name: 'Frites Surgelées', unit: 'kg', purchase_price_per_unit: 5.00, alert_threshold: 15, purchase_unit: 'carton', purchase_unit_price: 100.00, conversion_factor: 20 },
-    { id: 34, name: 'Huile de Friture', unit: 'L', purchase_price_per_unit: 5.00, alert_threshold: 8, purchase_unit: 'bidon', purchase_unit_price: 100.00, conversion_factor: 20 },
-    { id: 35, name: 'Farine de Blé', unit: 'kg', purchase_price_per_unit: 1.80, alert_threshold: 10, purchase_unit: 'sac', purchase_unit_price: 36.00, conversion_factor: 20 },
-    { id: 36, name: 'Levure', unit: 'kg', purchase_price_per_unit: 8.00, alert_threshold: 1, purchase_unit: 'boîte', purchase_unit_price: 24.00, conversion_factor: 3 },
-    { id: 37, name: 'Boissons Gazeuses', unit: 'pcs', purchase_price_per_unit: 1.20, alert_threshold: 48, purchase_unit: 'plateau', purchase_unit_price: 28.80, conversion_factor: 24 },
-    { id: 38, name: 'Eau Minérale', unit: 'pcs', purchase_price_per_unit: 0.60, alert_threshold: 24, purchase_unit: 'fardeau', purchase_unit_price: 7.20, conversion_factor: 12 },
-    { id: 41, name: 'Sel', unit: 'kg', purchase_price_per_unit: 1.00, alert_threshold: 2, purchase_unit: 'sac', purchase_unit_price: 10.00, conversion_factor: 10 },
-    { id: 42, name: 'Origan', unit: 'kg', purchase_price_per_unit: 20.00, alert_threshold: 1, purchase_unit: 'sac', purchase_unit_price: 20.00, conversion_factor: 1 },
-    { id: 43, name: 'Basilic', unit: 'kg', purchase_price_per_unit: 35.00, alert_threshold: 1, purchase_unit: 'sac', purchase_unit_price: 35.00, conversion_factor: 1 },
-    { id: 44, name: 'Ail', unit: 'kg', purchase_price_per_unit: 8.00, alert_threshold: 2, purchase_unit: 'sac', purchase_unit_price: 16.00, conversion_factor: 2 },
-  ],
-  recipes: [
-    { id: 10, name: 'Margherita Pizza', sale_price: 14.00, ingredient_ids: [23, 24, 25, 42, 43], quantities: [0.25, 0.15, 0.10, 0.003, 0.002] },
-    { id: 11, name: 'Pepperoni Pizza', sale_price: 18.00, ingredient_ids: [23, 24, 25, 26, 42], quantities: [0.25, 0.15, 0.10, 0.08, 0.003] },
-    { id: 12, name: 'Vegetarian Pizza', sale_price: 16.50, ingredient_ids: [23, 24, 25, 27, 28, 29, 30, 31], quantities: [0.25, 0.12, 0.10, 0.05, 0.04, 0.02, 0.03, 0.04] },
-    { id: 13, name: 'French Fries', sale_price: 5.00, ingredient_ids: [33, 34, 41], quantities: [0.25, 0.04, 0.005] },
-    { id: 14, name: 'Soda', sale_price: 3.00, ingredient_ids: [37], quantities: [1] },
-    { id: 15, name: 'Eau Minérale', sale_price: 1.50, ingredient_ids: [38], quantities: [1] },
-    { id: 17, name: 'Pain à l\'Ail', sale_price: 4.50, ingredient_ids: [35, 32, 44], quantities: [0.08, 0.02, 0.01] },
-  ],
-  suppliers: [
-    { name: 'Pizza Supply Co.', contact: 'Fathi Gharbi', phone: '+216 98 444 555' },
-    { name: 'Mediterranean Vegetables', contact: 'Ali Mejri', phone: '+216 99 333 444' },
-    { name: 'Cheese Factory', contact: 'Monia Kacem', phone: '+216 97 555 666' },
-    { name: 'Sotub', contact: 'Service Commercial', phone: '+216 71 777 888' },
-    { name: 'Olive Harvest', contact: 'Samir Larbi', phone: '+216 23 666 777' },
-    { name: 'Fresh Market', contact: 'Karim Jebali', phone: '+216 22 111 222' },
-  ],
-  agents: [
-    {
-      id: 2, name: 'POS-API-Sync', connector_type: 'api',
-      machine_name: 'POS-TERMINAL-02', version: '2.4.0',
-      config: {
-        api_url: 'https://api.pizzapalace.tn/pos/v1/tickets',
-        api_key: 'pp_api_key_2024_secret', method: 'GET',
-        polling_interval: 15000, headers: { 'X-Source': 'mePOS-Stock' }
-      }
-    },
-  ],
-};
+
 
 // ─── Seed Data Generator ───
 
@@ -501,26 +432,6 @@ function generateLosses(tdef: TenantDef): any[] {
     losses.push({ id: lossId, tenant_id: tdef.id, department_id: central.id, ingredient_id: tdef.ingredients[9]!.id, quantity: 3, loss_reason: 'counting_adjustment', cost_loss: 15.00, opportunity_loss: 37.50, reported_by: null, created_at: daysAgo(12) });
   }
 
-  // Specific scenario losses for pizza palace
-  if (tdef.id === 2) {
-    const mozzarella = tdef.ingredients.find(i => i.name === 'Mozzarella')!;
-    const champignons = tdef.ingredients.find(i => i.name === 'Champignons')!;
-    const olive = tdef.ingredients.find(i => i.name === 'Huile d\'Olive')!;
-    const kitchen = tdef.departments[1]!;
-    const cold = tdef.departments[2]!;
-
-    lossId++;
-    losses.push({ id: lossId, tenant_id: tdef.id, department_id: cold.id, ingredient_id: mozzarella.id, quantity: 1.5, loss_reason: 'spoilage', cost_loss: 27.00, opportunity_loss: 67.50, reported_by: null, created_at: daysAgo(3) });
-    lossId++;
-    losses.push({ id: lossId, tenant_id: tdef.id, department_id: kitchen.id, ingredient_id: champignons.id, quantity: 0.8, loss_reason: 'spoilage', cost_loss: 9.60, opportunity_loss: 24.00, reported_by: null, created_at: daysAgo(5) });
-    lossId++;
-    losses.push({ id: lossId, tenant_id: tdef.id, department_id: kitchen.id, ingredient_id: olive.id, quantity: 0.5, loss_reason: 'preparation_error', cost_loss: 7.50, opportunity_loss: 18.75, reported_by: null, created_at: daysAgo(1) });
-    lossId++;
-    losses.push({ id: lossId, tenant_id: tdef.id, department_id: kitchen.id, ingredient_id: tdef.ingredients[0]!.id, quantity: 2, loss_reason: 'overproduction', cost_loss: 6.00, opportunity_loss: 15.00, reported_by: null, created_at: daysAgo(6) });
-    lossId++;
-    losses.push({ id: lossId, tenant_id: tdef.id, department_id: cold.id, ingredient_id: tdef.ingredients[5]!.id, quantity: 1, loss_reason: 'counting_adjustment', cost_loss: 5.00, opportunity_loss: 12.50, reported_by: null, created_at: daysAgo(10) });
-  }
-
   // Assign users to losses
   const users = tdef.users;
   for (const loss of losses) {
@@ -753,7 +664,7 @@ export function generateSeedData(): SeedData {
     purchases: [],
   };
 
-  const tenants = [burgerHouse, pizzaPalace];
+  const tenants = [burgerHouse];
 
   for (const tdef of tenants) {
     // Tenant
@@ -782,8 +693,7 @@ export function generateSeedData(): SeedData {
     // Users
     for (const u of tdef.users) {
       data.users.push({
-        id: u.username === 'ahmed' ? 1 : u.username === 'sami' ? 2 : u.username === 'youssef' ? 3 :
-            u.username === 'mohamed' ? 4 : u.username === 'aymen' ? 5 : 6,
+        id: u.id,
         tenant_id: tdef.id,
         username: u.username,
         password_hash: u.password,
