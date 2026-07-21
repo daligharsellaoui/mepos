@@ -4,7 +4,6 @@ import { useAuthStore } from '../stores/auth'
 import { useAppStore } from '../stores/app'
 import { useNotificationStore } from '../stores/notifications'
 import Sidebar from '../components/layout/Sidebar.vue'
-import MobileNav from '../components/layout/MobileNav.vue'
 import NotificationBell from '../components/notifications/NotificationBell.vue'
 import NotificationDropdown from '../components/notifications/NotificationDropdown.vue'
 import logoSrc from '../assets/sidelogo.png'
@@ -14,7 +13,6 @@ const app = useAppStore()
 const notifStore = useNotificationStore()
 
 const showDropdown = ref(false)
-const showMobileSidebar = ref(false)
 const addToast = inject('addToast')
 
 let pollInterval = null
@@ -50,37 +48,11 @@ const getRoleText = (role) => {
 function toggleDropdown() {
   showDropdown.value = !showDropdown.value
 }
-
-function toggleMobileSidebar() {
-  showMobileSidebar.value = !showMobileSidebar.value
-}
-
-function closeMobileSidebar() {
-  showMobileSidebar.value = false
-}
-
-function handleMobileSidebarKeydown(e) {
-  if (e.key === 'Escape') closeMobileSidebar()
-}
 </script>
 
 <template>
-  <div
-    class="app-container"
-    @keydown="handleMobileSidebarKeydown"
-  >
-    <Sidebar
-      :class="{ 'mobile-sidebar-open': showMobileSidebar }"
-    />
-
-    <!-- Mobile Sidebar Backdrop -->
-    <Transition name="fade">
-      <div
-        v-if="showMobileSidebar"
-        class="sidebar-backdrop"
-        @click="closeMobileSidebar"
-      />
-    </Transition>
+  <div class="app-container">
+    <Sidebar />
 
     <!-- Mobile Top Header -->
     <header class="mobile-header-bar">
@@ -88,13 +60,6 @@ function handleMobileSidebarKeydown(e) {
         class="brand-section"
         style="display: flex; align-items: center; gap: 0.75rem;"
       >
-        <button
-          class="mobile-menu-btn"
-          aria-label="Menu"
-          @click="toggleMobileSidebar"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        </button>
         <img :src="logoSrc" alt="mePOS" style="height: 24px;">
         <div
           v-if="app.isOffline"
@@ -139,6 +104,41 @@ function handleMobileSidebarKeydown(e) {
         </div>
       </div>
     </header>
+
+    <!-- Desktop Top Bar -->
+    <div class="desktop-topbar">
+      <div class="topbar-left">
+        <img :src="logoSrc" alt="mePOS" style="height: 24px;">
+        <div
+          v-if="app.isOffline"
+          class="topbar-status topbar-status-offline"
+        >
+          <span class="status-dot-pulse" style="width: 6px; height: 6px; border-radius: 50%; background: #ef4444; display: inline-block;" />
+          <span>Hors ligne</span>
+        </div>
+        <div
+          v-else
+          class="topbar-status topbar-status-online"
+        >
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block;" />
+          <span>En ligne</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <NotificationBell @click="toggleDropdown" />
+        <div class="topbar-user">
+          <span class="topbar-user-name">{{ auth.user?.first_name }}</span>
+          <span class="topbar-user-role">{{ getRoleText(auth.user?.role) }}</span>
+        </div>
+        <button
+          class="btn-logout"
+          title="Se déconnecter"
+          @click="auth.logout(); $router.push('/login')"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+        </button>
+      </div>
+    </div>
 
     <main class="main-content">
       <div class="page-enter">
@@ -224,67 +224,75 @@ function handleMobileSidebarKeydown(e) {
 </template>
 
 <style scoped>
-.mobile-menu-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem;
-  border-radius: var(--radius-sm);
-  min-width: 44px;
-  min-height: 44px;
-}
-.mobile-menu-btn:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.04);
-}
-.sidebar-backdrop {
-  display: none;
-}
-
-@keyframes slideInRight {
-  from { opacity: 0; transform: translateX(100%); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@media (max-width: 900px) {
-  .mobile-menu-btn {
-    display: flex;
-  }
-  .sidebar-backdrop {
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 9;
-    animation: fadeIn 0.2s ease;
-  }
-  .sidebar.mobile-sidebar-open {
-    display: flex;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 280px;
-    max-width: 80vw;
-    height: 100dvh;
-    z-index: 20;
-    animation: slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  @keyframes slideInLeft {
-    from { transform: translateX(-100%); }
-    to { transform: translateX(0); }
-  }
-}
-
 @media (min-width: 901px) {
-  .mobile-menu-btn {
+  .mobile-header-bar {
     display: none !important;
   }
+}
+
+/* Desktop Top Bar */
+.desktop-topbar {
+  display: none;
+}
+@media (min-width: 901px) {
+  .desktop-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0;
+    left: 280px;
+    right: 0;
+    height: 56px;
+    padding: 0 1.5rem;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 5;
+  }
+}
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.topbar-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+.topbar-status-offline {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+}
+.topbar-status-online {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #10b981;
+}
+.topbar-user {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.topbar-user-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.topbar-user-role {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: capitalize;
 }
 </style>

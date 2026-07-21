@@ -70,7 +70,7 @@ const routes = [
         path: 'recipes',
         name: 'Recipes',
         component: () => import('../views/RecipesView.vue'),
-        meta: { hideForManager: true }
+        meta: { cookOnly: true }
       },
       {
         path: 'notifications',
@@ -102,7 +102,7 @@ router.beforeEach((to, from, next) => {
     next('/app')
   } else if (to.meta.requiresAdmin && user?.role !== 'admin') {
     next('/app')
-  } else if (to.meta.hideForManager && user?.role === 'manager') {
+  } else if (to.meta.cookOnly && user?.role !== 'cook') {
     next('/app')
   } else {
     next()

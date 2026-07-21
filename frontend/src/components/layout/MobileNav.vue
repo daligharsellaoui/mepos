@@ -9,7 +9,7 @@ const auth = useAuthStore()
 const navItems = [
   { path: '/app', label: 'Dashboard', icon: 'dashboard' },
   { path: '/app/inventory', label: 'Stocks', icon: 'inventory' },
-  { path: '/app/recipes', label: 'Recettes', icon: 'recipes', hideForManager: true },
+  { path: '/app/recipes', label: 'Recettes', icon: 'recipes', cookOnly: true },
   { path: '/app/losses', label: 'Pertes', icon: 'losses' },
   { path: '/app/forecast', label: 'Prévisions', icon: 'forecast', adminOnly: true },
   { path: '/app/transfers', label: 'Transferts', icon: 'transfers' },
@@ -19,7 +19,7 @@ const navItems = [
 const visibleItems = computed(() =>
   navItems.filter(item => {
     if (item.adminOnly) return auth.user?.role === 'admin'
-    if (item.hideForManager) return auth.user?.role !== 'manager'
+    if (item.cookOnly) return auth.user?.role === 'cook'
     return true
   })
 )

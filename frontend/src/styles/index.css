@@ -136,6 +136,9 @@ body {
 
 /* ── Main Content ── */
 .main-content { padding: 2.5rem; overflow-y: auto; height: 100vh; }
+@media (min-width: 901px) {
+  .main-content { padding-top: calc(2.5rem + 56px); }
+}
 
 .mobile-header-bar { display: none; }
 
