@@ -2,12 +2,17 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   {
+    path: '/',
+    name: 'Landing',
+    component: () => import('../views/LandingPage.vue')
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('../views/LoginPage.vue')
   },
   {
-    path: '/',
+    path: '/app',
     component: () => import('../layouts/AppShell.vue'),
     meta: { requiresAuth: true },
     children: [
@@ -78,9 +83,9 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !token) {
     next('/login')
   } else if (to.path === '/login' && token) {
-    next('/')
+    next('/app')
   } else if (to.meta.requiresAdmin && user?.role !== 'admin') {
-    next('/')
+    next('/app')
   } else {
     next()
   }
