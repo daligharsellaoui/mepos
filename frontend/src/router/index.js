@@ -69,7 +69,8 @@ const routes = [
       {
         path: 'recipes',
         name: 'Recipes',
-        component: () => import('../views/RecipesView.vue')
+        component: () => import('../views/RecipesView.vue'),
+        meta: { hideForManager: true }
       },
       {
         path: 'notifications',
@@ -100,6 +101,8 @@ router.beforeEach((to, from, next) => {
   } else if (to.path === '/login' && token) {
     next('/app')
   } else if (to.meta.requiresAdmin && user?.role !== 'admin') {
+    next('/app')
+  } else if (to.meta.hideForManager && user?.role === 'manager') {
     next('/app')
   } else {
     next()

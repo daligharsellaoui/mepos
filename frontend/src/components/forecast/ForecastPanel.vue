@@ -346,3 +346,22 @@ function getCriticalIngredients() {
     </div>
   </div>
 </template>
+
+<style scoped>
+@media (max-width: 600px) {
+  .critical-header {
+    flex-direction: column;
+  }
+  .critical-item {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+  .forecast-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .view-title-section {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+</style>

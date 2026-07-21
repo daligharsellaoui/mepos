@@ -369,7 +369,6 @@ body {
    ══════════════════════════════════════════════════════════════ */
 @media (min-width: 1440px) {
   .app-container { max-width: 100vw; }
-  .main-content { max-width: 1400px; margin: 0 auto; }
   .metrics-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 }
 
@@ -377,7 +376,6 @@ body {
    RESPONSIVE — ULTRA-WIDE (≥1920px)
    ══════════════════════════════════════════════════════════════ */
 @media (min-width: 1920px) {
-  .main-content { max-width: 1600px; padding: 3rem; }
   .metrics-grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; }
   .view-title { font-size: 2rem; }
 }

@@ -24,7 +24,7 @@ const navItems = [
   { path: '/app', label: 'Tableau de Bord', icon: 'dashboard' },
   { path: '/app/notifications', label: 'Notifications', icon: 'notifications' },
   { path: '/app/inventory', label: 'Inventaire', icon: 'inventory' },
-  { path: '/app/recipes', label: 'Recettes', icon: 'recipes' },
+  { path: '/app/recipes', label: 'Recettes', icon: 'recipes', hideForManager: true },
   { path: '/app/losses', label: 'Pertes & Gâche', icon: 'losses' },
   { path: '/app/forecast', label: 'Prévisions', icon: 'forecast', adminOnly: true },
   { path: '/app/transfers', label: 'Transfert Dépôt', icon: 'transfers' },
@@ -35,7 +35,11 @@ const navItems = [
 ]
 
 const visibleItems = computed(() =>
-  navItems.filter(item => !item.adminOnly || auth.user?.role === 'admin')
+  navItems.filter(item => {
+    if (item.adminOnly) return auth.user?.role === 'admin'
+    if (item.hideForManager) return auth.user?.role !== 'manager'
+    return true
+  })
 )
 
 const isActive = (path) => {
