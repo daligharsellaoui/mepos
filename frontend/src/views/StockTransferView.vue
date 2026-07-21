@@ -39,6 +39,18 @@ const successMsg = ref(null)
 const isSubmitting = ref(false)
 const requests = ref([])
 
+const requestPage = ref(1)
+const requestPerPage = ref(15)
+
+const paginatedRequests = computed(() => {
+  const start = (requestPage.value - 1) * requestPerPage.value
+  return requests.value.slice(start, start + requestPerPage.value)
+})
+
+const totalRequestPages = computed(() => Math.max(1, Math.ceil(requests.value.length / requestPerPage.value)))
+
+watch(() => requests.value.length, () => { requestPage.value = 1 })
+
 watch(() => app.departments, (depts) => {
   if (depts.length > 0) {
     srcDept.value = centralId.value.toString()
@@ -290,7 +302,7 @@ async function handleRejectRequest(id) {
         <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
           Distribution actuelle des stocks.
         </p>
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div style="display: flex; flex-direction: column; gap: 1rem; max-height: 480px; overflow-y: auto; padding-right: 0.25rem;">
           <div
             v-for="ing in app.ingredients"
             :key="ing.id"
@@ -347,7 +359,7 @@ async function handleRejectRequest(id) {
           </thead>
           <tbody>
             <tr
-              v-for="req in requests"
+              v-for="req in paginatedRequests"
               :key="req.id"
             >
               <td style="color: var(--text-secondary); font-size: 0.875rem;">
@@ -395,6 +407,28 @@ async function handleRejectRequest(id) {
             </tr>
           </tbody>
         </table>
+        <div
+          v-if="totalRequestPages > 1"
+          class="pagination"
+        >
+          <button
+            class="touch-btn touch-btn-secondary"
+            :disabled="requestPage <= 1"
+            @click="requestPage--"
+          >
+            ←
+          </button>
+          <span style="color: var(--text-secondary); font-size: 0.9rem; padding: 0 0.75rem;">
+            Page {{ requestPage }} / {{ totalRequestPages }}
+          </span>
+          <button
+            class="touch-btn touch-btn-secondary"
+            :disabled="requestPage >= totalRequestPages"
+            @click="requestPage++"
+          >
+            →
+          </button>
+        </div>
       </div>
     </div>
   </div>

@@ -117,7 +117,7 @@
             title="Détails"
             @click="viewDetails(agent)"
           >
-            Détails
+            ℹ️ Détails
           </button>
           <button
             class="touch-btn touch-btn-secondary"
@@ -154,15 +154,15 @@
         <label class="form-label">Nom de la machine</label>
         <input v-model="newAgent.machine_name" class="form-input" type="text" placeholder="Ex: kitchen-pc-01" />
       </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-        <div class="form-group">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; overflow-x: auto;">
+        <div class="form-group" style="min-width: 0;">
           <label class="form-label">Type de connecteur</label>
           <select v-model="newAgent.connector_type" class="form-select">
             <option value="database">Base de données</option>
             <option value="api">API REST</option>
           </select>
         </div>
-        <div class="form-group">
+        <div class="form-group" style="min-width: 0;">
           <label class="form-label">Système d'exploitation</label>
           <input v-model="newAgent.operating_system" class="form-input" type="text" placeholder="Ex: Windows 11" />
         </div>

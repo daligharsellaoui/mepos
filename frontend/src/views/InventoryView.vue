@@ -35,6 +35,18 @@ const filteredStocks = computed(() =>
     return stock.department_id === selectedDept.value
   })
 )
+
+const stockPage = ref(1)
+const stockPerPage = ref(15)
+
+const paginatedStocks = computed(() => {
+  const start = (stockPage.value - 1) * stockPerPage.value
+  return filteredStocks.value.slice(start, start + stockPerPage.value)
+})
+
+const totalStockPages = computed(() => Math.max(1, Math.ceil(filteredStocks.value.length / stockPerPage.value)))
+
+watch([filteredStocks, selectedDept], () => { stockPage.value = 1 })
 </script>
 
 <template>
@@ -111,7 +123,7 @@ const filteredStocks = computed(() =>
         </thead>
         <tbody>
           <tr
-            v-for="stock in filteredStocks"
+            v-for="stock in paginatedStocks"
             :key="stock.id"
           >
             <td data-label="Ingrédient">
@@ -161,6 +173,28 @@ const filteredStocks = computed(() =>
           </tr>
         </tbody>
       </table>
+      <div
+        v-if="totalStockPages > 1"
+        class="pagination"
+      >
+        <button
+          class="touch-btn touch-btn-secondary"
+          :disabled="stockPage <= 1"
+          @click="stockPage--"
+        >
+          ←
+        </button>
+        <span style="color: var(--text-secondary); font-size: 0.9rem; padding: 0 0.75rem;">
+          Page {{ stockPage }} / {{ totalStockPages }}
+        </span>
+        <button
+          class="touch-btn touch-btn-secondary"
+          :disabled="stockPage >= totalStockPages"
+          @click="stockPage++"
+        >
+          →
+        </button>
+      </div>
     </div>
   </div>
 </template>

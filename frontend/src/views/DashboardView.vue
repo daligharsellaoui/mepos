@@ -157,6 +157,7 @@ function handlePeriodChange(newPeriod) {
     startDate.value = weekAgoStr
     endDate.value = todayStr
   }
+  fetchSalesStats()
 }
 
 const totalPurchaseValue = computed(() =>

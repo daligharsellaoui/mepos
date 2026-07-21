@@ -11,6 +11,18 @@ const isAdmin = computed(() => auth.isAdmin)
 const isCook = computed(() => auth.isCook)
 
 const isModalOpen = ref(false)
+
+const lossPage = ref(1)
+const lossPerPage = ref(15)
+
+const paginatedLosses = computed(() => {
+  const start = (lossPage.value - 1) * lossPerPage.value
+  return app.losses.slice(start, start + lossPerPage.value)
+})
+
+const totalLossPages = computed(() => Math.max(1, Math.ceil(app.losses.length / lossPerPage.value)))
+
+watch(() => app.losses.length, () => { lossPage.value = 1 })
 const selectedDept = ref('')
 const selectedIng = ref('')
 const quantity = ref('')
@@ -134,7 +146,7 @@ async function handleSubmit() {
         </thead>
         <tbody>
           <tr
-            v-for="loss in app.losses"
+            v-for="loss in paginatedLosses"
             :key="loss.id"
           >
             <td
@@ -179,6 +191,28 @@ async function handleSubmit() {
           </tr>
         </tbody>
       </table>
+      <div
+        v-if="totalLossPages > 1"
+        class="pagination"
+      >
+        <button
+          class="touch-btn touch-btn-secondary"
+          :disabled="lossPage <= 1"
+          @click="lossPage--"
+        >
+          ←
+        </button>
+        <span style="color: var(--text-secondary); font-size: 0.9rem; padding: 0 0.75rem;">
+          Page {{ lossPage }} / {{ totalLossPages }}
+        </span>
+        <button
+          class="touch-btn touch-btn-secondary"
+          :disabled="lossPage >= totalLossPages"
+          @click="lossPage++"
+        >
+          →
+        </button>
+      </div>
     </div>
 
     <!-- Declare Loss Modal -->

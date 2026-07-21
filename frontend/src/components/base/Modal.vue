@@ -33,11 +33,12 @@ function handleOverlayClick(e) {
         class="modal-overlay"
         @click="handleOverlayClick"
       >
-        <div
-          class="glass-panel modal-content"
-          :style="{ maxWidth, padding: '2rem' }"
-        >
-          <div class="modal-header">
+          <div
+            class="glass-panel modal-content"
+            :style="{ maxWidth, padding: '2rem' }"
+            style="max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;"
+          >
+            <div class="modal-header" style="flex-shrink: 0;">
             <h2
               class="modal-title"
               style="font-size: 1.15rem; margin: 0;"
@@ -74,12 +75,13 @@ function handleOverlayClick(e) {
               </svg>
             </button>
           </div>
-          <div style="flex-grow: 1;">
+          <div style="flex-grow: 1; overflow-y: auto; max-height: 60vh;">
             <slot />
           </div>
           <div
             v-if="$slots.footer"
             class="modal-footer"
+            style="flex-shrink: 0;"
           >
             <slot name="footer" />
           </div>

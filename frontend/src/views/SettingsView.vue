@@ -567,8 +567,8 @@ async function handleDeleteDeptConfirm() {
               required
             >
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div class="form-group">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; overflow-x: auto;">
+            <div class="form-group" style="min-width: 0;">
               <label class="form-label">Unité Cuisine *</label>
               <select
                 v-model="ingUnit"
@@ -581,7 +581,7 @@ async function handleDeleteDeptConfirm() {
                 <option value="l">litre (l)</option>
               </select>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="min-width: 0;">
               <label class="form-label">Unité Achat *</label>
               <input
                 v-model="ingPurchaseUnit"
@@ -591,8 +591,8 @@ async function handleDeleteDeptConfirm() {
               >
             </div>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div class="form-group">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; overflow-x: auto;">
+            <div class="form-group" style="min-width: 0;">
               <label class="form-label">Capacité Paquet *</label>
               <input
                 v-model="ingConversionFactor"
@@ -603,7 +603,7 @@ async function handleDeleteDeptConfirm() {
                 required
               >
             </div>
-            <div class="form-group">
+            <div class="form-group" style="min-width: 0;">
               <label class="form-label">Prix Paquet (TND) *</label>
               <input
                 v-model="ingPurchaseUnitPrice"
@@ -1457,8 +1457,8 @@ async function handleDeleteDeptConfirm() {
           required
         >
       </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-        <div class="form-group">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; overflow-x: auto;">
+        <div class="form-group" style="min-width: 0;">
           <label class="form-label">Unité Cuisine *</label>
           <select
             v-model="editUnit"
@@ -1471,7 +1471,7 @@ async function handleDeleteDeptConfirm() {
             <option value="l">litre (l)</option>
           </select>
         </div>
-        <div class="form-group">
+        <div class="form-group" style="min-width: 0;">
           <label class="form-label">Unité Achat *</label>
           <input
             v-model="editPurchaseUnit"
@@ -1481,8 +1481,8 @@ async function handleDeleteDeptConfirm() {
           >
         </div>
       </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-        <div class="form-group">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; overflow-x: auto;">
+        <div class="form-group" style="min-width: 0;">
           <label class="form-label">Capacité Paquet *</label>
           <input
             v-model="editConversionFactor"
@@ -1493,7 +1493,7 @@ async function handleDeleteDeptConfirm() {
             required
           >
         </div>
-        <div class="form-group">
+        <div class="form-group" style="min-width: 0;">
           <label class="form-label">Prix Paquet (TND) *</label>
           <input
             v-model="editPurchaseUnitPrice"
