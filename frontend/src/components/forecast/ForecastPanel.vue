@@ -13,17 +13,9 @@ const props = defineProps({
   }
 })
 
-// ─── Critical Stocks Card ───
-const showAllCritical = ref(false)
-
 function getCriticalIngredients() {
   if (!props.forecast) return []
   return props.forecast.ingredients.filter(i => i.is_critical)
-}
-
-function getDisplayedCritical() {
-  const critical = getCriticalIngredients()
-  return showAllCritical.value ? critical : critical.slice(0, 5)
 }
 </script>
 
@@ -130,7 +122,7 @@ function getDisplayedCritical() {
     <!-- Critical stocks alert -->
     <div
       v-if="getCriticalIngredients().length > 0"
-      class="glass-panel"
+      class="glass-panel glass-panel-scroll"
       style="padding: 1.5rem; border-left: 4px solid var(--coral);"
     >
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
@@ -152,7 +144,7 @@ function getDisplayedCritical() {
 
       <div style="display: flex; flex-direction: column; gap: 0.75rem;">
         <div
-          v-for="ing in getDisplayedCritical()"
+          v-for="ing in getCriticalIngredients()"
           :key="`${ing.department_id}-${ing.ingredient_id}`"
           style="padding: 0.85rem 1rem; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; gap: 1rem;"
           :style="{
@@ -192,14 +184,7 @@ function getDisplayedCritical() {
         </div>
       </div>
 
-      <button
-        v-if="getCriticalIngredients().length > 5"
-        class="touch-btn touch-btn-secondary"
-        style="margin-top: 0.75rem; width: 100%; min-height: 36px; padding: 0.5rem; font-size: 0.85rem;"
-        @click="showAllCritical = !showAllCritical"
-      >
-        {{ showAllCritical ? 'Réduire' : `Voir les ${getCriticalIngredients().length - 5} autres` }}
-      </button>
+
     </div>
 
     <!-- Depletion Timeline + Reorder Suggestions Grid -->

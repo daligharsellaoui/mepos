@@ -977,7 +977,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
           <h3 style="font-size: 1.1rem; margin-bottom: 1.25rem;">
             Top Ventes (par volume)
           </h3>
-          <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+          <div style="display: flex; flex-direction: column; gap: 1.25rem; max-height: 360px; overflow-y: auto; padding-right: 0.25rem;">
             <div
               v-for="item in [...(salesStats.items || [])].sort((a, b) => b.quantity - a.quantity)"
               :key="item.recipe_id"
