@@ -14,7 +14,7 @@
       <p>Chargement des paramètres...</p>
     </div>
 
-    <div v-else style="display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 1.25rem;">
+    <div v-else style="display: grid; grid-template-columns: 1fr; gap: 1.25rem;">
       <!-- Restaurant Info -->
       <div class="glass-panel" style="padding: 1.5rem;">
         <h2 style="font-size: 1rem; font-weight: 700; margin: 0 0 1rem; color: var(--text-primary);">🏪 Informations du Restaurant</h2>

@@ -302,7 +302,7 @@ async function handleRejectRequest(id) {
         <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
           Distribution actuelle des stocks.
         </p>
-        <div style="display: flex; flex-direction: column; gap: 1rem; max-height: 480px; overflow-y: auto; padding-right: 0.25rem;">
+        <div class="panel-content-scroll" style="display: flex; flex-direction: column; gap: 1rem;">
           <div
             v-for="ing in app.ingredients"
             :key="ing.id"

@@ -146,6 +146,7 @@ async function fetchSalesHistory() {
 }
 
 function handlePeriodChange(newPeriod) {
+  if (newPeriod === period.value) return
   period.value = newPeriod
   if (newPeriod === 'today') {
     startDate.value = todayStr
@@ -957,9 +958,48 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
       <!-- Items sold -->
       <div
         v-if="isLoadingStats"
-        style="padding: 2rem; text-align: center; color: var(--text-secondary);"
+        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem;"
       >
-        Chargement des données de vente...
+        <div>
+          <h3 style="font-size: 1.1rem; margin-bottom: 1.25rem;">
+            Top Ventes (par volume)
+          </h3>
+          <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+            <div
+              v-for="n in 5"
+              :key="n"
+              style="display: flex; flex-direction: column; gap: 0.35rem;"
+            >
+              <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
+                <span class="skeleton" style="width: 60%; height: 1rem; border-radius: 4px;" />
+                <span class="skeleton" style="width: 20%; height: 1rem; border-radius: 4px;" />
+              </div>
+              <div style="height: 8px; background: rgba(255,255,255,0.03); border-radius: 4px; overflow: hidden;">
+                <div class="skeleton" style="height: 100%; width: 100%; border-radius: 4px;" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3 style="font-size: 1.1rem; margin-bottom: 1.25rem;">
+            Rapport Détaillé
+          </h3>
+          <div class="table-wrapper">
+            <table class="mepos-table">
+              <thead>
+                <tr><th>Produit</th><th>Quantité</th><th>Prix Unitaire</th><th>CA</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="n in 5" :key="n">
+                  <td><span class="skeleton" style="width: 70%; height: 1rem; border-radius: 4px; display: inline-block;" /></td>
+                  <td><span class="skeleton" style="width: 40%; height: 1rem; border-radius: 4px; display: inline-block;" /></td>
+                  <td><span class="skeleton" style="width: 50%; height: 1rem; border-radius: 4px; display: inline-block;" /></td>
+                  <td><span class="skeleton" style="width: 45%; height: 1rem; border-radius: 4px; display: inline-block;" /></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
       <div
         v-else-if="salesStats.items?.length === 0"
