@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useAppStore } from '../stores/app'
 import Modal from '../components/base/Modal.vue'
+import ConfirmDialog from '../components/base/ConfirmDialog.vue'
 
 const auth = useAuthStore()
 const app = useAppStore()
@@ -28,6 +29,9 @@ const selectedIng = ref('')
 const quantity = ref('')
 const reason = ref('spoilage')
 const errorMsg = ref(null)
+const showLowStockConfirm = ref(false)
+const lowStockQty = ref(0)
+const lowStockAvailable = ref(0)
 
 function findKitchenDept() {
   return app.departments.find(d =>
@@ -72,9 +76,16 @@ async function handleSubmit() {
   const availableQty = stockRow ? parseFloat(stockRow.quantity) : 0
 
   if (qtyVal > availableQty) {
-    if (!window.confirm(`Attention: Le stock disponible est de ${availableQty.toFixed(2)}. Continuer ?`)) return
+    lowStockQty.value = qtyVal
+    lowStockAvailable.value = availableQty
+    showLowStockConfirm.value = true
+    return
   }
 
+  await submitLoss(qtyVal)
+}
+
+async function submitLoss(qtyVal) {
   const success = await app.handleLossSubmit({
     department_id: parseInt(selectedDept.value),
     ingredient_id: parseInt(selectedIng.value),
@@ -323,6 +334,17 @@ async function handleSubmit() {
         </div>
       </form>
     </Modal>
+
+    <ConfirmDialog
+      :is-open="showLowStockConfirm"
+      title="Stock insuffisant"
+      :message="`Le stock disponible est de ${lowStockAvailable.toFixed(2)}. Continuer à déclarer ${lowStockQty.toFixed(2)} comme perte ?`"
+      confirm-label="Continuer"
+      variant="warning"
+      @confirm="showLowStockConfirm = false; submitLoss(lowStockQty)"
+      @close="showLowStockConfirm = false"
+      @cancel="showLowStockConfirm = false"
+    />
   </div>
 </template>
 

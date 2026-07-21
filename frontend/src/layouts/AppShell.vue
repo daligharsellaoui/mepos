@@ -108,7 +108,6 @@ function toggleDropdown() {
     <!-- Desktop Top Bar -->
     <div class="desktop-topbar">
       <div class="topbar-left">
-        <img :src="logoSrc" alt="mePOS" style="height: 24px;">
         <div
           v-if="app.isOffline"
           class="topbar-status topbar-status-offline"
@@ -126,17 +125,6 @@ function toggleDropdown() {
       </div>
       <div class="topbar-right">
         <NotificationBell @click="toggleDropdown" />
-        <div class="topbar-user">
-          <span class="topbar-user-name">{{ auth.user?.first_name }}</span>
-          <span class="topbar-user-role">{{ getRoleText(auth.user?.role) }}</span>
-        </div>
-        <button
-          class="btn-logout"
-          title="Se déconnecter"
-          @click="auth.logout(); $router.push('/login')"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
-        </button>
       </div>
     </div>
 
@@ -278,21 +266,5 @@ function toggleDropdown() {
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.25);
   color: #10b981;
-}
-.topbar-user {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-}
-.topbar-user-name {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-.topbar-user-role {
-  font-size: 0.65rem;
-  font-weight: 500;
-  color: var(--text-muted);
-  text-transform: capitalize;
 }
 </style>

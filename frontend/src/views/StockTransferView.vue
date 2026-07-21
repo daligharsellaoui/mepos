@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useAppStore } from '../stores/app'
 import { api } from '../api'
+import ConfirmDialog from '../components/base/ConfirmDialog.vue'
 
 const auth = useAuthStore()
 const app = useAppStore()
@@ -37,6 +38,9 @@ const quantity = ref('')
 const errorMsg = ref(null)
 const successMsg = ref(null)
 const isSubmitting = ref(false)
+const showValidateConfirm = ref(false)
+const showRejectConfirm = ref(false)
+const pendingRequestId = ref(null)
 const requests = ref([])
 
 const requestPage = ref(1)
@@ -141,21 +145,35 @@ async function handleSubmit() {
 }
 
 async function handleValidateRequest(id) {
-  if (!window.confirm("Approuver cette demande ?")) return
-  try {
-    const { data: resJson } = await api.approveTransferRequest(id, auth.user?.id)
-    if (resJson.status === 'success') { alert("Demande approuvée !"); fetchRequests(); app.fetchData(auth.user) }
-    else alert("Erreur: " + resJson.message)
-  } catch { alert("Erreur de connexion.") }
+  pendingRequestId.value = id
+  showValidateConfirm.value = true
 }
 
 async function handleRejectRequest(id) {
-  if (!window.confirm("Rejeter cette demande ?")) return
+  pendingRequestId.value = id
+  showRejectConfirm.value = true
+}
+
+async function confirmValidate() {
+  showValidateConfirm.value = false
+  const id = pendingRequestId.value
+  pendingRequestId.value = null
+  try {
+    const { data: resJson } = await api.approveTransferRequest(id, auth.user?.id)
+    if (resJson.status === 'success') { successMsg.value = "Demande approuvée !"; fetchRequests(); app.fetchData(auth.user) }
+    else errorMsg.value = "Erreur: " + resJson.message
+  } catch { errorMsg.value = "Erreur de connexion." }
+}
+
+async function confirmReject() {
+  showRejectConfirm.value = false
+  const id = pendingRequestId.value
+  pendingRequestId.value = null
   try {
     const { data: resJson } = await api.rejectTransferRequest(id, auth.user?.id)
-    if (resJson.status === 'success') { alert("Demande rejetée."); fetchRequests() }
-    else alert("Erreur: " + resJson.message)
-  } catch { alert("Erreur de connexion.") }
+    if (resJson.status === 'success') { successMsg.value = "Demande rejetée."; fetchRequests() }
+    else errorMsg.value = "Erreur: " + resJson.message
+  } catch { errorMsg.value = "Erreur de connexion." }
 }
 </script>
 
@@ -431,5 +449,26 @@ async function handleRejectRequest(id) {
         </div>
       </div>
     </div>
+
+    <ConfirmDialog
+      :is-open="showValidateConfirm"
+      title="Valider la demande"
+      message="Approuver cette demande de recharge ?"
+      confirm-label="Approuver"
+      variant="primary"
+      @confirm="confirmValidate"
+      @close="showValidateConfirm = false"
+      @cancel="showValidateConfirm = false"
+    />
+    <ConfirmDialog
+      :is-open="showRejectConfirm"
+      title="Refuser la demande"
+      message="Rejeter cette demande de recharge ?"
+      confirm-label="Refuser"
+      variant="danger"
+      @confirm="confirmReject"
+      @close="showRejectConfirm = false"
+      @cancel="showRejectConfirm = false"
+    />
   </div>
 </template>

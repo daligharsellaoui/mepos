@@ -15,6 +15,21 @@
     </div>
 
     <div v-else style="display: grid; grid-template-columns: 1fr; gap: 1.25rem;">
+      <div
+        v-if="saveMsg === 'success'"
+        class="alert-banner"
+        style="background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.2); color: var(--emerald);"
+        @click="saveMsg = ''"
+      >
+        <span>Paramètres enregistrés avec succès !</span>
+      </div>
+      <div
+        v-if="saveMsg === 'error'"
+        class="alert-banner alert-banner-danger"
+        @click="saveMsg = ''"
+      >
+        <span>Erreur lors de l'enregistrement.</span>
+      </div>
       <!-- Restaurant Info -->
       <div class="glass-panel" style="padding: 1.5rem;">
         <h2 style="font-size: 1rem; font-weight: 700; margin: 0 0 1rem; color: var(--text-primary);">🏪 Informations du Restaurant</h2>
@@ -130,6 +145,7 @@ import PageContainer from '../components/base/PageContainer.vue'
 
 const isLoading = ref(true)
 const isSaving = ref(false)
+const saveMsg = ref('')
 
 const settings = reactive({
   restaurant: {
@@ -190,10 +206,10 @@ async function saveAll() {
     await api.updateSettings('notification', notifications)
     await api.updateSettings('inventory', inventory)
     await api.updateSettings('sync', sync)
-    alert('Paramètres enregistrés avec succès !')
+    saveMsg.value = 'success'
   } catch (err) {
     console.error('Failed to save settings:', err)
-    alert('Erreur lors de l\'enregistrement.')
+    saveMsg.value = 'error'
   } finally {
     isSaving.value = false
   }
