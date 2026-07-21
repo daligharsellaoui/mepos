@@ -204,7 +204,6 @@ const testimonials = [
     <!-- 1. HERO -->
     <section ref="heroEl" class="landing-hero">
       <div class="landing-hero-bg">
-        <div class="landing-hero-bg-grid"></div>
         <div class="landing-hero-bg-noise"></div>
         <div class="landing-hero-particle" style="width:6px;height:6px;top:15%;left:10%;animation-delay:-1s;animation-duration:7s"></div>
         <div class="landing-hero-particle" style="width:4px;height:4px;top:70%;left:5%;animation-delay:-3s;animation-duration:9s"></div>
@@ -250,8 +249,9 @@ const testimonials = [
           </div>
         </div>
         <div class="landing-hero-actions landing-hero-stagger">
-          <button class="landing-hero-btn-primary">
-            Essayer gratuitement
+          <button class="landing-hero-btn-primary" @click="goLogin">
+            <template v-if="isLoggedIn">Mon compte</template>
+            <template v-else>Se connecter</template>
           </button>
           <button class="landing-hero-btn-secondary">
             Voir la démo
@@ -275,7 +275,6 @@ const testimonials = [
         <div class="landing-hero-cube"></div>
         <div class="landing-hero-image landing-hero-image-stagger" :style="{ transform: `perspective(1200px) rotateY(${mouseX * 2}deg) rotateX(${-mouseY * 2}deg) translateY(${mouseY * 4}px)` }">
           <div class="landing-hero-image-glow"></div>
-          <div class="landing-hero-image-rim"></div>
           <div class="landing-hero-image-sweep"></div>
           <img :src="sectionSrc" alt="mePOS Inventory Intel" loading="lazy">
         </div>

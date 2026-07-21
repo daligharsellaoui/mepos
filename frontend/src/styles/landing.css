@@ -3,10 +3,22 @@
    ========================================================================== */
 
 .landing-page {
+  position: relative;
   background: #06090e;
   color: var(--text-primary);
   font-family: var(--font-sans);
   overflow-x: hidden;
+}
+.landing-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
 }
 
 /* NAVBAR */
@@ -223,14 +235,6 @@
   overflow: hidden;
   pointer-events: none;
   z-index: 0;
-}
-.landing-hero-bg-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
-  background-size: 60px 60px;
 }
 .landing-hero-bg-noise {
   position: absolute;
@@ -460,14 +464,6 @@
   border-radius: 50%;
   animation: glowBreathe 5s ease-in-out infinite;
 }
-.landing-hero-image-rim {
-  position: absolute;
-  inset: 0;
-  border-radius: 8px;
-  pointer-events: none;
-  z-index: 2;
-  background: linear-gradient(135deg, rgba(129, 140, 248, 0.08) 0%, transparent 40%, transparent 60%, rgba(99, 102, 241, 0.06) 100%);
-}
 .landing-hero-image-sweep {
   position: absolute;
   inset: 0;
@@ -570,7 +566,6 @@
     transform: none;
     animation: none;
   }
-  .landing-hero-bg-grid,
   .landing-hero-bg-noise,
   .landing-hero-particle,
   .landing-hero-image-sweep,
