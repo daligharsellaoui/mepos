@@ -13,9 +13,6 @@ const navItems = [
   { path: '/forecast', label: 'Prévisions', icon: 'forecast', adminOnly: true },
   { path: '/transfers', label: 'Transferts', icon: 'transfers' },
   { path: '/settings', label: 'Config', icon: 'settings', adminOnly: true },
-  { path: '/agents', label: 'Agents', icon: 'agents', adminOnly: true },
-  { path: '/sync', label: 'Sync', icon: 'sync', adminOnly: true },
-  { path: '/tenant-settings', label: 'Restaurant', icon: 'tenant', adminOnly: true },
 ]
 
 const visibleItems = computed(() =>

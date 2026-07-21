@@ -36,6 +36,8 @@ export const demoDb: {
   agents: any[];
   agent_heartbeats: any[];
   tenant_settings: any[];
+  notifications: any[];
+  notification_preferences: any[];
 } = {
   tenants: seedData.tenants,
   users: seedData.users,

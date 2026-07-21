@@ -242,6 +242,9 @@ export async function updateUser(
 
     if (password) {
       demoDb.users[idx].password_hash = await hashPassword(password);
+      eventBus.emit(Events.USER_PASSWORD_CHANGED, {
+        tenantId: tid, userId, username: demoDb.users[idx].username,
+      });
     }
 
     return safeUser(demoDb.users[idx]);
@@ -268,7 +271,7 @@ export async function updateUser(
            first_name = COALESCE($4, first_name),
            last_name = COALESCE($5, last_name),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $6 AND tenant_id = $7 RETURNING id, username, role, first_name, last_name`,
+        WHERE id = $6 AND tenant_id = $7 RETURNING id, username, role, first_name, last_name`,
       [
         username || null,
         hashed,
@@ -279,6 +282,9 @@ export async function updateUser(
         tid,
       ]
     );
+    eventBus.emit(Events.USER_PASSWORD_CHANGED, {
+      tenantId: tid, userId, username: result.rows[0]?.username || 'unknown',
+    });
   } else {
     result = await query(
       `UPDATE users
@@ -315,6 +321,9 @@ export async function deleteUser(userId: number, tenantId?: number): Promise<voi
       throw new Error('Impossible de supprimer le compte administrateur principal');
     }
     demoDb.users = demoDb.users.filter((u: any) => u.id !== userId);
+    eventBus.emit(Events.USER_DISABLED, {
+      tenantId: tid, userId, username: user.username,
+    });
     return;
   }
 
@@ -326,5 +335,9 @@ export async function deleteUser(userId: number, tenantId?: number): Promise<voi
     throw new Error('Impossible de supprimer le compte administrateur principal');
   }
 
+  const deletedUser = checkUser.rows[0];
   await query('DELETE FROM users WHERE id = $1 AND tenant_id = $2', [userId, tid]);
+  eventBus.emit(Events.USER_DISABLED, {
+    tenantId: tid, userId, username: deletedUser.username,
+  });
 }

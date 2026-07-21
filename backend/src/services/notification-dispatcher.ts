@@ -325,5 +325,67 @@ export function setupNotificationDispatcher() {
     });
   });
 
+  eventBus.on(Events.USER_PASSWORD_CHANGED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'information',
+      category: CATEGORIES.authentication,
+      priority: PRIORITIES.low,
+      title: 'Mot de passe modifié',
+      message: `Le mot de passe de "${data.username}" a été modifié.`,
+      entityType: 'user',
+      entityId: data.userId,
+      icon: 'user',
+      color: '#6366f1',
+      minRole: 'admin',
+    });
+  });
+
+  eventBus.on(Events.USER_DISABLED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'warning',
+      category: CATEGORIES.administration,
+      priority: PRIORITIES.medium,
+      title: 'Utilisateur supprimé',
+      message: `L'utilisateur "${data.username}" a été supprimé.`,
+      entityType: 'user',
+      entityId: data.userId,
+      icon: 'user',
+      color: '#e11d48',
+      minRole: 'admin',
+    });
+  });
+
+  eventBus.on(Events.RECIPE_CREATED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'recipe',
+      category: CATEGORIES.recipe,
+      priority: PRIORITIES.low,
+      title: 'Nouvelle recette créée',
+      message: `La recette "${data.name}" a été ajoutée.`,
+      entityType: 'recipe',
+      entityId: data.recipeId,
+      icon: 'book-open',
+      color: '#a855f7',
+    });
+  });
+
+  eventBus.on(Events.RECIPE_UPDATED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'information',
+      category: CATEGORIES.recipe,
+      priority: PRIORITIES.low,
+      title: 'Recette mise à jour',
+      message: `La recette "${data.name}" a été modifiée.`,
+      entityType: 'recipe',
+      entityId: data.recipeId,
+      icon: 'book-open',
+      color: '#a855f7',
+    });
+  });
+
   console.log('[NotificationDispatcher] Handlers registered for all events.');
 }

@@ -1,0 +1,26 @@
+0.549 > mepos-stock-backend@2.4.0 build
+0.549 > tsc
+0.549
+6.854 src/database.ts(55,3): error TS2353: Object literal may only specify known properties, and 'notifications' does not exist in type '{ tenants: any[]; users: any[]; departments: any[]; ingredients: any[]; inventory_stocks: any[]; recipes: any[]; recipe_ingredients: any[]; sales_tickets: any[]; sales_ticket_items: any[]; stock_movements: any[]; ... 4 more ...; tenant_settings: any[]; }'.
+6.854 src/services/notification.service.ts(149,17): error TS2339: Property 'notifications' does not exist on type '{ tenants: any[]; users: any[]; departments: any[]; ingredients: any[]; inventory_stocks: any[]; recipes: any[]; recipe_ingredients: any[]; sales_tickets: any[]; sales_ticket_items: any[]; stock_movements: any[]; ... 4 more ...; tenant_settings: any[]; }'.
+------
+[+] up 0/2
+ ⠙ Image mepos-backend  Building                                                                                    8.2s
+ ⠙ Image mepos-frontend Building                                                                                    8.2s
+Dockerfile:22
+
+--------------------
+
+  20 |
+
+  21 |     # Build TypeScript to dist/
+
+  22 | >>> RUN npm run build
+
+  23 |
+
+  24 |     # Remove devDependencies — keep only production packages
+
+--------------------
+
+target backend: failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 2

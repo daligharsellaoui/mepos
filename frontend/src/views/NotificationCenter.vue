@@ -3,12 +3,19 @@ import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotificationStore } from '../stores/notifications'
 import NotificationCard from '../components/notifications/NotificationCard.vue'
+import Modal from '../components/base/Modal.vue'
 
 const router = useRouter()
 const notifStore = useNotificationStore()
 const searchQuery = ref('')
 const activeFilter = ref('all')
 const containerRef = ref(null)
+const groupBy = ref('date')
+const detailNotif = ref(null)
+const showDetail = ref(false)
+
+const priorityLabels = { critical: 'Critique', high: 'Haute', medium: 'Moyenne', low: 'Basse' }
+const priorityColors = { critical: '#dc2626', high: '#f59e0b', medium: '#3b82f6', low: '#64748b' }
 
 const filterOptions = [
   { value: 'all', label: 'Toutes' },
@@ -18,6 +25,25 @@ const filterOptions = [
   { value: 'medium', label: 'Moyenne' },
   { value: 'low', label: 'Basse' },
 ]
+
+const groupOptions = [
+  { value: 'date', label: 'Par date' },
+  { value: 'category', label: 'Par catégorie' },
+]
+
+const categoryLabels = {
+  inventory: 'Inventaire', synchronization: 'Sync', transfer: 'Transferts',
+  warehouse: 'Pertes', purchase: 'Achats', agent: 'Agents',
+  authentication: 'Auth', recipe: 'Recettes', administration: 'Admin',
+  reports: 'Rapports', security: 'Sécurité', general: 'Général',
+}
+
+const categoryColors = {
+  inventory: '#06b6d4', synchronization: '#8b5cf6', transfer: '#f97316',
+  warehouse: '#ef4444', purchase: '#22c55e', agent: '#8b5cf6',
+  authentication: '#6366f1', recipe: '#a855f7', administration: '#6366f1',
+  reports: '#10b981', security: '#e11d48', general: '#64748b',
+}
 
 const categories = [
   { value: 'inventory', label: 'Inventaire', icon: '📦' },
@@ -82,7 +108,38 @@ function handleNavigate(url) {
   if (url) router.push(url)
 }
 
+function openDetail(notif) {
+  if (!notif.read) {
+    notifStore.markAsRead(notif.id)
+  }
+  detailNotif.value = notif
+  showDetail.value = true
+}
+
+function closeDetail() {
+  showDetail.value = false
+  detailNotif.value = null
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('fr-FR', {
+    day: 'numeric', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
 const groupedItems = computed(() => {
+  if (groupBy.value === 'category') {
+    const groups = {}
+    notifStore.items.forEach((n) => {
+      const cat = n.category || 'general'
+      if (!groups[cat]) groups[cat] = []
+      groups[cat].push(n)
+    })
+    return groups
+  }
+
   const groups = {}
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -157,6 +214,18 @@ const groupedItems = computed(() => {
       </div>
     </div>
 
+    <div class="group-bar">
+      <button
+        v-for="opt in groupOptions"
+        :key="opt.value"
+        class="group-btn"
+        :class="{ active: groupBy === opt.value }"
+        @click="groupBy = opt.value"
+      >
+        {{ opt.label }}
+      </button>
+    </div>
+
     <div class="category-bar">
       <button
         v-for="cat in categories"
@@ -183,8 +252,19 @@ const groupedItems = computed(() => {
       </div>
 
       <div v-else>
-        <div v-for="(group, dateLabel) in groupedItems" :key="dateLabel" class="notification-group">
-          <div class="group-header">{{ dateLabel }}</div>
+        <div v-for="(group, label) in groupedItems" :key="label" class="notification-group">
+          <div class="group-header">
+            <template v-if="groupBy === 'category'">
+              <span
+                class="group-category-dot"
+                :style="{ background: categoryColors[label] || '#64748b' }"
+              />
+              {{ categoryLabels[label] || label }}
+            </template>
+            <template v-else>
+              {{ label }}
+            </template>
+          </div>
           <NotificationCard
             v-for="notif in group"
             :key="notif.id"
@@ -205,6 +285,103 @@ const groupedItems = computed(() => {
         </div>
       </div>
     </div>
+    <Modal
+      :is-open="showDetail"
+      title="Détails de la notification"
+      max-width="520px"
+      @close="closeDetail"
+    >
+      <div v-if="detailNotif" class="detail-content">
+        <div class="detail-header">
+          <div
+            class="detail-icon"
+            :style="{ background: `${detailNotif.color}15`, color: detailNotif.color }"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </div>
+          <div>
+            <h3 class="detail-title">{{ detailNotif.title }}</h3>
+            <p class="detail-date">{{ formatDate(detailNotif.created_at) }}</p>
+          </div>
+        </div>
+
+        <div v-if="detailNotif.message" class="detail-message">
+          {{ detailNotif.message }}
+        </div>
+
+        <div class="detail-meta">
+          <div class="detail-meta-item">
+            <span class="detail-meta-label">Priorité</span>
+            <span
+              class="detail-priority"
+              :style="{
+                background: `${priorityColors[detailNotif.priority]}15`,
+                color: priorityColors[detailNotif.priority],
+                border: `1px solid ${priorityColors[detailNotif.priority]}25`
+              }"
+            >
+              {{ priorityLabels[detailNotif.priority] || detailNotif.priority }}
+            </span>
+          </div>
+          <div v-if="detailNotif.category" class="detail-meta-item">
+            <span class="detail-meta-label">Catégorie</span>
+            <span class="detail-category">{{ categoryLabels[detailNotif.category] || detailNotif.category }}</span>
+          </div>
+          <div v-if="detailNotif.type" class="detail-meta-item">
+            <span class="detail-meta-label">Type</span>
+            <span class="detail-category">{{ detailNotif.type }}</span>
+          </div>
+          <div v-if="detailNotif.read_at" class="detail-meta-item">
+            <span class="detail-meta-label">Lu le</span>
+            <span class="detail-category">{{ formatDate(detailNotif.read_at) }}</span>
+          </div>
+          <div v-if="detailNotif.entity_type" class="detail-meta-item">
+            <span class="detail-meta-label">Entité liée</span>
+            <span class="detail-category">{{ detailNotif.entity_type }} #{{ detailNotif.entity_id }}</span>
+          </div>
+        </div>
+
+        <div v-if="detailNotif.action_url" class="detail-actions">
+          <button
+            class="touch-btn touch-btn-primary"
+            @click="closeDetail(); handleNavigate(detailNotif.action_url)"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            Voir
+          </button>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="detail-footer-actions">
+          <button
+            v-if="detailNotif && !detailNotif.read"
+            class="touch-btn touch-btn-secondary"
+            @click="notifStore.markAsRead(detailNotif.id); closeDetail()"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Marquer comme lu
+          </button>
+          <button
+            v-if="detailNotif"
+            class="touch-btn touch-btn-secondary"
+            @click="notifStore.archiveNotification(detailNotif.id); closeDetail()"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+            Archiver
+          </button>
+          <button
+            v-if="detailNotif"
+            class="touch-btn touch-btn-danger"
+            @click="notifStore.deleteNotification(detailNotif.id); closeDetail()"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Supprimer
+          </button>
+          <button class="touch-btn" @click="closeDetail()">Fermer</button>
+        </div>
+      </template>
+    </Modal>
   </div>
 </template>
 
@@ -347,6 +524,37 @@ const groupedItems = computed(() => {
   overflow-y: auto;
   max-height: calc(100vh - 320px);
 }
+.group-bar {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+.group-btn {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.group-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+}
+.group-btn.active {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.3);
+  color: var(--indigo-light);
+}
+.group-category-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
 .center-state {
   display: flex;
   flex-direction: column;
@@ -376,5 +584,84 @@ const groupedItems = computed(() => {
   padding: 1rem;
   font-size: 0.8rem;
   color: var(--text-muted);
+}
+.detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.detail-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.detail-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.15rem;
+}
+.detail-date {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+.detail-message {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+.detail-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.detail-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.detail-meta-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.detail-priority {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+  width: fit-content;
+  text-transform: uppercase;
+}
+.detail-category {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.detail-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.detail-footer-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 </style>

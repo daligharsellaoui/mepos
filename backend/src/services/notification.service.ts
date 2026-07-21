@@ -52,7 +52,7 @@ function roleHasAccess(userRole: string, minRole: string): boolean {
   return (ROLE_HIERARCHY[userRole] || 0) >= (ROLE_HIERARCHY[minRole] || 0);
 }
 
-function getUsersForRole(tenantId: number, minRole: string): any[] {
+export function getUsersForRole(tenantId: number, minRole: string): any[] {
   if (isDemoMode) {
     return (demoDb.users || []).filter((u: any) =>
       u.tenant_id === tenantId && roleHasAccess(u.role, minRole)

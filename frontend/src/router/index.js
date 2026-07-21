@@ -70,6 +70,11 @@ const routes = [
         path: 'notifications',
         name: 'NotificationCenter',
         component: () => import('../views/NotificationCenter.vue')
+      },
+      {
+        path: 'notifications/preferences',
+        name: 'NotificationPreferences',
+        component: () => import('../views/NotificationPreferences.vue')
       }
     ]
   }

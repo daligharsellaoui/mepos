@@ -672,6 +672,9 @@ export async function createRecipe(data: { name: string; sale_price: number }, t
   if (isDemoMode) {
     const newRec = { id: demoDb.recipes.length + 1, name, sale_price, is_active: true, tenant_id: tid };
     demoDb.recipes.push(newRec);
+    eventBus.emit(Events.RECIPE_CREATED, {
+      tenantId: tid, recipeId: newRec.id, name: newRec.name, salePrice: newRec.sale_price,
+    });
     return newRec;
   }
 
@@ -679,7 +682,11 @@ export async function createRecipe(data: { name: string; sale_price: number }, t
     'INSERT INTO recipes (name, sale_price, tenant_id) VALUES ($1, $2, $3) RETURNING *',
     [name, sale_price, tid]
   );
-  return result.rows[0];
+  const recipe = result.rows[0];
+  eventBus.emit(Events.RECIPE_CREATED, {
+    tenantId: tid, recipeId: recipe.id, name: recipe.name, salePrice: recipe.sale_price,
+  });
+  return recipe;
 }
 
 export async function updateRecipe(
@@ -698,6 +705,9 @@ export async function updateRecipe(
       name: name || demoDb.recipes[idx].name,
       sale_price: sale_price !== undefined ? sale_price : demoDb.recipes[idx].sale_price,
     };
+    eventBus.emit(Events.RECIPE_UPDATED, {
+      tenantId: tid, recipeId: id, name: demoDb.recipes[idx].name, salePrice: demoDb.recipes[idx].sale_price,
+    });
     return demoDb.recipes[idx];
   }
 
@@ -709,7 +719,11 @@ export async function updateRecipe(
   );
 
   if (result.rows.length === 0) throw new Error('Recipe not found');
-  return result.rows[0];
+  const recipe = result.rows[0];
+  eventBus.emit(Events.RECIPE_UPDATED, {
+    tenantId: tid, recipeId: recipe.id, name: recipe.name, salePrice: recipe.sale_price,
+  });
+  return recipe;
 }
 
 export async function saveRecipeIngredients(
