@@ -1,0 +1,190 @@
+You are a senior product designer and frontend engineer specializing in premium SaaS websites (Stripe, Linear, Framer, Vercel, Raycast quality).
+
+Redesign the landing page hero for mePOS Stock while preserving the existing branding and dark purple identity.
+
+OBJECTIVE
+The result should immediately feel like a premium SaaS product worth paying for. Every detail should communicate quality, confidence, performance, and modern design.
+
+DO NOT redesign the brand.
+DO NOT introduce new colors outside the existing palette.
+Elevate the experience instead.
+
+──────────────────────────────
+
+LAYOUT
+
+• Keep two-column layout
+• Increase visual balance
+• Reduce empty black space
+• Product occupies more visual weight
+• Add breathing room without feeling empty
+
+──────────────────────────────
+
+BACKGROUND
+
+Create a premium atmosphere using:
+
+• large radial purple gradient
+• subtle mesh gradient
+• very light noise texture
+• faint grid texture
+• soft ambient glow
+• blurred floating particles
+• premium depth
+
+Nothing should distract from content.
+
+──────────────────────────────
+
+TYPOGRAPHY
+
+Improve hierarchy.
+
+Large headline (80–96px)
+
+Example:
+
+Gestion de stock.
+
+Simplifiée.
+
+Surboostée.
+
+Make "Surboostée" use the brand gradient.
+
+Subtitle:
+larger
+more readable
+better spacing
+maximum width around 520px.
+
+──────────────────────────────
+
+CTA
+
+Add:
+
+Primary CTA
+"Essayer gratuitement"
+
+Secondary CTA
+"Voir la démo"
+
+Buttons should have premium hover animations.
+
+──────────────────────────────
+
+TRUST
+
+Below CTA add:
+
+★★★★★
+
+Adopté par plus de XXX commerces
+
+or
+
+99.9% disponibilité
+
+Small elegant typography.
+
+──────────────────────────────
+
+FEATURE STRIP
+
+Replace the current four isolated icons with a premium glass feature bar.
+
+Each feature should have:
+
+glass card
+soft border
+purple glow
+hover lift
+micro animation
+
+Features:
+
+Gestion de stock
+
+Gestion de pertes
+
+Rapports & Analyses
+
+Alertes & Notifications
+
+──────────────────────────────
+
+PRODUCT SHOWCASE
+
+Keep the existing composition.
+
+Enhance with:
+
+soft bloom
+
+purple rim light
+
+larger glow
+
+better shadows
+
+floating animation
+
+mouse parallax
+
+glass reflections
+
+device depth
+
+floating cubes
+
+Everything must feel alive but subtle.
+
+──────────────────────────────
+
+ANIMATIONS
+
+Add premium motion:
+
+fade up
+
+stagger reveal
+
+floating devices
+
+breathing glow
+
+button hover
+
+glass reflection sweep
+
+parallax
+
+gradient animation
+
+Animations should remain under 300ms except the floating loop.
+
+──────────────────────────────
+
+DESIGN LANGUAGE
+
+Target quality similar to:
+
+• Stripe
+• Linear
+• Framer
+• Vercel
+• Raycast
+• Arc Browser
+• Apple product pages
+
+Minimal.
+
+Elegant.
+
+Confident.
+
+Never flashy.
+
+Every spacing, shadow, blur, glow, animation and typography choice should feel intentional and premium.

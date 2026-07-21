@@ -9,13 +9,24 @@ const router = useRouter()
 
 const scrolled = ref(false)
 const mobileOpen = ref(false)
+const mouseX = ref(0)
+const mouseY = ref(0)
+const heroEl = ref(null)
 
 function onScroll() {
   scrolled.value = window.scrollY > 20
 }
 
+function onMouseMove(e) {
+  if (!heroEl.value) return
+  const rect = heroEl.value.getBoundingClientRect()
+  mouseX.value = ((e.clientX - rect.left) / rect.width - 0.5) * 2
+  mouseY.value = ((e.clientY - rect.top) / rect.height - 0.5) * 2
+}
+
 onMounted(() => {
   window.addEventListener('scroll', onScroll)
+  window.addEventListener('mousemove', onMouseMove)
   observeSections()
   document.body.style.overflow = 'auto'
   document.body.style.height = 'auto'
@@ -23,6 +34,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('scroll', onScroll)
+  window.removeEventListener('mousemove', onMouseMove)
   document.body.style.overflow = ''
   document.body.style.height = ''
 })
@@ -183,7 +195,16 @@ const testimonials = [
     </div>
 
     <!-- 1. HERO -->
-    <section class="landing-hero">
+    <section ref="heroEl" class="landing-hero">
+      <div class="landing-hero-bg">
+        <div class="landing-hero-bg-grid"></div>
+        <div class="landing-hero-bg-noise"></div>
+        <div class="landing-hero-particle" style="width:6px;height:6px;top:15%;left:10%;animation-delay:-1s;animation-duration:7s"></div>
+        <div class="landing-hero-particle" style="width:4px;height:4px;top:70%;left:5%;animation-delay:-3s;animation-duration:9s"></div>
+        <div class="landing-hero-particle" style="width:5px;height:5px;top:25%;left:85%;animation-delay:-5s;animation-duration:6s"></div>
+        <div class="landing-hero-particle" style="width:3px;height:3px;top:60%;left:90%;animation-delay:-2s;animation-duration:8s"></div>
+        <div class="landing-hero-particle" style="width:7px;height:7px;top:40%;left:45%;animation-delay:-4s;animation-duration:10s"></div>
+      </div>
       <div class="landing-hero-content">
         <div class="landing-hero-stagger">
           <h1 class="landing-hero-title">
@@ -221,13 +242,34 @@ const testimonials = [
             <span class="landing-hero-feature-label">Alertes & Notifications</span>
           </div>
         </div>
+        <div class="landing-hero-actions landing-hero-stagger">
+          <button class="landing-hero-btn-primary">
+            Essayer gratuitement
+          </button>
+          <button class="landing-hero-btn-secondary">
+            Voir la démo
+          </button>
+        </div>
+        <div class="landing-hero-trust landing-hero-stagger">
+          <div class="landing-hero-stars">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)" stroke="var(--amber)" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)" stroke="var(--amber)" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)" stroke="var(--amber)" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)" stroke="var(--amber)" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)" stroke="var(--amber)" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <span class="landing-hero-trust-text">Adopté par plus de 150 commerces</span>
+        </div>
       </div>
       <div class="landing-hero-visual">
         <div class="landing-hero-glow"></div>
         <div class="landing-hero-cube"></div>
         <div class="landing-hero-cube"></div>
         <div class="landing-hero-cube"></div>
-        <div class="landing-hero-image landing-hero-image-stagger">
+        <div class="landing-hero-image landing-hero-image-stagger" :style="{ transform: `perspective(1200px) rotateY(${mouseX * 2}deg) rotateX(${-mouseY * 2}deg) translateY(${mouseY * 4}px)` }">
+          <div class="landing-hero-image-glow"></div>
+          <div class="landing-hero-image-rim"></div>
+          <div class="landing-hero-image-sweep"></div>
           <img :src="sectionSrc" alt="mePOS Inventory Intel" loading="lazy">
         </div>
       </div>
