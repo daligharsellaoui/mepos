@@ -119,13 +119,12 @@ function toggleDropdown() {
 
     <main class="main-content">
       <div class="app-topbar">
-        <div class="topbar-left">
-          <span class="topbar-page-title">{{ $route.meta?.title || $route.name }}</span>
-        </div>
-        <div class="topbar-right">
+        <div />
+        <div>
           <NotificationBell @click="toggleDropdown" />
         </div>
       </div>
+      <div class="topbar-spacer" />
       <div class="page-enter">
         <router-view />
       </div>
@@ -327,27 +326,24 @@ function toggleDropdown() {
   background: rgba(255, 255, 255, 0.05);
 }
 .app-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   padding: 0 1.5rem;
   height: 56px;
-  border-bottom: 1px solid var(--border-color);
+  z-index: 100;
+  pointer-events: none;
+}
+.app-topbar > * {
+  pointer-events: auto;
+}
+.topbar-spacer {
+  height: 56px;
   flex-shrink: 0;
-  background: var(--bg-sidebar);
-}
-.topbar-left {
-  display: flex;
-  align-items: center;
-}
-.topbar-page-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-.topbar-right {
-  display: flex;
-  align-items: center;
 }
 @media (max-width: 768px) {
   .app-topbar {

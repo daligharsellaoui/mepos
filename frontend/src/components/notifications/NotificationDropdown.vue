@@ -30,7 +30,12 @@ function handleNavigate(url) {
     <div class="dropdown-backdrop" @click="emit('close')" />
     <div class="notification-dropdown">
       <div class="dropdown-header">
-        <h3 class="dropdown-title">Notifications</h3>
+        <div class="dropdown-title-row">
+          <h3 class="dropdown-title">Notifications</h3>
+          <button class="dropdown-settings-btn" @click="emit('close'); router.push('/app/notifications/preferences')" title="Préférences">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </div>
         <button
           v-if="notifStore.unreadCount > 0"
           class="dropdown-mark-read"
@@ -66,10 +71,6 @@ function handleNavigate(url) {
       <div class="dropdown-footer">
         <button class="view-all-btn" @click="handleViewAll">
           Voir toutes les notifications ({{ notifStore.total }})
-        </button>
-        <button class="pref-btn" @click="emit('close'); router.push('/app/notifications/preferences')">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          Préférences
         </button>
       </div>
     </div>
@@ -110,11 +111,31 @@ function handleNavigate(url) {
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
+.dropdown-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
 .dropdown-title {
   font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
+}
+.dropdown-settings-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+.dropdown-settings-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
 }
 .dropdown-mark-read {
   background: transparent;
@@ -179,24 +200,5 @@ function handleNavigate(url) {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
 }
-.pref-btn {
-  width: 100%;
-  font-size: 0.78rem;
-  padding: 0.5rem;
-  border: 1px solid transparent;
-  color: var(--text-muted);
-  font-weight: 500;
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.2s;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-}
-.pref-btn:hover {
-  border-color: var(--border-color);
-  color: var(--text-secondary);
-}
+
 </style>
