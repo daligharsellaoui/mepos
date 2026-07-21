@@ -5,7 +5,6 @@ import { useAuthStore } from '../stores/auth'
 import { useAppStore } from '../stores/app'
 import { api } from '../api'
 import { Chart, registerables } from 'chart.js'
-import ForecastPanel from '../components/forecast/ForecastPanel.vue'
 import PageContainer from '../components/base/PageContainer.vue'
 import EmptyState from '../components/base/EmptyState.vue'
 
@@ -532,17 +531,6 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
         </button>
       </template>
     </PageContainer>
-
-    <ForecastPanel
-      v-if="isAdmin"
-      :forecast="app.forecast"
-      :is-loading="app.isForecastLoading"
-    />
-
-    <hr
-      v-if="isAdmin && app.forecast"
-      style="border: none; border-top: 1px solid var(--border-color); margin: 0.5rem 0;"
-    >
 
     <!-- Metrics with skeleton loading -->
     <div class="metrics-grid">

@@ -50,6 +50,12 @@ const routes = [
         meta: { requiresAdmin: true }
       },
       {
+        path: 'forecast',
+        name: 'Forecast',
+        component: () => import('../views/ForecastView.vue'),
+        meta: { requiresAdmin: true }
+      },
+      {
         path: 'sync',
         name: 'SyncDashboard',
         component: () => import('../views/SyncDashboard.vue'),
