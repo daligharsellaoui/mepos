@@ -64,7 +64,7 @@ function navigateToRecipe(recipeId) {
           </div>
         </div>
         <div v-if="recipe.sale_price" style="margin-top: 0.4rem; font-size: 0.8rem; color: var(--emerald);">
-          Prix vente: {{ parseFloat(recipe.sale_price).toFixed(2) }} TND
+          Prix vente: {{ parseFloat(recipe.sale_price).toFixed(3) }} TND
         </div>
       </div>
     </div>

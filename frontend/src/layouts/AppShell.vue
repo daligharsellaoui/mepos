@@ -141,10 +141,10 @@ const getRoleText = (role) => {
             class="notification-financials"
           >
             <span style="color: var(--coral); font-weight: 600;">
-              Perte Sèche : -{{ alert.costLoss?.toFixed(2) }} TND
+              Perte Sèche : -{{ alert.costLoss?.toFixed(3) }} TND
             </span>
             <span style="color: var(--amber); font-weight: 600;">
-              Manque à Gagner : -{{ alert.opportunityLoss?.toFixed(2) }} TND
+              Manque à Gagner : -{{ alert.opportunityLoss?.toFixed(3) }} TND
             </span>
           </div>
         </div>

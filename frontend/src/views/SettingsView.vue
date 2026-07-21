@@ -173,8 +173,8 @@ const deptSuccess = ref(null)
 const getCalculatedBasePrice = (price, factor) => {
   const p = parseFloat(price)
   const f = parseFloat(factor)
-  if (!isNaN(p) && !isNaN(f) && f > 0) return (p / f).toFixed(4)
-  return '0.0000'
+  if (!isNaN(p) && !isNaN(f) && f > 0) return (p / f).toFixed(3)
+  return '0.000'
 }
 
 const filteredMovements = computed(() =>
@@ -853,9 +853,9 @@ async function handleDeleteDeptConfirm() {
                 </td>
                 <td><span class="badge badge-success">{{ ing.purchase_unit || '—' }}</span></td>
                 <td class="cell-num">{{ parseFloat(ing.conversion_factor).toLocaleString() }} {{ ing.unit }}</td>
-                <td class="cell-num">{{ parseFloat(ing.purchase_unit_price).toFixed(2) }} TND</td>
+                <td class="cell-num">{{ parseFloat(ing.purchase_unit_price).toFixed(3) }} TND</td>
                 <td class="cell-cost">
-                  {{ parseFloat(ing.purchase_price_per_unit).toFixed(4) }} TND/{{ ing.unit }}
+                  {{ parseFloat(ing.purchase_price_per_unit).toFixed(3) }} TND/{{ ing.unit }}
                 </td>
                 <td class="cell-actions" @click.stop>
                   <RowActionMenu
@@ -992,7 +992,7 @@ async function handleDeleteDeptConfirm() {
                 >
                   <td><strong style="color: var(--text-primary);">{{ rec.name }}</strong></td>
                   <td style="color: var(--emerald); font-weight: 600;">
-                    {{ parseFloat(rec.sale_price).toFixed(2) }} TND
+                    {{ parseFloat(rec.sale_price).toFixed(3) }} TND
                   </td>
                   <td>{{ rec.ingredients?.length || 0 }} réf(s)</td>
                   <td>

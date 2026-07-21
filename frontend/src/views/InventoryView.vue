@@ -162,13 +162,13 @@ watch([filteredStocks, selectedDept], () => { stockPage.value = 1 })
               data-label="Prix"
               style="color: var(--text-secondary);"
             >
-              {{ isAdmin ? `${parseFloat(stock.purchase_price_per_unit).toFixed(2)} TND / ${stock.unit}` : '*** TND' }}
+              {{ isAdmin ? `${parseFloat(stock.purchase_price_per_unit).toFixed(3)} TND / ${stock.unit}` : '*** TND' }}
             </td>
             <td
               data-label="Valeur"
               style="font-weight: 600; color: var(--blue);"
             >
-              {{ isAdmin ? `${(parseFloat(stock.quantity) * parseFloat(stock.purchase_price_per_unit)).toFixed(2)} TND` : '*** TND' }}
+              {{ isAdmin ? `${(parseFloat(stock.quantity) * parseFloat(stock.purchase_price_per_unit)).toFixed(3)} TND` : '*** TND' }}
             </td>
           </tr>
         </tbody>

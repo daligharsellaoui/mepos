@@ -576,7 +576,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
             <span class="skeleton" style="width: 80px; height: 2rem; border-radius: 4px; display: inline-block;" />
           </span>
           <span v-else-if="canViewFinance">
-            {{ totalPurchaseValue.toLocaleString('fr-TN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} <span class="metric-unit"> TND</span>
+            {{ totalPurchaseValue.toLocaleString('fr-TN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) }} <span class="metric-unit"> TND</span>
           </span>
           <span v-else>{{ app.stocks.length }} <span class="metric-unit">références</span></span>
         </span>
@@ -592,7 +592,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
             <span class="skeleton" style="width: 80px; height: 2rem; border-radius: 4px; display: inline-block;" />
           </span>
           <span v-else-if="canViewFinance">
-            {{ totalLossCost.toFixed(2) }} <span class="metric-unit"> TND</span>
+            {{ totalLossCost.toFixed(3) }} <span class="metric-unit"> TND</span>
           </span>
           <span v-else>{{ app.losses.length }} <span class="metric-unit">incidents</span></span>
         </span>
@@ -600,7 +600,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
           v-if="canViewFinance"
           class="metric-desc"
           style="color: #fca5a5;"
-        >Opportunités perdues : <strong>{{ totalOpportunityLoss.toFixed(2) }} TND</strong></span>
+        >Opportunités perdues : <strong>{{ totalOpportunityLoss.toFixed(3) }} TND</strong></span>
         <span
           v-else
           class="metric-desc"
@@ -797,7 +797,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
                 </div>
               </div>
               <div style="text-align: right; font-size: 0.9rem; color: #ef4444; font-weight: 600;">
-                {{ canViewFinance ? `-${parseFloat(loss.cost_loss).toFixed(2)} TND` : '*** TND' }}
+                {{ canViewFinance ? `-${parseFloat(loss.cost_loss).toFixed(3)} TND` : '*** TND' }}
               </div>
             </div>
           </div>
@@ -937,7 +937,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
               <span class="skeleton" style="width: 120px; height: 2rem; border-radius: 4px; display: inline-block;" />
             </span>
             <span v-else-if="canViewFinance">
-              {{ salesStats.total_revenue?.toLocaleString('fr-TN', { minimumFractionDigits: 2 }) }} TND
+              {{ salesStats.total_revenue?.toLocaleString('fr-TN', { minimumFractionDigits: 3 }) }} TND
             </span>
             <span v-else>*** TND</span>
           </span>
@@ -1053,9 +1053,9 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
                   <td style="font-weight: 600;">
                     {{ item.quantity }}
                   </td>
-                  <td>{{ parseFloat(item.unit_price).toFixed(2) }} TND</td>
+                  <td>{{ parseFloat(item.unit_price).toFixed(3) }} TND</td>
                   <td style="color: var(--emerald); font-weight: 600;">
-                    {{ canViewFinance ? `${parseFloat(item.total_revenue).toFixed(2)} TND` : '*** TND' }}
+                    {{ canViewFinance ? `${parseFloat(item.total_revenue).toFixed(3)} TND` : '*** TND' }}
                   </td>
                 </tr>
               </tbody>

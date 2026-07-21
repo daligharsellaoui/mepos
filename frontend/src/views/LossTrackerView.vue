@@ -180,13 +180,13 @@ async function handleSubmit() {
               data-label="Perte Sèche"
               style="color: #ef4444; font-weight: 600;"
             >
-              {{ isAdmin ? `-${parseFloat(loss.cost_loss).toFixed(2)} TND` : '*** TND' }}
+              {{ isAdmin ? `-${parseFloat(loss.cost_loss).toFixed(3)} TND` : '*** TND' }}
             </td>
             <td
               data-label="Manque à Gagner"
               style="color: var(--amber); font-weight: 600;"
             >
-              {{ isAdmin ? `-${parseFloat(loss.opportunity_loss).toFixed(2)} TND` : '*** TND' }}
+              {{ isAdmin ? `-${parseFloat(loss.opportunity_loss).toFixed(3)} TND` : '*** TND' }}
             </td>
           </tr>
         </tbody>

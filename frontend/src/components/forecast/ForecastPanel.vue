@@ -134,7 +134,7 @@ function getCriticalIngredients() {
         <div style="text-align: right; font-size: 0.8rem; color: var(--text-secondary);">
           <div>Coût réappro. estimé</div>
           <div style="font-weight: 700; color: var(--amber); font-size: 1rem;">
-            {{ forecast.summary.total_reorder_cost.toFixed(2) }} TND
+            {{ forecast.summary.total_reorder_cost.toFixed(3) }} TND
           </div>
         </div>
       </div>
