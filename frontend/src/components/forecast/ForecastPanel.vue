@@ -20,45 +20,52 @@ function getCriticalIngredients() {
 </script>
 
 <template>
-  <!-- Loading state -->
-  <div
-    v-if="isLoading"
-    style="display: flex; flex-direction: column; gap: 1.5rem;"
-  >
-    <div class="metrics-grid">
-      <div
-        v-for="i in 4"
-        :key="i"
-        class="glass-panel metric-card"
-      >
-        <div
-          class="skeleton"
-          style="width: 60%; height: 0.75rem; border-radius: 4px; margin-bottom: 0.5rem;"
-        />
-        <div
-          class="skeleton"
-          style="width: 40%; height: 2rem; border-radius: 6px;"
-        />
-      </div>
-    </div>
+  <!-- First load state -->
+  <template v-if="!forecast">
     <div
-      class="skeleton"
-      style="width: 100%; height: 200px; border-radius: 14px;"
+      v-if="isLoading"
+      style="display: flex; flex-direction: column; gap: 1.5rem;"
+    >
+      <div class="metrics-grid">
+        <div
+          v-for="i in 4"
+          :key="i"
+          class="glass-panel metric-card"
+        >
+          <div
+            class="skeleton"
+            style="width: 60%; height: 0.75rem; border-radius: 4px; margin-bottom: 0.5rem;"
+          />
+          <div
+            class="skeleton"
+            style="width: 40%; height: 2rem; border-radius: 6px;"
+          />
+        </div>
+      </div>
+      <div
+        class="skeleton"
+        style="width: 100%; height: 200px; border-radius: 14px;"
+      />
+    </div>
+    <EmptyState
+      v-else
+      title="Prévisions non disponibles"
+      description="Les données de prévision seront disponibles après les premières synchronisations de ventes."
     />
-  </div>
-
-  <!-- No data state -->
-  <EmptyState
-    v-else-if="!forecast"
-    title="Prévisions non disponibles"
-    description="Les données de prévision seront disponibles après les premières synchronisations de ventes."
-  />
+  </template>
 
   <!-- Main forecast view -->
   <div
     v-else
     style="display: flex; flex-direction: column; gap: 1.5rem;"
   >
+    <div
+      v-if="isLoading"
+      style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0; font-size: 0.75rem; color: var(--text-muted);"
+    >
+      <div class="spinner" style="width: 12px; height: 12px; border-width: 2px;" />
+      <span>Mise à jour...</span>
+    </div>
     <!-- Section header -->
     <div
       class="view-title-section"
