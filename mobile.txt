@@ -1,0 +1,531 @@
+You are a senior Frontend Engineer, UX Designer, and Design System expert.
+
+Your mission is to perform a COMPLETE RESPONSIVE DESIGN AUDIT of the entire application and automatically fix every responsive issue while preserving all existing functionality.
+
+## Objectives
+
+The application must feel like a premium SaaS product on:
+
+- Mobile (320px+)
+- Large phones
+- Tablets
+- Small laptops
+- Desktop
+- Ultra-wide screens
+
+The final result should look polished, consistent and production-ready.
+
+---
+
+# Phase 1 — Full Responsive Audit
+
+Inspect EVERY page, layout and component.
+
+Audit:
+
+- Login
+- Register
+- Dashboard
+- All CRUD pages
+- Tables
+- Calendar
+- Forms
+- Settings
+- Modals
+- Drawers
+- Dropdowns
+- Navigation
+- Sidebar
+- Header
+- Cards
+- Charts
+- Empty states
+- Loading states
+- AI pages
+- Landing pages (if included)
+
+For each component identify:
+
+- overflow
+- horizontal scrolling
+- clipped content
+- broken grids
+- oversized padding
+- tiny touch targets
+- unreadable text
+- bad spacing
+- inconsistent margins
+- incorrect breakpoints
+- overlapping elements
+- modal sizing issues
+- unusable mobile interactions
+- poor accessibility
+
+Fix everything.
+
+Never leave TODOs.
+
+---
+
+# Phase 2 — Breakpoint Strategy
+
+Standardize breakpoints across the entire app.
+
+Use a consistent responsive system.
+
+Example:
+
+xs
+sm
+md
+lg
+xl
+2xl
+
+Avoid random media queries.
+
+Replace inconsistent breakpoints with reusable design tokens.
+
+---
+
+# Phase 3 — Layout Improvements
+
+Ensure every page behaves correctly.
+
+Desktop:
+
+- comfortable whitespace
+- centered content
+- max width where appropriate
+- balanced spacing
+
+Tablet:
+
+- adapt grids
+- resize cards
+- reduce gutters
+
+Mobile:
+
+- single column layout
+- no horizontal scrolling
+- content fills available width
+- comfortable reading width
+
+---
+
+# Phase 4 — Sidebar
+
+Audit sidebar behavior.
+
+Desktop:
+
+- fixed sidebar
+
+Tablet:
+
+- collapsible
+
+Mobile:
+
+- drawer
+- backdrop
+- swipe-friendly
+- ESC closes
+- click outside closes
+- remembers state when appropriate
+
+Ensure animation is smooth.
+
+---
+
+# Phase 5 — Header
+
+Improve responsive header.
+
+Desktop:
+
+- balanced spacing
+
+Mobile:
+
+- compact toolbar
+- responsive title
+- actions collapse intelligently
+- notification/avatar never overflow
+- search adapts correctly
+
+---
+
+# Phase 6 — Tables
+
+Current tables should become mobile-friendly.
+
+Do NOT simply add horizontal scrolling.
+
+Instead:
+
+Desktop
+
+- regular table
+
+Tablet
+
+- optimized spacing
+
+Mobile
+
+Transform rows into responsive cards while keeping:
+
+- sorting
+- pagination
+- actions
+- badges
+- menus
+
+If horizontal scrolling is unavoidable, make it elegant with sticky headers and proper shadows.
+
+---
+
+# Phase 7 — Forms
+
+Audit every form.
+
+Improve:
+
+spacing
+
+labels
+
+validation
+
+button layout
+
+input widths
+
+For mobile:
+
+- full width inputs
+- stacked layout
+- proper keyboard behavior
+- numeric keyboard where needed
+- large touch targets
+- correct autocomplete
+- prevent zoom caused by font-size
+
+---
+
+# Phase 8 — Cards
+
+Every dashboard card should adapt.
+
+Desktop
+
+4-6 columns depending on width
+
+Tablet
+
+2 columns
+
+Mobile
+
+1 column
+
+Maintain equal heights when appropriate.
+
+---
+
+# Phase 9 — Charts
+
+Charts must resize correctly.
+
+Prevent:
+
+cropping
+
+overflow
+
+tiny legends
+
+illegible labels
+
+Adapt legends for mobile.
+
+---
+
+# Phase 10 — Calendar
+
+Audit calendar responsiveness.
+
+Improve:
+
+week view
+
+day view
+
+month view
+
+appointment cards
+
+time labels
+
+doctor columns
+
+On mobile:
+
+provide an optimized experience instead of squeezing desktop layout.
+
+---
+
+# Phase 11 — Modals
+
+Audit every modal.
+
+Problems to fix:
+
+too tall
+
+too wide
+
+content clipped
+
+buttons hidden
+
+scroll issues
+
+On mobile:
+
+bottom sheet where appropriate
+
+or fullscreen modal
+
+Keep animations.
+
+---
+
+# Phase 12 — Dropdowns
+
+Ensure dropdowns:
+
+never overflow viewport
+
+flip automatically
+
+remain accessible
+
+support touch
+
+correct z-index
+
+---
+
+# Phase 13 — Typography
+
+Standardize typography.
+
+Use fluid sizing where appropriate.
+
+Ensure:
+
+titles
+
+subtitles
+
+body
+
+captions
+
+badges
+
+buttons
+
+remain readable on every screen.
+
+Avoid oversized text on mobile.
+
+---
+
+# Phase 14 — Spacing
+
+Normalize spacing using the design system.
+
+Use consistent spacing tokens.
+
+Remove arbitrary margins and paddings.
+
+Maintain a premium visual rhythm.
+
+---
+
+# Phase 15 — Buttons
+
+Audit all buttons.
+
+Ensure:
+
+minimum 44x44 touch target
+
+consistent heights
+
+icons aligned
+
+loading states
+
+responsive widths
+
+proper wrapping
+
+---
+
+# Phase 16 — Images
+
+Prevent:
+
+overflow
+
+stretching
+
+distortion
+
+Improve responsive behavior of:
+
+illustrations
+
+avatars
+
+logos
+
+screenshots
+
+hero images
+
+---
+
+# Phase 17 — Animations
+
+Ensure animations remain smooth on mobile.
+
+Reduce heavy effects where needed.
+
+Avoid layout shifts.
+
+Preserve premium feel.
+
+---
+
+# Phase 18 — Performance
+
+Remove responsive CSS duplication.
+
+Merge repeated media queries.
+
+Reduce layout thrashing.
+
+Prefer CSS Grid/Flexbox over JavaScript layout calculations.
+
+---
+
+# Phase 19 — Accessibility
+
+Verify:
+
+keyboard navigation
+
+focus states
+
+touch targets
+
+contrast
+
+zoom at 200%
+
+screen rotation
+
+dynamic viewport height
+
+safe-area insets
+
+reduced motion support
+
+---
+
+# Phase 20 — Final QA
+
+Simulate and verify at least:
+
+320px
+
+360px
+
+375px
+
+390px
+
+414px
+
+480px
+
+600px
+
+768px
+
+820px
+
+1024px
+
+1280px
+
+1440px
+
+1920px
+
+2560px
+
+No page should have:
+
+- horizontal scroll
+- clipped text
+- broken layout
+- overlapping UI
+- inaccessible controls
+- inconsistent spacing
+
+---
+
+# Design Principles
+
+Maintain the existing visual identity.
+
+Do NOT redesign the application.
+
+Only improve responsiveness and polish.
+
+Respect:
+
+- existing design system
+- colors
+- typography
+- component architecture
+- animations
+- business logic
+- state management
+
+Never break existing behavior.
+
+---
+
+# Deliverables
+
+1. Audit every page and component.
+2. Fix every responsive issue found.
+3. Refactor duplicated responsive CSS.
+4. Standardize breakpoints.
+5. Improve mobile UX across the application.
+6. Preserve all existing functionality.
+7. Produce production-ready, premium responsive layouts.
+8. At the end, generate a detailed report listing:
+   - Issues found
+   - Files modified
+   - Responsive improvements made
+   - New reusable utilities/components created
+   - Any remaining edge cases (if any)
