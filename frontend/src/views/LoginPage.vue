@@ -83,3 +83,23 @@ async function handleLogin() {
     </div>
   </div>
 </template>
+
+<style scoped>
+@media (max-width: 600px) {
+  .login-card {
+    padding: 1.5rem;
+  }
+  .login-card img {
+    height: 70px !important;
+  }
+}
+@media (max-width: 400px) {
+  .login-card {
+    padding: 1rem;
+    gap: 1rem;
+  }
+  .login-card img {
+    height: 56px !important;
+  }
+}
+</style>

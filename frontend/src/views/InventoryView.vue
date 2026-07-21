@@ -37,7 +37,7 @@ const filteredStocks = computed(() =>
 )
 
 const stockPage = ref(1)
-const stockPerPage = ref(8)
+const stockPerPage = ref(10)
 
 const paginatedStocks = computed(() => {
   const start = (stockPage.value - 1) * stockPerPage.value

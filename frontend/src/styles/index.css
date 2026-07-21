@@ -220,6 +220,30 @@ body {
   .mobile-bottom-nav { display: flex; background: var(--bg-sidebar); border-top: 1px solid var(--border-color); height: 66px; padding: 0.25rem 0.5rem; justify-content: space-around; align-items: center; z-index: 10; }
   .mobile-bottom-nav .nav-btn { flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem; padding: 0.25rem 0.5rem; height: 100%; font-size: 0.675rem; color: var(--text-secondary); border-radius: var(--radius-sm); text-decoration: none; }
   .mobile-bottom-nav .nav-btn.active { background: transparent; color: var(--indigo-light); }
+
+  .panel-content-scroll { max-height: 220px; }
+
+  .ing-table .cell-num,
+  .ing-table .cell-cost {
+    text-align: left;
+  }
+  .ing-table .actions-th {
+    display: none;
+  }
+  .ing-table td.cell-actions {
+    width: auto;
+    text-align: left;
+    justify-content: flex-start;
+  }
+  .ing-table td.cell-actions::before {
+    content: attr(data-label);
+  }
+  .ing-row {
+    border-left: none;
+  }
+  .ing-row:hover {
+    border-left-color: transparent;
+  }
 }
 
 @media (max-width: 600px) {
@@ -377,27 +401,3 @@ body {
   border-color: transparent;
 }
 
-/* Responsive table improvements */
-@media (max-width: 900px) {
-  .ing-table .cell-num,
-  .ing-table .cell-cost {
-    text-align: left;
-  }
-  .ing-table .actions-th {
-    display: none;
-  }
-  .ing-table td.cell-actions {
-    width: auto;
-    text-align: left;
-    justify-content: flex-start;
-  }
-  .ing-table td.cell-actions::before {
-    content: attr(data-label);
-  }
-  .ing-row {
-    border-left: none;
-  }
-  .ing-row:hover {
-    border-left-color: transparent;
-  }
-}

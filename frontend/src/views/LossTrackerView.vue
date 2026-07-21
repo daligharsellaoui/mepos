@@ -13,7 +13,7 @@ const isCook = computed(() => auth.isCook)
 const isModalOpen = ref(false)
 
 const lossPage = ref(1)
-const lossPerPage = ref(15)
+const lossPerPage = ref(10)
 
 const paginatedLosses = computed(() => {
   const start = (lossPage.value - 1) * lossPerPage.value
@@ -105,7 +105,7 @@ async function handleSubmit() {
           Déclarer et suivre le gaspillage et les freintes.
         </p>
       </div>
-      <div style="display: flex; gap: 0.75rem;">
+      <div class="action-buttons">
         <button
           class="touch-btn touch-btn-secondary"
           @click="app.fetchData(auth.user)"
@@ -325,3 +325,11 @@ async function handleSubmit() {
     </Modal>
   </div>
 </template>
+
+<style scoped>
+@media (max-width: 600px) {
+  .action-buttons {
+    flex-direction: column;
+  }
+}
+</style>

@@ -40,7 +40,7 @@ const isSubmitting = ref(false)
 const requests = ref([])
 
 const requestPage = ref(1)
-const requestPerPage = ref(15)
+const requestPerPage = ref(10)
 
 const paginatedRequests = computed(() => {
   const start = (requestPage.value - 1) * requestPerPage.value
@@ -362,24 +362,24 @@ async function handleRejectRequest(id) {
               v-for="req in paginatedRequests"
               :key="req.id"
             >
-              <td style="color: var(--text-secondary); font-size: 0.875rem;">
+              <td data-label="Date" style="color: var(--text-secondary); font-size: 0.875rem;">
                 {{ new Date(req.created_at).toLocaleString('fr-TN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) }}
               </td>
-              <td style="color: var(--text-primary);">
+              <td data-label="Demandeur" style="color: var(--text-primary);">
                 @{{ req.requested_by_username }}
               </td>
-              <td><strong>{{ req.ingredient_name }}</strong></td>
-              <td style="font-weight: 600;">
+              <td data-label="Ingrédient"><strong>{{ req.ingredient_name }}</strong></td>
+              <td data-label="Quantité" style="font-weight: 600;">
                 {{ parseFloat(req.quantity).toFixed(2) }} {{ req.ingredient_unit }}
               </td>
-              <td style="font-size: 0.875rem;">
+              <td data-label="Trajet" style="font-size: 0.875rem;">
                 {{ req.source_department_name }} → {{ req.destination_department_name }}
               </td>
-              <td><span :class="['badge', req.status === 'approved' ? 'badge-success' : req.status === 'rejected' ? 'badge-danger' : 'badge-warn']">{{ req.status === 'approved' ? 'Validé' : req.status === 'rejected' ? 'Refusé' : 'En attente' }}</span></td>
-              <td style="color: var(--text-secondary); font-size: 0.875rem;">
+              <td data-label="Statut"><span :class="['badge', req.status === 'approved' ? 'badge-success' : req.status === 'rejected' ? 'badge-danger' : 'badge-warn']">{{ req.status === 'approved' ? 'Validé' : req.status === 'rejected' ? 'Refusé' : 'En attente' }}</span></td>
+              <td data-label="Traité par" style="color: var(--text-secondary); font-size: 0.875rem;">
                 {{ req.validated_by_username ? `@${req.validated_by_username}` : '-' }}
               </td>
-              <td v-if="isAdminOrManager">
+              <td data-label="Actions" v-if="isAdminOrManager">
                 <div
                   v-if="req.status === 'pending'"
                   style="display: flex; gap: 0.5rem;"
