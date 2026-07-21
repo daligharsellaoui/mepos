@@ -246,6 +246,32 @@
   line-height: 1.7;
   max-width: 540px;
 }
+.landing-hero-features {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+.landing-hero-feature {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+}
+.landing-hero-feature:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+.landing-hero-feature svg {
+  color: var(--indigo-light);
+  flex-shrink: 0;
+}
 .landing-hero-actions {
   display: flex;
   gap: 1rem;

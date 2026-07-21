@@ -1,0 +1,582 @@
+You are a Senior Frontend Architect, Product Designer, UI/UX Designer, Marketing Designer, and SaaS Product Engineer.
+
+Your objective is to design and implement a modern, premium Landing Page for mePOS Inventory Intel.
+
+DO NOT redesign the existing application.
+
+The Landing Page should become the public face of the product while integrating naturally with the existing frontend.
+
+Analyze the existing project before implementing anything.
+
+Reuse the existing design language, colors, typography, icons, spacing and components whenever possible.
+
+====================================================
+OBJECTIVE
+====================================================
+
+Create a production-ready SaaS landing page that showcases the product and helps convert visitors into customers.
+
+The design should feel modern, premium, and trustworthy.
+
+Inspirations:
+
+- Stripe
+- Linear
+- Vercel
+- Notion
+- Odoo
+- Toast POS
+- Lightspeed
+- Square
+
+Avoid flashy animations.
+
+Prioritize clarity, readability and professionalism.
+
+====================================================
+LANDING PAGE STRUCTURE
+====================================================
+
+Create the following sections.
+
+----------------------------------------------------
+1. HERO
+----------------------------------------------------
+
+Large hero section.
+
+Include:
+
+Logo
+
+Navigation
+
+Headline
+
+Short description
+
+Primary CTA
+
+Secondary CTA
+
+Illustration or product mockup
+
+Example CTA
+
+Start Free Trial
+
+Request Demo
+
+Watch Demo
+
+Login
+
+----------------------------------------------------
+2. FEATURES
+----------------------------------------------------
+
+Show the major features.
+
+Examples
+
+Inventory Management
+
+Recipe Management
+
+Stock Movements
+
+Warehouse Transfers
+
+Loss & Waste Tracking
+
+Supplier Management
+
+Purchase Orders
+
+Real-Time Synchronization
+
+Multi-Tenant SaaS
+
+Role-Based Permissions
+
+Agent Monitoring
+
+Reports & Analytics
+
+Notifications
+
+Each feature should include
+
+Icon
+
+Title
+
+Short description
+
+----------------------------------------------------
+3. HOW IT WORKS
+----------------------------------------------------
+
+Explain the workflow.
+
+Restaurant
+
+↓
+
+POS
+
+↓
+
+Synchronization Agent
+
+↓
+
+Inventory Intel
+
+↓
+
+Automatic Inventory Updates
+
+Illustrate both synchronization methods.
+
+Database Connector
+
+REST API Connector
+
+----------------------------------------------------
+4. WHY CHOOSE MEPOS
+----------------------------------------------------
+
+Highlight advantages.
+
+Examples
+
+Works with Existing POS
+
+No Need To Replace Current System
+
+Real-Time Inventory
+
+Reduce Waste
+
+Monitor Every Ingredient
+
+Multi-Restaurant Support
+
+Automatic Synchronization
+
+Secure
+
+Cloud Based
+
+----------------------------------------------------
+5. PRODUCT SCREENSHOTS
+----------------------------------------------------
+
+Create a product showcase.
+
+Use existing application screenshots or reusable mockups.
+
+Show
+
+Dashboard
+
+Inventory
+
+Recipes
+
+Transfers
+
+Synchronization
+
+Reports
+
+Agent Monitoring
+
+Responsive carousel.
+
+----------------------------------------------------
+6. MULTI-TENANCY
+----------------------------------------------------
+
+Explain how multiple restaurants are isolated.
+
+Illustrate
+
+Restaurant A
+
+Restaurant B
+
+Restaurant C
+
+↓
+
+Shared Platform
+
+↓
+
+Complete Data Isolation
+
+----------------------------------------------------
+7. SYNCHRONIZATION
+----------------------------------------------------
+
+Explain supported connectors.
+
+Database
+
+SQL Server
+
+PostgreSQL
+
+MySQL
+
+SQLite
+
+API
+
+REST API
+
+API Key
+
+Future
+
+CSV
+
+Webhook
+
+Plugin
+
+SDK
+
+Show this visually.
+
+----------------------------------------------------
+8. USER ROLES
+----------------------------------------------------
+
+Present the three application roles.
+
+Administrator
+
+Manager
+
+Kitchen Staff
+
+Explain responsibilities.
+
+Use cards.
+
+----------------------------------------------------
+9. TESTIMONIALS
+----------------------------------------------------
+
+Create placeholder testimonials.
+
+Restaurant owners
+
+Managers
+
+Chefs
+
+Keep them realistic.
+
+----------------------------------------------------
+10. FAQ
+----------------------------------------------------
+
+Examples
+
+Can I use my current POS?
+
+Do I need to replace my POS?
+
+How is inventory synchronized?
+
+Can I manage multiple restaurants?
+
+How secure is the system?
+
+Can I use SQL Server?
+
+Can I connect using an API?
+
+Can I use multiple warehouses?
+
+----------------------------------------------------
+11. CALL TO ACTION
+----------------------------------------------------
+
+Large CTA section.
+
+Request Demo
+
+Start Free Trial
+
+Contact Sales
+
+----------------------------------------------------
+12. FOOTER
+----------------------------------------------------
+
+Logo
+
+Links
+
+Documentation
+
+Contact
+
+Privacy Policy
+
+Terms
+
+Social Media
+
+====================================================
+NAVIGATION
+====================================================
+
+Sticky navigation bar.
+
+Include
+
+Features
+
+How It Works
+
+Pricing (placeholder)
+
+FAQ
+
+Contact
+
+Login
+
+Demo
+
+Smooth scrolling.
+
+====================================================
+LOGIN
+====================================================
+
+The Login button should redirect to the existing authentication page.
+
+Do not duplicate authentication.
+
+====================================================
+ROUTING
+====================================================
+
+Landing Page
+
+/
+
+Application
+
+/app
+
+Login
+
+/login
+
+Preserve existing routing.
+
+====================================================
+VISUAL DESIGN
+====================================================
+
+Use the existing design language.
+
+Premium.
+
+Minimal.
+
+Modern.
+
+Professional.
+
+Generous whitespace.
+
+Glassmorphism only if already part of the design system.
+
+Do not introduce an unrelated design style.
+
+====================================================
+RESPONSIVE
+====================================================
+
+Optimize for
+
+Desktop
+
+Laptop
+
+Tablet
+
+Mobile
+
+Navigation becomes hamburger menu on mobile.
+
+====================================================
+MICRO INTERACTIONS
+====================================================
+
+Add subtle animations.
+
+Section fade-in
+
+Button hover
+
+Card hover
+
+Smooth scrolling
+
+Do not overuse animations.
+
+====================================================
+PERFORMANCE
+====================================================
+
+Lazy load heavy assets.
+
+Optimize images.
+
+Avoid unnecessary JavaScript.
+
+Keep Lighthouse score high.
+
+====================================================
+SEO
+====================================================
+
+Add
+
+Meta Title
+
+Description
+
+Open Graph
+
+Twitter Cards
+
+Structured data where appropriate.
+
+Semantic HTML.
+
+====================================================
+ACCESSIBILITY
+====================================================
+
+Keyboard navigation.
+
+ARIA labels.
+
+Color contrast.
+
+Accessible buttons.
+
+====================================================
+CODE QUALITY
+====================================================
+
+Create reusable components.
+
+Examples
+
+HeroSection
+
+FeatureCard
+
+SectionTitle
+
+FAQAccordion
+
+CTASection
+
+Footer
+
+Navbar
+
+RoleCard
+
+FeatureGrid
+
+ScreenshotCarousel
+
+Keep components modular.
+
+====================================================
+CONTENT
+====================================================
+
+Write professional marketing copy.
+
+Avoid Lorem Ipsum.
+
+The copy should target:
+
+Restaurant Owners
+
+Restaurant Managers
+
+Hotel Kitchens
+
+Fast Food Chains
+
+Coffee Shops
+
+Dark Kitchens
+
+Multi-Branch Restaurants
+
+Focus on solving business problems rather than listing features.
+
+====================================================
+FUTURE READY
+====================================================
+
+Design the landing page so additional sections can easily be added later.
+
+Examples
+
+Pricing
+
+Blog
+
+Partners
+
+Integrations
+
+Documentation
+
+Customer Stories
+
+====================================================
+FINAL VALIDATION
+====================================================
+
+Verify:
+
+✓ Responsive
+
+✓ Fast
+
+✓ SEO friendly
+
+✓ Accessible
+
+✓ Modern
+
+✓ Matches existing design language
+
+✓ Navigation works
+
+✓ Login redirects correctly
+
+✓ Components reusable
+
+✓ Production ready
+
+The final result should look like a professional SaaS website capable of being shown to investors and restaurant owners without requiring additional redesign work.
