@@ -406,6 +406,7 @@ export async function processHeartbeat(
     if (!agent) return { success: false };
 
     const wasOffline = agent.status === 'offline' || agent.status === 'error';
+    const hadMissingBeat = !agent.last_heartbeat_at;
 
     agent.last_heartbeat_at = new Date().toISOString();
     agent.last_seen_at = new Date().toISOString();
@@ -414,9 +415,29 @@ export async function processHeartbeat(
     if (payload.health_status) agent.health_status = payload.health_status;
     if (payload.last_sync_at) agent.last_sync_at = payload.last_sync_at;
 
+    if (hadMissingBeat) {
+      eventBus.emit(Events.AGENT_HEARTBEAT_MISSING, {
+        tenantId, agentId, agentName: agent.name,
+      });
+    }
+
     if (wasOffline) {
       eventBus.emit(Events.AGENT_RECONNECTED, {
         tenantId, agentId, agentName: agent.name,
+      });
+    }
+
+    if (payload.tickets_imported && payload.tickets_imported > 0) {
+      eventBus.emit(Events.SYNC_COMPLETED, {
+        tenantId, agentId, agentName: agent.name,
+        ticketsImported: payload.tickets_imported,
+      });
+    }
+
+    if (payload.errors_count && payload.errors_count > 0) {
+      eventBus.emit(Events.SYNC_FAILED, {
+        tenantId, agentId, agentName: agent.name,
+        error: `${payload.errors_count} erreur(s) détectée(s)`,
       });
     }
 
@@ -426,6 +447,14 @@ export async function processHeartbeat(
   const { client, release } = await getClient();
   try {
     await client.query('BEGIN');
+
+    // Check if heartbeat was previously missing (no prior heartbeat or long gap)
+    const prevHeartbeatRes = await client.query(
+      'SELECT last_heartbeat_at, name, status FROM agents WHERE id = $1 AND tenant_id = $2',
+      [agentId, tenantId]
+    );
+    const prevAgent = prevHeartbeatRes.rows[0];
+    const wasOffline = prevAgent && (prevAgent.status === 'offline' || prevAgent.status === 'error');
 
     // Update agent status
     await client.query(
@@ -459,6 +488,29 @@ export async function processHeartbeat(
     const config = agentResult.rows.length > 0 ? getDecryptedConfig(agentResult.rows[0].config) : {};
 
     await client.query('COMMIT');
+
+    const agentName = prevAgent?.name || 'Inconnu';
+
+    if (wasOffline) {
+      eventBus.emit(Events.AGENT_RECONNECTED, {
+        tenantId, agentId, agentName,
+      });
+    }
+
+    if (payload.tickets_imported && payload.tickets_imported > 0) {
+      eventBus.emit(Events.SYNC_COMPLETED, {
+        tenantId, agentId, agentName,
+        ticketsImported: payload.tickets_imported,
+      });
+    }
+
+    if (payload.errors_count && payload.errors_count > 0) {
+      eventBus.emit(Events.SYNC_FAILED, {
+        tenantId, agentId, agentName,
+        error: `${payload.errors_count} erreur(s) détectée(s)`,
+      });
+    }
+
     return { success: true, config };
   } catch (error) {
     await client.query('ROLLBACK');

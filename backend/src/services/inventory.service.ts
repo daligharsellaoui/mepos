@@ -726,6 +726,39 @@ export async function updateRecipe(
   return recipe;
 }
 
+export async function deleteRecipe(id: number, tenantId?: number | null): Promise<{ success: boolean; message: string }> {
+  const tid = tenantId ?? 1;
+
+  if (isDemoMode) {
+    const idx = demoDb.recipes.findIndex((r: any) => r.id === id && r.tenant_id === tid);
+    if (idx === -1) {
+      return { success: false, message: 'Recette non trouvée' };
+    }
+    const deleted = demoDb.recipes[idx];
+    demoDb.recipes.splice(idx, 1);
+    demoDb.recipe_ingredients = (demoDb.recipe_ingredients || []).filter(
+      (ri: any) => ri.recipe_id !== id
+    );
+    eventBus.emit(Events.RECIPE_DELETED, {
+      tenantId: tid, recipeId: id, name: deleted.name,
+    });
+    return { success: true, message: 'Recette supprimée avec succès.' };
+  }
+
+  const recipeCheck = await query('SELECT name FROM recipes WHERE id = $1 AND tenant_id = $2', [id, tid]);
+  if (recipeCheck.rows.length === 0) {
+    return { success: false, message: 'Recette non trouvée' };
+  }
+
+  await query('DELETE FROM recipe_ingredients WHERE recipe_id = $1 AND tenant_id = $2', [id, tid]);
+  await query('DELETE FROM recipes WHERE id = $1 AND tenant_id = $2', [id, tid]);
+
+  eventBus.emit(Events.RECIPE_DELETED, {
+    tenantId: tid, recipeId: id, name: recipeCheck.rows[0].name,
+  });
+  return { success: true, message: 'Recette supprimée avec succès.' };
+}
+
 export async function saveRecipeIngredients(
   recipeId: number,
   ingredients: Array<{ ingredient_id: number; quantity_needed: number }>,
@@ -931,6 +964,14 @@ export async function adjustStock(data: {
     };
     demoDb.stock_movements.push(movement);
 
+    if (type === 'purchase') {
+      const ing = demoDb.ingredients.find((i: any) => i.id === ingId);
+      eventBus.emit(Events.PURCHASE_CREATED, {
+        tenantId: tid, ingredientId: ingId, ingredientName: ing?.name || 'Inconnu',
+        quantity: qtyVal, unit: ing?.unit || '',
+      });
+    }
+
     return { new_quantity: newQty, movement };
   }
 
@@ -985,6 +1026,16 @@ export async function adjustStock(data: {
     );
 
     await client.query('COMMIT');
+
+    if (type === 'purchase') {
+      const ingResult = await query('SELECT name, unit FROM ingredients WHERE id = $1 AND tenant_id = $2', [ingId, tid]);
+      const ingData = ingResult.rows[0] || {};
+      eventBus.emit(Events.PURCHASE_CREATED, {
+        tenantId: tid, ingredientId: ingId, ingredientName: ingData.name || 'Inconnu',
+        quantity: qtyVal, unit: ingData.unit || '',
+      });
+    }
+
     return { new_quantity: newQty, movement: movementInsert.rows[0] };
   } catch (err) {
     await client.query('ROLLBACK');

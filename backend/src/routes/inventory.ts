@@ -13,6 +13,7 @@ import {
   getAllRecipes,
   createRecipe,
   updateRecipe,
+  deleteRecipe,
   saveRecipeIngredients,
   getAllStocks,
   getAllMovements,
@@ -196,6 +197,20 @@ router.put('/recipes/:id', async (req: Request, res: Response) => {
   } catch (error: any) {
     const status = error.message.includes('not found') ? 404 : 500;
     res.status(status).json({ status: 'error', message: error.message });
+  }
+});
+
+router.delete('/recipes/:id', async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+
+  try {
+    const result = await deleteRecipe(id, req.tenantId);
+    if (!result.success) {
+      return res.status(404).json({ status: 'error', message: result.message });
+    }
+    res.json({ status: 'success', message: result.message });
+  } catch (error: any) {
+    res.status(500).json({ status: 'error', message: error.message || 'Erreur lors de la suppression' });
   }
 });
 

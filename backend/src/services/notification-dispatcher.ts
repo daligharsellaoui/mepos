@@ -387,5 +387,109 @@ export function setupNotificationDispatcher() {
     });
   });
 
+  eventBus.on(Events.AGENT_HEARTBEAT_MISSING, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'critical',
+      category: CATEGORIES.agent,
+      priority: PRIORITIES.critical,
+      title: 'Agent injoignable',
+      message: `L'agent "${data.agentName}" n'a pas envoyé de signal depuis longtemps.`,
+      entityType: 'agent',
+      entityId: data.agentId,
+      actionUrl: `/app/agents`,
+      icon: 'alert-octagon',
+      color: '#dc2626',
+      minRole: 'admin',
+    });
+  });
+
+  eventBus.on(Events.SYNC_RETRY_SUCCEEDED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'success',
+      category: CATEGORIES.synchronization,
+      priority: PRIORITIES.medium,
+      title: 'Nouvelle tentative réussie',
+      message: `La synchronisation via "${data.agentName}" a réussi après une nouvelle tentative.`,
+      entityType: 'agent',
+      entityId: data.agentId,
+      icon: 'check-circle',
+      color: '#10b981',
+    });
+  });
+
+  eventBus.on(Events.DUPLICATE_TICKET, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'warning',
+      category: CATEGORIES.synchronization,
+      priority: PRIORITIES.medium,
+      title: 'Ticket en double détecté',
+      message: `Un ticket en double a été détecté lors de la synchronisation via "${data.agentName}".`,
+      entityType: 'agent',
+      entityId: data.agentId,
+      actionUrl: `/app/sync`,
+      icon: 'alert-triangle',
+      color: '#f59e0b',
+      minRole: 'admin',
+    });
+  });
+
+  eventBus.on(Events.RECIPE_DELETED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'warning',
+      category: CATEGORIES.recipe,
+      priority: PRIORITIES.medium,
+      title: 'Recette supprimée',
+      message: `La recette "${data.name}" a été supprimée.`,
+      icon: 'book-open',
+      color: '#ef4444',
+    });
+  });
+
+  eventBus.on(Events.TENANT_CREATED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'system',
+      category: CATEGORIES.administration,
+      priority: PRIORITIES.medium,
+      title: 'Nouveau restaurant créé',
+      message: `Le restaurant "${data.name}" a été créé.`,
+      icon: 'settings',
+      color: '#6366f1',
+      minRole: 'admin',
+    });
+  });
+
+  eventBus.on(Events.SETTINGS_UPDATED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'settings',
+      category: CATEGORIES.general,
+      priority: PRIORITIES.low,
+      title: 'Paramètres modifiés',
+      message: `Les paramètres "${data.key}" (${data.category}) ont été mis à jour.`,
+      icon: 'sliders',
+      color: '#64748b',
+    });
+  });
+
+  eventBus.on(Events.PURCHASE_CREATED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'purchase',
+      category: CATEGORIES.purchase,
+      priority: PRIORITIES.low,
+      title: 'Achat enregistré',
+      message: `${data.quantity} ${data.unit} de "${data.ingredientName}" ajouté à l'inventaire.`,
+      entityType: 'ingredient',
+      entityId: data.ingredientId,
+      icon: 'shopping-cart',
+      color: '#22c55e',
+    });
+  });
+
   console.log('[NotificationDispatcher] Handlers registered for all events.');
 }

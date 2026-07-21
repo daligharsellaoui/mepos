@@ -80,7 +80,7 @@ export const useNotificationStore = defineStore('notifications', () => {
       if (res.status === 'success') {
         unreadCount.value = res.data.count
       }
-    } catch { }
+    } catch (_) { /* noop */ }
   }
 
   async function markAsRead(notifId) {
@@ -135,9 +135,45 @@ export const useNotificationStore = defineStore('notifications', () => {
     return fetchNotifications(true)
   }
 
+  function requestDesktopPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }
+
+  function showDesktopNotification(notif) {
+    if ('Notification' in window && Notification.permission === 'granted' && !document.hasFocus()) {
+      try {
+        new Notification(notif.title || 'Notification', {
+          body: notif.message || '',
+          icon: '/favicon.ico',
+          tag: `notif-${notif.id}`,
+        })
+      } catch (_) { /* noop */ }
+    }
+  }
+
+  function playNotificationSound() {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+      const osc = audioCtx.createOscillator()
+      const gain = audioCtx.createGain()
+      osc.connect(gain)
+      gain.connect(audioCtx.destination)
+      osc.frequency.value = 880
+      osc.type = 'sine'
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3)
+      osc.start(audioCtx.currentTime)
+      osc.stop(audioCtx.currentTime + 0.3)
+    } catch (_) { /* noop */ }
+  }
+
   function connectSSE() {
     const token = localStorage.getItem('mepos_token')
     if (!token) return
+
+    requestDesktopPermission()
 
     if (eventSource) {
       eventSource.close()
@@ -157,8 +193,10 @@ export const useNotificationStore = defineStore('notifications', () => {
           if (data.unreadCount !== undefined) {
             unreadCount.value = data.unreadCount
           }
+          showDesktopNotification(data.notification)
+          playNotificationSound()
         }
-      } catch { }
+      } catch (_) { /* noop */ }
     }
 
     eventSource.onerror = () => {

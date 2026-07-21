@@ -6,6 +6,7 @@
 
 import { query, isDemoMode, demoDb, getClient } from '../database';
 import { encryptIfNeeded, decryptIfNeeded, isEncrypted } from './encryption.service';
+import { eventBus, Events } from './event.service';
 
 // ─── Types ───
 
@@ -132,6 +133,9 @@ export async function createTenant(input: CreateTenantInput): Promise<Tenant> {
     };
     if (!demoDb.tenants) demoDb.tenants = [];
     demoDb.tenants.push(newTenant);
+    eventBus.emit(Events.TENANT_CREATED, {
+      tenantId: newTenant.id, name: newTenant.name, slug: newTenant.slug,
+    });
     return newTenant;
   }
 
@@ -156,6 +160,10 @@ export async function createTenant(input: CreateTenantInput): Promise<Tenant> {
       ]
     );
     const tenant = result.rows[0];
+
+    eventBus.emit(Events.TENANT_CREATED, {
+      tenantId: tenant.id, name: tenant.name, slug: tenant.slug,
+    });
 
     // Create default tenant settings
     await client.query(
@@ -377,6 +385,9 @@ export async function setTenantSetting(
     };
     if (!demoDb.tenant_settings) demoDb.tenant_settings = [];
     demoDb.tenant_settings.push(newSetting);
+    eventBus.emit(Events.SETTINGS_UPDATED, {
+      tenantId, category, key,
+    });
     return newSetting;
   }
 
@@ -388,6 +399,9 @@ export async function setTenantSetting(
      RETURNING *`,
     [tenantId, category, key, storedValue, encrypt]
   );
+  eventBus.emit(Events.SETTINGS_UPDATED, {
+    tenantId, category, key,
+  });
   return result.rows[0];
 }
 

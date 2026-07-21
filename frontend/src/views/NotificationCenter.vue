@@ -45,16 +45,28 @@ const categoryColors = {
   reports: '#10b981', security: '#e11d48', general: '#64748b',
 }
 
+const categorySvgs = {
+  inventory: '<path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/>',
+  synchronization: '<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>',
+  transfer: '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+  warehouse: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  agent: '<rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>',
+  authentication: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  administration: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  security: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  general: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+}
+
 const categories = [
-  { value: 'inventory', label: 'Inventaire', icon: '📦' },
-  { value: 'synchronization', label: 'Sync', icon: '🔄' },
-  { value: 'transfer', label: 'Transferts', icon: '↔️' },
-  { value: 'warehouse', label: 'Pertes', icon: '⚠️' },
-  { value: 'agent', label: 'Agents', icon: '🤖' },
-  { value: 'authentication', label: 'Auth', icon: '🔐' },
-  { value: 'administration', label: 'Admin', icon: '⚙️' },
-  { value: 'security', label: 'Sécurité', icon: '🛡️' },
-  { value: 'general', label: 'Général', icon: '📋' },
+  { value: 'inventory', label: 'Inventaire', svg: categorySvgs.inventory, color: '#06b6d4' },
+  { value: 'synchronization', label: 'Sync', svg: categorySvgs.synchronization, color: '#8b5cf6' },
+  { value: 'transfer', label: 'Transferts', svg: categorySvgs.transfer, color: '#f97316' },
+  { value: 'warehouse', label: 'Pertes', svg: categorySvgs.warehouse, color: '#ef4444' },
+  { value: 'agent', label: 'Agents', svg: categorySvgs.agent, color: '#8b5cf6' },
+  { value: 'authentication', label: 'Auth', svg: categorySvgs.authentication, color: '#6366f1' },
+  { value: 'administration', label: 'Admin', svg: categorySvgs.administration, color: '#6366f1' },
+  { value: 'security', label: 'Sécurité', svg: categorySvgs.security, color: '#e11d48' },
+  { value: 'general', label: 'Général', svg: categorySvgs.general, color: '#64748b' },
 ]
 
 const activeCategory = ref(null)
@@ -234,7 +246,11 @@ const groupedItems = computed(() => {
         :class="{ active: activeCategory === cat.value }"
         @click="handleCategoryToggle(cat.value)"
       >
-        <span>{{ cat.icon }}</span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          v-html="cat.svg"
+        />
         <span>{{ cat.label }}</span>
       </button>
     </div>
