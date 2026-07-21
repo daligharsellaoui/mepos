@@ -1,6 +1,6 @@
 <template>
   <PageContainer
-    title="Paramètres du Restaurant"
+    title="⚙️ Paramètres du Restaurant"
     subtitle="Configurez les paramètres généraux de votre établissement."
   >
     <template #actions>

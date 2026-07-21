@@ -1,6 +1,6 @@
 <template>
   <PageContainer
-    title="Gestion des Agents"
+    title="🤖 Gestion des Agents"
     subtitle="Configurez et surveillez les agents de synchronisation POS."
   >
     <template #actions>

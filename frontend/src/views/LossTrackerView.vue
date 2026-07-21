@@ -99,7 +99,7 @@ async function handleSubmit() {
     <div class="view-title-section">
       <div>
         <h1 class="view-title">
-          Registre des Pertes
+          🚨 Registre des Pertes
         </h1>
         <p style="color: var(--text-secondary); margin-top: 0.25rem;">
           Déclarer et suivre le gaspillage et les freintes.

@@ -512,7 +512,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
     style="display: flex; flex-direction: column; gap: 1.5rem;"
   >
     <PageContainer
-      title="Tableau de bord"
+      title="🖥️ Tableau de bord"
       :subtitle="`Bienvenue, ${auth.user?.first_name} ${auth.user?.last_name} (${auth.user?.role === 'admin' ? 'Administrateur' : 'Gérant'})`"
     >
       <template #actions>

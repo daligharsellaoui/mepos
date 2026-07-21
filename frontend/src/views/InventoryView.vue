@@ -54,7 +54,7 @@ watch([filteredStocks, selectedDept], () => { stockPage.value = 1 })
     <div class="view-title-section">
       <div>
         <h1 class="view-title">
-          État des Stocks
+          📦 État des Stocks
         </h1>
         <p style="color: var(--text-secondary); margin-top: 0.25rem;">
           Suivi des quantités d'ingrédients disponibles en temps réel.

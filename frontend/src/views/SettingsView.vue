@@ -601,7 +601,7 @@ async function handleDeleteDeptConfirm() {
 
 <template>
   <PageContainer
-    title="Paramétrage Système"
+    title="⚙️ Paramétrage Système"
     subtitle="Gestion des matières premières, fiches techniques, stocks et comptes utilisateurs."
   >
     <template #actions>

@@ -1,6 +1,6 @@
 <template>
   <PageContainer
-    title="Prévisions & Analyse"
+    title="🔮 Prévisions & Analyse"
     subtitle="Anticipez les besoins en stock grâce aux prévisions basées sur l'historique des ventes."
   >
     <ForecastPanel

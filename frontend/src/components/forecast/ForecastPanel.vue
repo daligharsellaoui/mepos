@@ -66,7 +66,7 @@ function getCriticalIngredients() {
     >
       <div>
         <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem;">
-          🔮 Généré le {{ new Date(forecast.generated_at).toLocaleString('fr-FR') }} — basé sur les {{ forecast.days_analyzed }} derniers jours
+          Généré le {{ new Date(forecast.generated_at).toLocaleString('fr-FR') }} — basé sur les {{ forecast.days_analyzed }} derniers jours
         </p>
       </div>
     </div>

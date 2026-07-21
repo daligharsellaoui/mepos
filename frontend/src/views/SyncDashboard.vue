@@ -1,6 +1,6 @@
 <template>
   <PageContainer
-    title="Tableau de Bord de Synchronisation"
+    title="🔄 Tableau de Bord de Synchronisation"
     subtitle="Surveillez l'état et la santé de vos agents de synchronisation POS."
   >
     <template #actions>
