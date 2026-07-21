@@ -807,6 +807,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
 
     <!-- Sales Statistics -->
     <div
+      v-if="isAdmin"
       class="glass-panel"
       style="padding: 2rem;"
     >
@@ -928,7 +929,6 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
         </div>
       </div>
 
-      <template v-if="isAdmin">
       <!-- Stats KPIs -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
         <div style="padding: 1.25rem; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px;">
@@ -1064,7 +1064,6 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
           </div>
         </div>
       </div>
-    </template>
     </div>
   </div>
 </template>

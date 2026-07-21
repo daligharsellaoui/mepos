@@ -29,6 +29,9 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.removeItem('mepos_token')
       }
     }
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
   }
 
   async function login(username, password) {
