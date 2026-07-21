@@ -81,10 +81,7 @@ function toggleDropdown() {
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <div style="position: relative;">
           <NotificationBell @click="toggleDropdown" />
-          <NotificationDropdown v-if="showDropdown" @close="showDropdown = false" />
-        </div>
         <div class="user-profile">
           <span
             :class="['user-role', `user-role-${auth.user?.role}`]"
@@ -121,12 +118,23 @@ function toggleDropdown() {
     </header>
 
     <main class="main-content">
+      <div class="app-topbar">
+        <div class="topbar-left">
+          <span class="topbar-page-title">{{ $route.meta?.title || $route.name }}</span>
+        </div>
+        <div class="topbar-right">
+          <NotificationBell @click="toggleDropdown" />
+        </div>
+      </div>
       <div class="page-enter">
         <router-view />
       </div>
     </main>
 
     <MobileNav />
+
+    <!-- Notification Dropdown (shared, teleported to body) -->
+    <NotificationDropdown v-if="showDropdown" @close="showDropdown = false" />
 
     <!-- Toast loss alerts (kept for backward compatibility) -->
     <div
@@ -317,6 +325,34 @@ function toggleDropdown() {
 .notification-close-btn:hover {
   color: var(--text-primary);
   background: rgba(255, 255, 255, 0.05);
+}
+.app-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  height: 56px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  background: var(--bg-sidebar);
+}
+.topbar-left {
+  display: flex;
+  align-items: center;
+}
+.topbar-page-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+}
+@media (max-width: 768px) {
+  .app-topbar {
+    display: none;
+  }
 }
 @keyframes slideInRight {
   from { opacity: 0; transform: translateX(100%); }
