@@ -51,6 +51,9 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.setItem('mepos_offline_users', JSON.stringify(offlineUsers))
 
         isLoading.value = false
+        if ('Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission()
+        }
         return true
       }
       error.value = res.message || 'Identifiants incorrects.'
@@ -102,6 +105,9 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('mepos_user', JSON.stringify(data))
     localStorage.setItem('mepos_token', token.value)
     isLoading.value = false
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
   }
 
   function logout() {
