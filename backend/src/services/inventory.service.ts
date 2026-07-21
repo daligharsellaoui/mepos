@@ -1,6 +1,7 @@
 import { Decimal } from 'decimal.js';
 import { query, isDemoMode, demoDb, getClient } from '../database';
 import { getEffectiveDepartmentId } from './stock.service';
+import { eventBus, Events } from './event.service';
 
 // ======================================================
 // INVENTORY SERVICE
@@ -433,6 +434,11 @@ export async function createIngredient(data: {
       }
     });
 
+    eventBus.emit(Events.INGREDIENT_CREATED, {
+      tenantId: tid, id: newIng.id, name: newIng.name,
+      alertThreshold: newIng.alert_threshold,
+    });
+
     return newIng;
   }
 
@@ -480,6 +486,11 @@ export async function updateIngredient(
       purchase_unit_price: purchase_unit_price !== undefined ? purchase_unit_price : demoDb.ingredients[idx].purchase_unit_price,
       conversion_factor: conversion_factor || demoDb.ingredients[idx].conversion_factor,
     };
+
+    eventBus.emit(Events.INGREDIENT_UPDATED, {
+      tenantId: tid, id, name: demoDb.ingredients[idx].name,
+    });
+
     return demoDb.ingredients[idx];
   }
 
@@ -532,8 +543,14 @@ export async function deleteIngredient(
       };
     }
 
+    const deletedIng = demoDb.ingredients[idx];
     demoDb.ingredients.splice(idx, 1);
     demoDb.inventory_stocks = demoDb.inventory_stocks.filter((s: any) => s.ingredient_id !== id);
+
+    eventBus.emit(Events.INGREDIENT_DELETED, {
+      tenantId: tid, id, name: deletedIng.name,
+    });
+
     return { success: true, message: 'Ingrédient supprimé avec succès.' };
   }
 

@@ -99,6 +99,16 @@ export const api = {
     client.put(`/settings/${category}/${key}`, { value, encrypt }),
   deleteSetting: (category, key) => client.delete(`/settings/${category}/${key}`),
 
+  // Notifications
+  getNotifications: (params) => client.get('/notifications', { params }),
+  getUnreadCount: () => client.get('/notifications/unread-count'),
+  markAsRead: (id) => client.put(`/notifications/${id}/read`),
+  markAllAsRead: () => client.put('/notifications/read-all'),
+  archiveNotification: (id) => client.put(`/notifications/${id}/archive`),
+  deleteNotification: (id) => client.delete(`/notifications/${id}`),
+  getNotificationPreferences: () => client.get('/notifications/preferences'),
+  setNotificationPreference: (category, data) => client.put(`/notifications/preferences/${category}`, data),
+
   // Tenants
   getTenants: () => client.get('/tenants'),
   getTenant: (id) => client.get(`/tenants/${id}`),

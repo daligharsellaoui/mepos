@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import sideLogoSrc from '../assets/sidelogo.png'
-import heroSrc from '../assets/hero.jpg'
+import sectionSrc from '../assets/section.png'
 import '../styles/landing.css'
 
 const router = useRouter()
@@ -185,43 +185,58 @@ const testimonials = [
     <!-- 1. HERO -->
     <section class="landing-hero">
       <div class="landing-hero-content">
-        <div class="landing-hero-badge">
-          <span>Intelligence d'inventaire en temps réel</span>
+        <div class="landing-hero-stagger">
+          <h1 class="landing-hero-title">
+            Gestion de stock.<br>Simplifiée.<br><span class="highlight">Surboostée.</span>
+          </h1>
         </div>
-        <h1 class="landing-hero-title">
-          Ne manquez plus jamais<br><span>ce qui compte vraiment</span>
-        </h1>
-        <p class="landing-hero-desc">
-          mePOS Inventory Intel synchronise vos stocks en temps réel sur tous vos restaurants. Réduisez les pertes, optimisez vos approvisionnements et gérez tous vos sites depuis un seul tableau de bord.
-        </p>
-        <div class="landing-hero-features">
-          <div class="landing-hero-feature">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-            <span>Gestion des stocks</span>
-          </div>
-          <div class="landing-hero-feature">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
-            <span>Pertes & Gâche</span>
-          </div>
-          <div class="landing-hero-feature">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-6"/></svg>
-            <span>Prévisions</span>
-          </div>
-          <div class="landing-hero-feature">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            <span>Alertes & Notifications</span>
-          </div>
+        <div class="landing-hero-stagger">
+          <p class="landing-hero-desc">
+            La solution tout-en-un de gestion de stock et d'inventaire conçue pour les commerces modernes.
+          </p>
         </div>
-        <div class="landing-hero-actions">
-          <button class="landing-hero-btn-primary" @click="goLogin">
-            Connexion
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <div class="landing-hero-actions landing-hero-stagger">
+          <button class="landing-hero-btn-primary">
+            Commencer gratuitement
           </button>
+          <button class="landing-hero-btn-secondary">
+            Voir la démo
+          </button>
+        </div>
+        <div class="landing-hero-features landing-hero-stagger">
+          <div class="landing-hero-feature">
+            <div class="landing-hero-feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            </div>
+            <span class="landing-hero-feature-label">Gestion de stock</span>
+          </div>
+          <div class="landing-hero-feature">
+            <div class="landing-hero-feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+            </div>
+            <span class="landing-hero-feature-label">Gestion de pertes</span>
+          </div>
+          <div class="landing-hero-feature">
+            <div class="landing-hero-feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-6"/></svg>
+            </div>
+            <span class="landing-hero-feature-label">Rapports & Analyses</span>
+          </div>
+          <div class="landing-hero-feature">
+            <div class="landing-hero-feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            </div>
+            <span class="landing-hero-feature-label">Alertes & Notifications</span>
+          </div>
         </div>
       </div>
       <div class="landing-hero-visual">
-        <div class="landing-hero-mockup">
-          <img :src="heroSrc" alt="mePOS Inventory Intel">
+        <div class="landing-hero-glow"></div>
+        <div class="landing-hero-cube"></div>
+        <div class="landing-hero-cube"></div>
+        <div class="landing-hero-cube"></div>
+        <div class="landing-hero-image landing-hero-image-stagger">
+          <img :src="sectionSrc" alt="mePOS Inventory Intel" loading="lazy">
         </div>
       </div>
     </section>

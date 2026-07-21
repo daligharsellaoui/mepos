@@ -1,0 +1,184 @@
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { api } from '../api'
+
+export const useNotificationStore = defineStore('notifications', () => {
+  const items = ref([])
+  const unreadCount = ref(0)
+  const isLoading = ref(false)
+  const hasMore = ref(true)
+  const total = ref(0)
+  const limit = 30
+  const offset = ref(0)
+  const filters = ref({
+    types: [],
+    categories: [],
+    priorities: [],
+    read: undefined,
+    search: '',
+  })
+
+  const unreadNotifications = computed(() => items.value.filter(n => !n.read))
+  const sortedByPriority = computed(() => {
+    const priorityWeight = { critical: 0, high: 1, medium: 2, low: 3 }
+    return [...items.value].sort((a, b) => {
+      const pwA = priorityWeight[a.priority] ?? 99
+      const pwB = priorityWeight[b.priority] ?? 99
+      if (pwA !== pwB) return pwA - pwB
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+  })
+
+  let eventSource = null
+
+  async function fetchNotifications(reset = false) {
+    if (isLoading.value) return
+    isLoading.value = true
+
+    try {
+      if (reset) {
+        offset.value = 0
+        hasMore.value = true
+      }
+
+      const params = {
+        limit,
+        offset: offset.value,
+        sort_by: 'created_at',
+        sort_order: 'desc',
+        archived: false,
+      }
+
+      if (filters.value.types.length > 0) params.types = filters.value.types.join(',')
+      if (filters.value.categories.length > 0) params.categories = filters.value.categories.join(',')
+      if (filters.value.priorities.length > 0) params.priorities = filters.value.priorities.join(',')
+      if (filters.value.read !== undefined) params.read = filters.value.read
+      if (filters.value.search) params.search = filters.value.search
+
+      const { data: res } = await api.getNotifications(params)
+
+      if (res.status === 'success') {
+        if (reset) {
+          items.value = res.data
+        } else {
+          items.value = [...items.value, ...res.data]
+        }
+        total.value = res.total
+        hasMore.value = offset.value + limit < total.value
+        offset.value += limit
+      }
+    } catch (err) {
+      console.error('[Notifications] fetch error:', err)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function fetchUnreadCount() {
+    try {
+      const { data: res } = await api.getUnreadCount()
+      if (res.status === 'success') {
+        unreadCount.value = res.data.count
+      }
+    } catch { }
+  }
+
+  async function markAsRead(notifId) {
+    try {
+      await api.put(`/notifications/${notifId}/read`)
+      items.value = items.value.map(n =>
+        n.id === notifId ? { ...n, read: true, read_at: new Date().toISOString() } : n
+      )
+      unreadCount.value = Math.max(0, unreadCount.value - 1)
+    } catch (err) {
+      console.error('[Notifications] mark read error:', err)
+    }
+  }
+
+  async function markAllAsRead() {
+    try {
+      await api.put('/notifications/read-all')
+      items.value = items.value.map(n => ({ ...n, read: true, read_at: n.read_at || new Date().toISOString() }))
+      unreadCount.value = 0
+    } catch (err) {
+      console.error('[Notifications] mark all read error:', err)
+    }
+  }
+
+  async function archiveNotification(notifId) {
+    try {
+      await api.put(`/notifications/${notifId}/archive`)
+      items.value = items.value.filter(n => n.id !== notifId)
+      if (!items.value.find(n => n.id === notifId)?.read) {
+        unreadCount.value = Math.max(0, unreadCount.value - 1)
+      }
+    } catch (err) {
+      console.error('[Notifications] archive error:', err)
+    }
+  }
+
+  async function deleteNotification(notifId) {
+    try {
+      await api.delete(`/notifications/${notifId}`)
+      const notif = items.value.find(n => n.id === notifId)
+      items.value = items.value.filter(n => n.id !== notifId)
+      if (notif && !notif.read) {
+        unreadCount.value = Math.max(0, unreadCount.value - 1)
+      }
+    } catch (err) {
+      console.error('[Notifications] delete error:', err)
+    }
+  }
+
+  function setFilters(newFilters) {
+    Object.assign(filters.value, newFilters)
+    return fetchNotifications(true)
+  }
+
+  function connectSSE() {
+    const token = localStorage.getItem('mepos_token')
+    if (!token) return
+
+    if (eventSource) {
+      eventSource.close()
+    }
+
+    const baseUrl = api.defaults.baseURL || '/api/v1'
+    const base = baseUrl.replace('/api/v1', '')
+    const url = `${base || ''}/api/v1/notifications/stream?token=${encodeURIComponent(token)}`
+
+    eventSource = new EventSource(url)
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        if (data.type === 'notification') {
+          items.value = [data.notification, ...items.value]
+          if (data.unreadCount !== undefined) {
+            unreadCount.value = data.unreadCount
+          }
+        }
+      } catch { }
+    }
+
+    eventSource.onerror = () => {
+      eventSource.close()
+      setTimeout(() => connectSSE(), 5000)
+    }
+  }
+
+  function disconnectSSE() {
+    if (eventSource) {
+      eventSource.close()
+      eventSource = null
+    }
+  }
+
+  return {
+    items, unreadCount, isLoading, hasMore, total,
+    filters, unreadNotifications, sortedByPriority,
+    fetchNotifications, fetchUnreadCount, markAsRead,
+    markAllAsRead, archiveNotification, deleteNotification,
+    setFilters, connectSSE, disconnectSSE,
+  }
+})

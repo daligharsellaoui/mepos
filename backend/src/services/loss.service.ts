@@ -3,6 +3,7 @@ import { query, isDemoMode, demoDb, getClient } from '../database';
 import {
   getEffectiveDepartmentId, ensureStockRow, updateStockQuantity, logMovement, calculateLossCosts
 } from './stock.service';
+import { eventBus, Events } from './event.service';
 
 /**
  * Resolve tenant ID for queries.
@@ -40,6 +41,25 @@ export async function createLoss(
       reported_by: reportedBy, created_at: new Date(), tenant_id: tid,
     };
     demoDb.ingredient_losses.push(lossRecord);
+
+    const ing = demoDb.ingredients.find((i: any) => i.id === ingredientId);
+    const dept = demoDb.departments.find((d: any) => d.id === departmentId);
+
+    eventBus.emit(Events.LOSS_DECLARED, {
+      tenantId: tid, lossId: lossRecord.id, quantity: qtyDecimal.toNumber(),
+      unit: ing?.unit || '', ingredientName: ing?.name || 'Inconnu',
+      reason: lossReason, costLoss: costLoss.toNumber(),
+      departmentName: dept?.name || 'Inconnu',
+    });
+
+    if (costLoss.greaterThan(50)) {
+      eventBus.emit(Events.LOSS_LARGE, {
+        tenantId: tid, lossId: lossRecord.id, quantity: qtyDecimal.toNumber(),
+        unit: ing?.unit || '', ingredientName: ing?.name || 'Inconnu',
+        reason: lossReason, costLoss: costLoss.toNumber(),
+      });
+    }
+
     return lossRecord;
   }
 

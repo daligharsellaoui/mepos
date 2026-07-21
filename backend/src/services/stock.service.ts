@@ -1,5 +1,6 @@
 import { Decimal } from 'decimal.js';
 import { query, isDemoMode, demoDb, getClient } from '../database';
+import { eventBus, Events } from './event.service';
 
 // ======================================================
 // STOCK SERVICE
@@ -219,6 +220,23 @@ export async function getStockWarning(
   }
 
   if (newQty.lessThanOrEqualTo(new Decimal(ingredientInfo.alert_threshold))) {
+    if (newQty.lessThanOrEqualTo(0)) {
+      eventBus.emit(Events.STOCK_OUT, {
+        tenantId: tid, ingredientId, ingredientName: ingredientInfo.name,
+        remainingQty: newQty.toString(), departmentName, departmentId,
+      });
+    } else if (newQty.lessThanOrEqualTo(new Decimal(ingredientInfo.alert_threshold).dividedBy(2))) {
+      eventBus.emit(Events.STOCK_CRITICAL, {
+        tenantId: tid, ingredientId, ingredientName: ingredientInfo.name,
+        remainingQty: newQty.toString(), departmentName, departmentId,
+      });
+    } else {
+      eventBus.emit(Events.STOCK_LOW, {
+        tenantId: tid, ingredientId, ingredientName: ingredientInfo.name,
+        remainingQty: newQty.toString(), unit: ingredientInfo.unit || '', departmentName, departmentId,
+      });
+    }
+
     return `Stock critique pour l'ingrédient '${ingredientInfo.name}' dans le département '${departmentName}' (Stock restant : ${newQty.toString()})`;
   }
 

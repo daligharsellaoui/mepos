@@ -1,0 +1,212 @@
+# Hero Section Redesign – Match Premium Landing Page
+
+Redesign the current landing page Hero section to match the premium style of the provided reference image while preserving our existing design system, animations, responsiveness, accessibility, and component architecture.
+
+## Objective
+
+Transform the Hero into a modern SaaS hero inspired by the reference image.
+
+The layout should be approximately:
+
+----------------------------------------------------------
+| Logo + Heading/Description          | 3D Product Image |
+| CTA Buttons                         |                  |
+| Feature Icons                       |                  |
+----------------------------------------------------------
+
+The provided PNG section.png will be used as the hero illustration on the right.
+
+Do NOT recreate this image with CSS.
+Simply display the provided PNG.
+
+---
+
+# Left Content (French)
+
+## Heading
+
+Gestion de stock.
+Simplifiée.
+**Surboostée.**
+
+The word **Surboostée.** must use the primary brand gradient/purple color.
+
+Typography:
+- Extra bold
+- Large display title
+- Tight line height
+- Responsive scaling
+- Smooth fade-up animation
+
+---
+
+## Description
+
+La solution tout-en-un de gestion de stock et d'inventaire conçue pour les commerces modernes.
+
+Maximum width around 500px.
+
+Use the existing typography tokens.
+
+---
+
+## CTA Buttons
+
+Primary:
+Commencer gratuitement
+
+Secondary:
+Voir la démo
+
+Reuse existing button components.
+
+---
+
+## Feature Icons
+
+Create a horizontal feature list with 4 premium cards/icons.
+
+Each item contains:
+- Rounded square glass icon
+- Purple gradient background
+- White SVG icon
+- Label underneath
+
+Items:
+
+📦
+Gestion de stock
+
+📉
+Gestion de pertes
+
+📊
+Rapports & Analyses
+
+🔔
+Alertes & Notifications
+
+Replace the current "Sales & POS" feature with **Gestion de pertes**.
+
+Use existing AppIcon component whenever possible.
+
+---
+
+# Right Side
+
+Replace the current hero illustration with the provided PNG.
+
+Requirements:
+
+- Large premium render
+- Positioned to the right
+- Overflow slightly outside container for a modern look
+- Maintain aspect ratio
+- No cropping of important elements
+- Lazy loaded
+- Responsive
+- High quality
+
+Add a subtle floating animation (3–5px vertical movement).
+
+---
+
+# Background
+
+Keep the current dark theme.
+
+Add a subtle radial purple glow behind the hero image similar to the reference.
+
+No busy gradients.
+
+Use layered radial gradients only.
+
+---
+
+# Decorations
+
+Add a few floating translucent purple cubes around the image.
+
+Requirements:
+- Very subtle
+- Low opacity
+- Soft blur
+- Slow floating animation
+- Different sizes
+- Do not distract from the content
+
+---
+
+# Layout
+
+Desktop:
+- Two-column layout (≈45% text / 55% image)
+- Vertically centered
+- Plenty of whitespace
+
+Tablet:
+- Slightly smaller illustration
+- Maintain two columns until necessary
+
+Mobile:
+- Stack vertically
+- Text first
+- Illustration second
+- Feature icons become a responsive 2×2 grid
+
+---
+
+# Animations
+
+Use existing animation utilities if available.
+
+Hero content:
+- Fade-up
+- Staggered entrance
+
+Hero image:
+- Fade + slight scale
+
+Feature icons:
+- Fade-up with stagger
+
+Floating cubes:
+- Infinite slow floating animation
+
+Buttons:
+- Existing hover animations
+
+---
+
+# Performance
+
+- Keep Lighthouse score high.
+- Lazy load the hero image.
+- No heavy animation libraries.
+- CSS transforms only.
+- GPU-accelerated animations.
+- Respect prefers-reduced-motion.
+
+---
+
+# Accessibility
+
+- Semantic HTML.
+- Proper heading hierarchy.
+- Meaningful alt text for the hero image.
+- Keyboard accessible buttons.
+- Sufficient color contrast.
+
+---
+
+# Technical Requirements
+
+- Reuse existing components.
+- Reuse design tokens.
+- Do not introduce a UI framework.
+- Keep the implementation clean and componentized.
+- Extract any new reusable UI into dedicated components.
+- Maintain responsive behavior across all breakpoints.
+- Preserve existing functionality and routing.
+
+The final result should closely resemble the premium SaaS aesthetic of the reference while using our own branding, French content, and the provided PNG hero illustration.

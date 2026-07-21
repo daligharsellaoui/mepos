@@ -339,6 +339,73 @@ CREATE INDEX IF NOT EXISTS idx_tenant_settings_lookup ON tenant_settings(tenant_
 -- Audit logs for compliance
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(tenant_id, user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(tenant_id, entity_type, entity_id);
+
+-- ============================================================
+-- NOTIFICATIONS TABLE
+-- ============================================================
+
+DO $$ BEGIN
+    CREATE TYPE notification_type AS ENUM (
+        'information', 'success', 'warning', 'error', 'critical',
+        'system', 'synchronization', 'inventory', 'transfer',
+        'purchase', 'recipe', 'loss', 'security', 'user', 'settings'
+    );
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE notification_priority AS ENUM ('low', 'medium', 'high', 'critical');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    type notification_type NOT NULL DEFAULT 'information',
+    category VARCHAR(50) NOT NULL DEFAULT 'general',
+    priority notification_priority NOT NULL DEFAULT 'medium',
+    title VARCHAR(255) NOT NULL,
+    message TEXT,
+    icon VARCHAR(50),
+    color VARCHAR(20),
+    entity_type VARCHAR(50),
+    entity_id INT,
+    created_by INT REFERENCES users(id) ON DELETE SET NULL,
+    assigned_to INT REFERENCES users(id) ON DELETE SET NULL,
+    read BOOLEAN NOT NULL DEFAULT FALSE,
+    read_at TIMESTAMP WITH TIME ZONE,
+    archived BOOLEAN NOT NULL DEFAULT FALSE,
+    action_url TEXT,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS notification_preferences (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    category VARCHAR(50) NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    muted BOOLEAN NOT NULL DEFAULT FALSE,
+    critical_only BOOLEAN NOT NULL DEFAULT FALSE,
+    desktop BOOLEAN NOT NULL DEFAULT TRUE,
+    sound BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(tenant_id, user_id, category)
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_tenant ON notifications(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_assigned ON notifications(tenant_id, assigned_to);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(tenant_id, assigned_to, read);
+CREATE INDEX IF NOT EXISTS idx_notifications_archived ON notifications(tenant_id, assigned_to, archived);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(tenant_id, type);
+CREATE INDEX IF NOT EXISTS idx_notifications_category ON notifications(tenant_id, category);
+CREATE INDEX IF NOT EXISTS idx_notifications_priority ON notifications(tenant_id, priority, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_entity ON notifications(tenant_id, entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_notification_prefs_user ON notification_preferences(tenant_id, user_id);
 `;
 
 export async function initializeDatabase() {

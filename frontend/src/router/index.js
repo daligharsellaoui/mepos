@@ -65,6 +65,11 @@ const routes = [
         name: 'SyncDashboard',
         component: () => import('../views/SyncDashboard.vue'),
         meta: { requiresAdmin: true }
+      },
+      {
+        path: 'notifications',
+        name: 'NotificationCenter',
+        component: () => import('../views/NotificationCenter.vue')
       }
     ]
   }

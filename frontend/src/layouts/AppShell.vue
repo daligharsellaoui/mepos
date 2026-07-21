@@ -1,13 +1,41 @@
 <script setup>
+import { ref, onMounted, onUnmounted, inject } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useAppStore } from '../stores/app'
+import { useNotificationStore } from '../stores/notifications'
 import Sidebar from '../components/layout/Sidebar.vue'
 import MobileNav from '../components/layout/MobileNav.vue'
+import NotificationBell from '../components/notifications/NotificationBell.vue'
+import NotificationDrawer from '../components/notifications/NotificationDrawer.vue'
 import logoSrc from '../assets/sidelogo.png'
 
 const auth = useAuthStore()
 const app = useAppStore()
+const notifStore = useNotificationStore()
 
+const showDrawer = ref(false)
+const addToast = inject('addToast')
+
+let pollInterval = null
+
+onMounted(() => {
+  notifStore.fetchUnreadCount()
+  notifStore.connectSSE()
+
+  pollInterval = setInterval(() => {
+    notifStore.fetchUnreadCount()
+  }, 15000)
+
+  if (auth.isLoggedIn) {
+    app.setupNetworkListeners()
+    app.fetchData(auth.user)
+  }
+})
+
+onUnmounted(() => {
+  if (pollInterval) clearInterval(pollInterval)
+  notifStore.disconnectSSE()
+})
 
 const getRoleText = (role) => {
   switch (role) {
@@ -16,6 +44,10 @@ const getRoleText = (role) => {
     case 'cook': return 'Cuisinier'
     default: return role
   }
+}
+
+function toggleDrawer() {
+  showDrawer.value = !showDrawer.value
 }
 </script>
 
@@ -48,37 +80,40 @@ const getRoleText = (role) => {
           <span>En ligne</span>
         </div>
       </div>
-      <div class="user-profile">
-        <span
-          :class="['user-role', `user-role-${auth.user?.role}`]"
-          style="margin-right: 0.25rem;"
-        >
-          {{ getRoleText(auth.user?.role) }}
-        </span>
-        <button
-          class="btn-logout"
-          title="Se déconnecter"
-          @click="auth.logout(); $router.push('/login')"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <NotificationBell @click="toggleDrawer" />
+        <div class="user-profile">
+          <span
+            :class="['user-role', `user-role-${auth.user?.role}`]"
+            style="margin-right: 0.25rem;"
           >
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line
-              x1="21"
-              y1="12"
-              x2="9"
-              y2="12"
-            />
-          </svg>
-        </button>
+            {{ getRoleText(auth.user?.role) }}
+          </span>
+          <button
+            class="btn-logout"
+            title="Se déconnecter"
+            @click="auth.logout(); $router.push('/login')"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line
+                x1="21"
+                y1="12"
+                x2="9"
+                y2="12"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -90,7 +125,7 @@ const getRoleText = (role) => {
 
     <MobileNav />
 
-    <!-- Real-time Loss Notifications -->
+    <!-- Toast loss alerts (kept for backward compatibility) -->
     <div
       v-if="app.alerts.length > 0"
       class="notification-container"
@@ -127,7 +162,7 @@ const getRoleText = (role) => {
         </div>
         <div class="notification-content">
           <div class="notification-title">
-            <span>⚠️ ALERTE : Perte Détectée</span>
+            <span>&#9888;&#65039; ALERTE : Perte Détectée</span>
             <span class="notification-time">
               {{ alert.timestamp?.toLocaleTimeString('fr-TN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) }}
             </span>
@@ -179,5 +214,113 @@ const getRoleText = (role) => {
         </button>
       </div>
     </div>
+
+    <!-- Notification Drawer -->
+    <NotificationDrawer
+      v-if="showDrawer"
+      @close="showDrawer = false"
+    />
   </div>
 </template>
+
+<style scoped>
+.notification-container {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 420px;
+  pointer-events: none;
+}
+.notification-toast {
+  pointer-events: auto;
+  background: rgba(21, 26, 41, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-left: 4px solid var(--coral);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  gap: 0.85rem;
+  position: relative;
+  overflow: hidden;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: all 0.3s ease;
+}
+.notification-toast.fade-out {
+  opacity: 0;
+  transform: translateX(50px);
+}
+.notification-icon {
+  color: var(--coral);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 50%;
+  margin-top: 0.15rem;
+}
+.notification-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.notification-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.notification-time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: normal;
+}
+.notification-body {
+  font-size: 0.825rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+.notification-financials {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 0.5rem;
+}
+.notification-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  align-self: flex-start;
+  margin-top: -0.25rem;
+  margin-right: -0.25rem;
+}
+.notification-close-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+</style>

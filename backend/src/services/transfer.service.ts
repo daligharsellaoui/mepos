@@ -1,6 +1,7 @@
 import { Decimal } from 'decimal.js';
 import { query, isDemoMode, demoDb, getClient } from '../database';
 import { ensureStockRow, updateStockQuantity, logMovement } from './stock.service';
+import { eventBus, Events } from './event.service';
 
 /**
  * Resolve tenant ID for queries.
@@ -130,6 +131,17 @@ export async function createTransferRequest(
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(), tenant_id: tid,
     };
     demoDb.transfer_requests.push(newRequest);
+
+    const ing = demoDb.ingredients.find((i: any) => i.id === ingredientId);
+    const srcDept = demoDb.departments.find((d: any) => d.id === sourceDepartmentId);
+    const destDept = demoDb.departments.find((d: any) => d.id === destinationDepartmentId);
+
+    eventBus.emit(Events.TRANSFER_REQUESTED, {
+      tenantId: tid, requestId: newRequest.id, quantity: reqQty.toNumber(),
+      unit: ing?.unit || '', ingredientName: ing?.name || 'Inconnu',
+      sourceDept: srcDept?.name || 'Inconnu', destDept: destDept?.name || 'Inconnu',
+    });
+
     return newRequest;
   }
 
@@ -159,6 +171,13 @@ export async function approveTransferRequest(
     request.status = 'approved';
     request.validated_by = validatedBy;
     request.updated_at = new Date().toISOString();
+
+    const ing = demoDb.ingredients.find((i: any) => i.id === request.ingredient_id);
+    eventBus.emit(Events.TRANSFER_APPROVED, {
+      tenantId: tid, requestId: request.id, quantity: request.quantity,
+      unit: ing?.unit || '', ingredientName: ing?.name || 'Inconnu',
+    });
+
     return request;
   }
 
@@ -221,6 +240,13 @@ export async function rejectTransferRequest(
     request.status = 'rejected';
     request.validated_by = validatedBy;
     request.updated_at = new Date().toISOString();
+
+    const ing = demoDb.ingredients.find((i: any) => i.id === request.ingredient_id);
+    eventBus.emit(Events.TRANSFER_REJECTED, {
+      tenantId: tid, requestId: request.id, quantity: request.quantity,
+      unit: ing?.unit || '', ingredientName: ing?.name || 'Inconnu',
+    });
+
     return request;
   }
 

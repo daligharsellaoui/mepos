@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { query, isDemoMode, demoDb } from '../database';
+import { eventBus, Events } from './event.service';
 
 const SALT_ROUNDS = 12;
 
@@ -53,6 +54,9 @@ export async function authenticateUser(
       ? demoDb.users.find((u: any) => u.username === username && u.tenant_id === tenantId)
       : demoDb.users.find((u: any) => u.username === username);
     if (!user) {
+      eventBus.emit(Events.USER_LOGIN_FAILED, {
+        tenantId: tenantId || 1, username,
+      });
       throw new Error('Invalid username or password');
     }
 
@@ -64,8 +68,16 @@ export async function authenticateUser(
       : user.password_hash === password;
 
     if (!isValid) {
+      eventBus.emit(Events.USER_LOGIN_FAILED, {
+        tenantId: user.tenant_id || tenantId || 1, username,
+      });
       throw new Error('Invalid username or password');
     }
+
+    eventBus.emit(Events.USER_LOGIN, {
+      tenantId: user.tenant_id || tenantId || 1, userId: user.id,
+      username: user.username,
+    });
 
     return safeUser(user);
   }
@@ -158,6 +170,12 @@ export async function createUser(data: {
       last_name: last_name || '',
     };
     demoDb.users.push(newUser);
+
+    eventBus.emit(Events.USER_CREATED, {
+      tenantId: tenantId || 1, userId: newUser.id,
+      username: newUser.username, role: newUser.role,
+    });
+
     return safeUser(newUser);
   }
 

@@ -12,6 +12,9 @@ import { initializeDatabase } from './schema';
 import { startSalesSimulator } from './simulator';
 import { authMiddleware } from './routes/auth';
 import { tenantContextMiddleware } from './middleware/tenantContext';
+import { eventBus } from './services/event.service';
+import { setupNotificationDispatcher } from './services/notification-dispatcher';
+import { getUnreadCount } from './services/notification.service';
 
 // Import Routes
 import authRouter from './routes/auth';
@@ -23,6 +26,7 @@ import forecastRouter from './routes/forecast';
 import agentsRouter from './routes/agents';
 import settingsRouter from './routes/settings';
 import tenantsRouter from './routes/tenants';
+import notificationsRouter from './routes/notifications';
 
 dotenv.config();
 
@@ -92,6 +96,8 @@ app.use('/api/v1/agents', agentsRouter);
 app.use('/api/v1/tenants', authMiddleware, tenantContextMiddleware, tenantsRouter);
 // Tenant settings routes
 app.use('/api/v1/settings', authMiddleware, tenantContextMiddleware, settingsRouter);
+// Notification routes
+app.use('/api/v1/notifications', authMiddleware, tenantContextMiddleware, notificationsRouter);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
@@ -100,6 +106,61 @@ app.get('/health', (_req, res) => {
     mode: isDemoMode ? 'demo-in-memory' : 'postgres-active',
     version: process.env.npm_package_version || '1.5.0',
     timestamp: new Date()
+  });
+});
+
+// SSE endpoint for real-time notifications
+const sseClients: Map<number, Set<Response>> = new Map();
+
+app.get('/api/v1/notifications/stream', authMiddleware, tenantContextMiddleware, (req: Request, res: Response) => {
+  const tenantId = (req as any).tenantId;
+  const userId = (req as any).user?.id;
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+
+  res.write(`data: ${JSON.stringify({ type: 'connected', message: 'Connexion établie.' })}\n\n`);
+
+  if (!sseClients.has(tenantId)) {
+    sseClients.set(tenantId, new Set());
+  }
+  sseClients.get(tenantId)!.add(res);
+
+  const heartbeat = setInterval(() => {
+    res.write(`:heartbeat\n\n`);
+  }, 30000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    const clients = sseClients.get(tenantId);
+    if (clients) {
+      clients.delete(res);
+      if (clients.size === 0) sseClients.delete(tenantId);
+    }
+  });
+});
+
+eventBus.on('notification:created', async ({ notification }: { notification: any }) => {
+  const clients = sseClients.get(notification.tenant_id);
+  if (!clients || clients.size === 0) return;
+
+  const unreadCount = await getUnreadCount(
+    notification.tenant_id,
+    notification.assigned_to || 0
+  );
+
+  const payload = JSON.stringify({
+    type: 'notification',
+    notification,
+    unreadCount,
+  });
+
+  clients.forEach(client => {
+    client.write(`data: ${payload}\n\n`);
   });
 });
 
@@ -132,11 +193,14 @@ async function startServer() {
     await initializeDatabase();
   }
 
-  // 3. Start listening
+  // 3. Set up notification dispatcher
+  setupNotificationDispatcher();
+
+  // 4. Start listening
   app.listen(PORT, () => {
     console.log(`[mePOS STOCK API] Server is running on port ${PORT} in ${isDemoMode ? 'DEMO' : 'PRODUCTION'} mode.`);
     
-    // 4. Start Background Sales Simulator
+    // 5. Start Background Sales Simulator
     startSalesSimulator();
   });
 }

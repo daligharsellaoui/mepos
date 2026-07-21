@@ -10,6 +10,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { query, isDemoMode, demoDb, getClient } from '../database';
 import { encrypt, decrypt, encryptIfNeeded, isEncrypted } from './encryption.service';
+import { eventBus, Events } from './event.service';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'mepos_jwt_dev_secret_change_in_production';
 const AGENT_JWT_EXPIRY = '1h';
@@ -279,6 +280,11 @@ export async function disableAgent(agentId: number, tenantId: number): Promise<S
     agent.status = 'disabled';
     agent.updated_at = new Date().toISOString();
     const { agent_secret_hash, ...safe } = agent;
+
+    eventBus.emit(Events.AGENT_DISCONNECTED, {
+      tenantId, agentId, agentName: agent.name,
+    });
+
     return safe;
   }
 
@@ -399,12 +405,20 @@ export async function processHeartbeat(
     const agent = (demoDb.agents || []).find((a: any) => a.id === agentId && a.tenant_id === tenantId);
     if (!agent) return { success: false };
 
+    const wasOffline = agent.status === 'offline' || agent.status === 'error';
+
     agent.last_heartbeat_at = new Date().toISOString();
     agent.last_seen_at = new Date().toISOString();
     agent.status = 'online';
     if (payload.version) agent.version = payload.version;
     if (payload.health_status) agent.health_status = payload.health_status;
     if (payload.last_sync_at) agent.last_sync_at = payload.last_sync_at;
+
+    if (wasOffline) {
+      eventBus.emit(Events.AGENT_RECONNECTED, {
+        tenantId, agentId, agentName: agent.name,
+      });
+    }
 
     return { success: true };
   }

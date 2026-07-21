@@ -52,6 +52,8 @@ export const demoDb: {
   agents: seedData.agents,
   agent_heartbeats: seedData.agent_heartbeats,
   tenant_settings: seedData.tenant_settings,
+  notifications: [],
+  notification_preferences: [],
 };
 
 // Check DB Connection
