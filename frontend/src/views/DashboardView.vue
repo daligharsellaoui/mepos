@@ -364,24 +364,25 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
 
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem;">
       <div
-        class="glass-panel glass-panel-scroll"
+        class="glass-panel"
         style="padding: 1.5rem;"
       >
         <h2 style="font-size: 1.1rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
           Stock de la Cuisine
           <span style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary); margin-left: auto;">{{ cookDeptStocks.length }} réf(s)</span>
         </h2>
-        <div
-          v-if="cookDeptStocks.length === 0"
-          class="empty-state"
-          style="padding: 2rem 0; text-align: center; color: var(--text-secondary);"
-        >
-          Aucun stock disponible dans ce dépôt.
-        </div>
-        <div
-          v-else
-          style="display: flex; flex-direction: column; gap: 1rem;"
-        >
+        <div class="panel-content-scroll">
+          <div
+            v-if="cookDeptStocks.length === 0"
+            class="empty-state"
+            style="padding: 2rem 0; text-align: center; color: var(--text-secondary);"
+          >
+            Aucun stock disponible dans ce dépôt.
+          </div>
+          <div
+            v-else
+            style="display: flex; flex-direction: column; gap: 1rem;"
+          >
           <div
             v-for="s in [...cookDeptStocks].sort((a, b) => getStockPercent(a) - getStockPercent(b))"
             :key="s.id"
@@ -399,10 +400,11 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
             </div>
           </div>
         </div>
+        </div>
       </div>
 
       <div
-        class="glass-panel glass-panel-scroll"
+        class="glass-panel"
         style="padding: 1.5rem;"
       >
         <h2 style="font-size: 1.1rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -415,45 +417,47 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
           placeholder="Rechercher un produit..."
           style="width: 100%; margin-bottom: 1rem;"
         >
-        <div
-          v-if="filteredCookMenu.length === 0"
-          class="empty-state"
-          style="padding: 2rem 0; text-align: center; color: var(--text-secondary);"
-        >
-          {{ cookMenuSearch ? 'Aucun produit trouvé.' : 'Aucune recette configurée.' }}
-        </div>
-        <div
-          v-else
-          style="display: flex; flex-direction: column; gap: 0.6rem;"
-        >
+        <div class="panel-content-scroll">
           <div
-            v-for="rec in filteredCookMenu"
-            :key="rec.id"
+            v-if="filteredCookMenu.length === 0"
+            class="empty-state"
+            style="padding: 2rem 0; text-align: center; color: var(--text-secondary);"
+          >
+            {{ cookMenuSearch ? 'Aucun produit trouvé.' : 'Aucune recette configurée.' }}
+          </div>
+          <div
+            v-else
+            style="display: flex; flex-direction: column; gap: 0.6rem;"
           >
             <div
-              :style="{ padding: '0.75rem 1rem', background: selectedRecipe?.id === rec.id ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.02)', border: `1px solid ${selectedRecipe?.id === rec.id ? 'rgba(99,102,241,0.4)' : 'var(--border-color)'}`, borderRadius: '10px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.2s ease' }"
-              @click="selectedRecipe = selectedRecipe?.id === rec.id ? null : rec"
+              v-for="rec in filteredCookMenu"
+              :key="rec.id"
             >
-              <span style="font-weight: 600; font-size: 0.95rem;">{{ rec.name }}</span>
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <span style="font-size: 0.78rem; color: var(--text-secondary);">{{ rec.ingredients?.length || 0 }} ingr.</span>
-                <span :style="{ fontSize: '0.75rem', color: selectedRecipe?.id === rec.id ? 'var(--indigo-light)' : 'var(--text-muted)' }">{{ selectedRecipe?.id === rec.id ? '▲' : '▼' }}</span>
-              </div>
-            </div>
-            <div
-              v-if="selectedRecipe?.id === rec.id && rec.ingredients?.length > 0"
-              style="margin-top: 0.4rem; padding: 0.75rem 1rem; background: rgba(99,102,241,0.04); border: 1px solid rgba(99,102,241,0.15); border-radius: 8px; display: flex; flex-direction: column; gap: 0.4rem;"
-            >
-              <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.25rem;">
-                Composition par portion :
+              <div
+                :style="{ padding: '0.75rem 1rem', background: selectedRecipe?.id === rec.id ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.02)', border: `1px solid ${selectedRecipe?.id === rec.id ? 'rgba(99,102,241,0.4)' : 'var(--border-color)'}`, borderRadius: '10px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.2s ease' }"
+                @click="selectedRecipe = selectedRecipe?.id === rec.id ? null : rec"
+              >
+                <span style="font-weight: 600; font-size: 0.95rem;">{{ rec.name }}</span>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <span style="font-size: 0.78rem; color: var(--text-secondary);">{{ rec.ingredients?.length || 0 }} ingr.</span>
+                  <span :style="{ fontSize: '0.75rem', color: selectedRecipe?.id === rec.id ? 'var(--indigo-light)' : 'var(--text-muted)' }">{{ selectedRecipe?.id === rec.id ? '▲' : '▼' }}</span>
+                </div>
               </div>
               <div
-                v-for="ing in rec.ingredients"
-                :key="ing.ingredient_id"
-                style="display: flex; justify-content: space-between; font-size: 0.88rem;"
+                v-if="selectedRecipe?.id === rec.id && rec.ingredients?.length > 0"
+                style="margin-top: 0.4rem; padding: 0.75rem 1rem; background: rgba(99,102,241,0.04); border: 1px solid rgba(99,102,241,0.15); border-radius: 8px; display: flex; flex-direction: column; gap: 0.4rem;"
               >
-                <span>{{ ing.name || ing.ingredient_name || `#${ing.ingredient_id}` }}</span>
-                <span style="font-weight: 600; color: var(--indigo-light);">{{ parseFloat(ing.quantity_needed).toFixed(2) }} {{ ing.unit || 'g' }}</span>
+                <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.25rem;">
+                  Composition par portion :
+                </div>
+                <div
+                  v-for="ing in rec.ingredients"
+                  :key="ing.ingredient_id"
+                  style="display: flex; justify-content: space-between; font-size: 0.88rem;"
+                >
+                  <span>{{ ing.name || ing.ingredient_name || `#${ing.ingredient_id}` }}</span>
+                  <span style="font-weight: 600; color: var(--indigo-light);">{{ parseFloat(ing.quantity_needed).toFixed(2) }} {{ ing.unit || 'g' }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -462,37 +466,39 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
     </div>
 
       <div
-        class="glass-panel glass-panel-scroll"
+        class="glass-panel"
         style="padding: 1.5rem;"
       >
         <h2 style="font-size: 1.1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
           Pertes Enregistrées — Aujourd'hui
       </h2>
-      <div
-        v-if="todayLosses.length === 0"
-        class="empty-state"
-        style="padding: 2rem; text-align: center;"
-      >
-        <p style="color: var(--emerald); font-weight: 600; font-size: 1rem;">✅ Aucune perte déclarée aujourd'hui</p>
-        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.5rem;">Les pertes détectées apparaîtront ici automatiquement.</p>
-      </div>
-      <div
-        v-else
-        style="display: flex; flex-direction: column; gap: 0.6rem;"
-      >
+      <div class="panel-content-scroll">
         <div
-          v-for="l in todayLosses"
-          :key="l.id"
-          style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: rgba(251,191,36,0.04); border: 1px solid rgba(251,191,36,0.15); border-radius: 10px;"
+          v-if="todayLosses.length === 0"
+          class="empty-state"
+          style="padding: 2rem; text-align: center;"
         >
-          <div>
-            <strong style="font-size: 0.95rem;">{{ l.ingredient_name }}</strong>
-            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.1rem;">
-              <span :class="['badge', getLossReasonBadge(l.loss_reason)]" style="margin-right: 0.4rem;">{{ getLossReasonLabel(l.loss_reason) }}</span>
-              {{ l.department_name }}
+          <p style="color: var(--emerald); font-weight: 600; font-size: 1rem;">✅ Aucune perte déclarée aujourd'hui</p>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.5rem;">Les pertes détectées apparaîtront ici automatiquement.</p>
+        </div>
+        <div
+          v-else
+          style="display: flex; flex-direction: column; gap: 0.6rem;"
+        >
+          <div
+            v-for="l in todayLosses"
+            :key="l.id"
+            style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: rgba(251,191,36,0.04); border: 1px solid rgba(251,191,36,0.15); border-radius: 10px;"
+          >
+            <div>
+              <strong style="font-size: 0.95rem;">{{ l.ingredient_name }}</strong>
+              <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.1rem;">
+                <span :class="['badge', getLossReasonBadge(l.loss_reason)]" style="margin-right: 0.4rem;">{{ getLossReasonLabel(l.loss_reason) }}</span>
+                {{ l.department_name }}
+              </div>
             </div>
+            <span style="font-weight: 700; color: var(--amber); font-size: 0.95rem;">-{{ parseFloat(l.quantity).toFixed(2) }} {{ l.unit }}</span>
           </div>
-          <span style="font-weight: 700; color: var(--amber); font-size: 0.95rem;">-{{ parseFloat(l.quantity).toFixed(2) }} {{ l.unit }}</span>
         </div>
       </div>
     </div>
@@ -702,7 +708,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
     <!-- Critical Stocks + Recent Losses -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
       <div
-        class="glass-panel glass-panel-scroll"
+        class="glass-panel"
         style="padding: 1.5rem;"
       >
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;">
@@ -717,37 +723,39 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
             Voir l'inventaire
           </button>
         </div>
-        <div
-          v-if="app.lowStockAlerts.length === 0"
-          class="empty-state"
-          style="padding: 2rem 0; text-align: center; color: var(--text-secondary);"
-        >
-          Aucune alerte de stock à signaler.
-        </div>
-        <div
-          v-else
-          style="display: flex; flex-direction: column; gap: 0.75rem;"
-        >
+        <div class="panel-content-scroll">
           <div
-            v-for="alert in app.lowStockAlerts"
-            :key="alert.id"
-            style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.15); border-radius: 8px;"
+            v-if="app.lowStockAlerts.length === 0"
+            class="empty-state"
+            style="padding: 2rem 0; text-align: center; color: var(--text-secondary);"
           >
-            <div>
-              <strong style="font-size: 0.95rem;">{{ alert.ingredient_name }}</strong>
-              <div style="font-size: 0.8rem; color: var(--text-secondary);">
-                {{ alert.department_name }}
+            Aucune alerte de stock à signaler.
+          </div>
+          <div
+            v-else
+            style="display: flex; flex-direction: column; gap: 0.75rem;"
+          >
+            <div
+              v-for="alert in app.lowStockAlerts"
+              :key="alert.id"
+              style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.15); border-radius: 8px;"
+            >
+              <div>
+                <strong style="font-size: 0.95rem;">{{ alert.ingredient_name }}</strong>
+                <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                  {{ alert.department_name }}
+                </div>
               </div>
+              <span
+                class="badge badge-danger"
+                style="font-size: 0.8rem;"
+              >{{ parseFloat(alert.quantity).toFixed(2) }} / {{ parseFloat(alert.alert_threshold).toFixed(2) }} {{ alert.unit }}</span>
             </div>
-            <span
-              class="badge badge-danger"
-              style="font-size: 0.8rem;"
-            >{{ parseFloat(alert.quantity).toFixed(2) }} / {{ parseFloat(alert.alert_threshold).toFixed(2) }} {{ alert.unit }}</span>
           </div>
         </div>
       </div>
       <div
-        class="glass-panel glass-panel-scroll"
+        class="glass-panel"
         style="padding: 1.5rem;"
       >
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;">
@@ -762,31 +770,33 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
             Voir tout
           </button>
         </div>
-        <div
-          v-if="app.losses.length === 0"
-          class="empty-state"
-          style="padding: 2rem 0; text-align: center; color: var(--text-secondary);"
-        >
-          Aucune perte déclarée récemment.
-        </div>
-        <div
-          v-else
-          style="display: flex; flex-direction: column; gap: 0.75rem;"
-        >
+        <div class="panel-content-scroll">
           <div
-            v-for="loss in app.losses.slice(0, 4)"
-            :key="loss.id"
-            style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px;"
+            v-if="app.losses.length === 0"
+            class="empty-state"
+            style="padding: 2rem 0; text-align: center; color: var(--text-secondary);"
           >
-            <div>
-              <strong style="font-size: 0.95rem;">{{ loss.ingredient_name }}</strong>
-              <div style="font-size: 0.8rem; color: var(--text-secondary);">
-                Quantité: {{ parseFloat(loss.quantity).toFixed(2) }} {{ loss.unit }} |
-                <span :class="['badge', getLossReasonBadge(loss.loss_reason)]" style="margin-left: 0.25rem;">{{ getLossReasonLabel(loss.loss_reason) }}</span>
+            Aucune perte déclarée récemment.
+          </div>
+          <div
+            v-else
+            style="display: flex; flex-direction: column; gap: 0.75rem;"
+          >
+            <div
+              v-for="loss in app.losses.slice(0, 4)"
+              :key="loss.id"
+              style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px;"
+            >
+              <div>
+                <strong style="font-size: 0.95rem;">{{ loss.ingredient_name }}</strong>
+                <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                  Quantité: {{ parseFloat(loss.quantity).toFixed(2) }} {{ loss.unit }} |
+                  <span :class="['badge', getLossReasonBadge(loss.loss_reason)]" style="margin-left: 0.25rem;">{{ getLossReasonLabel(loss.loss_reason) }}</span>
+                </div>
               </div>
-            </div>
-            <div style="text-align: right; font-size: 0.9rem; color: #ef4444; font-weight: 600;">
-              {{ canViewFinance ? `-${parseFloat(loss.cost_loss).toFixed(2)} TND` : '*** TND' }}
+              <div style="text-align: right; font-size: 0.9rem; color: #ef4444; font-weight: 600;">
+                {{ canViewFinance ? `-${parseFloat(loss.cost_loss).toFixed(2)} TND` : '*** TND' }}
+              </div>
             </div>
           </div>
         </div>

@@ -23,10 +23,10 @@ const navItems = [
   { path: '/', label: 'Tableau de Bord', icon: 'dashboard' },
   { path: '/inventory', label: 'Inventaire', icon: 'inventory' },
   { path: '/losses', label: 'Pertes & Gâche', icon: 'losses' },
+  { path: '/forecast', label: 'Prévisions', icon: 'forecast', adminOnly: true },
   { path: '/transfers', label: 'Transfert Dépôt', icon: 'transfers' },
   { path: '/settings', label: 'Paramétrage', icon: 'settings', adminOnly: true },
   { path: '/agents', label: 'Agents Sync', icon: 'agents', adminOnly: true },
-  { path: '/forecast', label: 'Prévisions', icon: 'forecast', adminOnly: true },
   { path: '/sync', label: 'Sync Dashboard', icon: 'sync', adminOnly: true },
   { path: '/tenant-settings', label: 'Paramètres Restaurant', icon: 'tenant', adminOnly: true },
 ]

@@ -65,11 +65,8 @@ function getCriticalIngredients() {
       style="margin-bottom: 0;"
     >
       <div>
-        <h2 style="font-size: 1.4rem; font-weight: 800; margin: 0;">
-          🔮 Prévisions & Analyse
-        </h2>
         <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem;">
-          Généré le {{ new Date(forecast.generated_at).toLocaleString('fr-FR') }} — basé sur les {{ forecast.days_analyzed }} derniers jours
+          🔮 Généré le {{ new Date(forecast.generated_at).toLocaleString('fr-FR') }} — basé sur les {{ forecast.days_analyzed }} derniers jours
         </p>
       </div>
     </div>
@@ -122,7 +119,7 @@ function getCriticalIngredients() {
     <!-- Critical stocks alert -->
     <div
       v-if="getCriticalIngredients().length > 0"
-      class="glass-panel glass-panel-scroll"
+      class="glass-panel"
       style="padding: 1.5rem; border-left: 4px solid var(--coral);"
     >
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
@@ -142,7 +139,7 @@ function getCriticalIngredients() {
         </div>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+      <div class="panel-content-scroll" style="display: flex; flex-direction: column; gap: 0.75rem;">
         <div
           v-for="ing in getCriticalIngredients()"
           :key="`${ing.department_id}-${ing.ingredient_id}`"
