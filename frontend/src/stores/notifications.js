@@ -85,7 +85,7 @@ export const useNotificationStore = defineStore('notifications', () => {
 
   async function markAsRead(notifId) {
     try {
-      await api.put(`/notifications/${notifId}/read`)
+      await api.markAsRead(notifId)
       items.value = items.value.map(n =>
         n.id === notifId ? { ...n, read: true, read_at: new Date().toISOString() } : n
       )
@@ -97,7 +97,7 @@ export const useNotificationStore = defineStore('notifications', () => {
 
   async function markAllAsRead() {
     try {
-      await api.put('/notifications/read-all')
+      await api.markAllAsRead()
       items.value = items.value.map(n => ({ ...n, read: true, read_at: n.read_at || new Date().toISOString() }))
       unreadCount.value = 0
     } catch (err) {
@@ -107,7 +107,7 @@ export const useNotificationStore = defineStore('notifications', () => {
 
   async function archiveNotification(notifId) {
     try {
-      await api.put(`/notifications/${notifId}/archive`)
+      await api.archiveNotification(notifId)
       items.value = items.value.filter(n => n.id !== notifId)
       if (!items.value.find(n => n.id === notifId)?.read) {
         unreadCount.value = Math.max(0, unreadCount.value - 1)
@@ -119,7 +119,7 @@ export const useNotificationStore = defineStore('notifications', () => {
 
   async function deleteNotification(notifId) {
     try {
-      await api.delete(`/notifications/${notifId}`)
+      await api.deleteNotification(notifId)
       const notif = items.value.find(n => n.id === notifId)
       items.value = items.value.filter(n => n.id !== notifId)
       if (notif && !notif.read) {
@@ -179,9 +179,7 @@ export const useNotificationStore = defineStore('notifications', () => {
       eventSource.close()
     }
 
-    const baseUrl = api.defaults.baseURL || '/api/v1'
-    const base = baseUrl.replace('/api/v1', '')
-    const url = `${base || ''}/api/v1/notifications/stream?token=${encodeURIComponent(token)}`
+    const url = `/api/v1/notifications/stream?token=${encodeURIComponent(token)}`
 
     eventSource = new EventSource(url)
 
