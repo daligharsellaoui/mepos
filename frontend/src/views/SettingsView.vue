@@ -848,16 +848,16 @@ async function handleDeleteDeptConfirm() {
                 @click="handleRowClick(ing, $event)"
                 @keydown.enter="openEditModal(ing)"
               >
-                <td class="cell-name">
+                <td class="cell-name" data-label="Nom">
                   <strong style="color: var(--text-primary);">{{ ing.name }}</strong>
                 </td>
-                <td><span class="badge badge-success">{{ ing.purchase_unit || '—' }}</span></td>
-                <td class="cell-num">{{ parseFloat(ing.conversion_factor).toLocaleString() }} {{ ing.unit }}</td>
-                <td class="cell-num">{{ parseFloat(ing.purchase_unit_price).toFixed(3) }} TND</td>
-                <td class="cell-cost">
+                <td data-label="Unité Achat"><span class="badge badge-success">{{ ing.purchase_unit || '—' }}</span></td>
+                <td class="cell-num" data-label="Capacité">{{ parseFloat(ing.conversion_factor).toLocaleString() }} {{ ing.unit }}</td>
+                <td class="cell-num" data-label="Prix Colis">{{ parseFloat(ing.purchase_unit_price).toFixed(3) }} TND</td>
+                <td class="cell-cost" data-label="Coût Cuisine">
                   {{ parseFloat(ing.purchase_price_per_unit).toFixed(3) }} TND/{{ ing.unit }}
                 </td>
-                <td class="cell-actions" @click.stop>
+                <td class="cell-actions" data-label="Actions" @click.stop>
                   <RowActionMenu
                     class="row-action-menu-wrap"
                     :actions="getRowActions(ing)"

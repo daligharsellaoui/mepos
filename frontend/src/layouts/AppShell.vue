@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/auth'
 import { useAppStore } from '../stores/app'
 import Sidebar from '../components/layout/Sidebar.vue'
 import MobileNav from '../components/layout/MobileNav.vue'
-import logoSrc from '../assets/logo.png'
+import logoSrc from '../assets/sidelogo.png'
 
 const auth = useAuthStore()
 const app = useAppStore()
