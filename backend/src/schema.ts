@@ -468,6 +468,31 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(tenant_id, user_id);
+
+-- ============================================================
+-- PRODUCT MAPPINGS TABLE (POS Product Mapping)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS product_mappings (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    connector_type VARCHAR(50) NOT NULL,
+    external_product_id VARCHAR(100) NOT NULL,
+    external_product_code VARCHAR(100),
+    external_product_name VARCHAR(255),
+    mepos_product_id INT REFERENCES recipes(id) ON DELETE SET NULL,
+    mapping_status VARCHAR(20) DEFAULT 'unmapped',
+    confidence DECIMAL(5,2) DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(tenant_id, connector_type, external_product_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_mappings_tenant ON product_mappings(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_product_mappings_connector ON product_mappings(tenant_id, connector_type);
+CREATE INDEX IF NOT EXISTS idx_product_mappings_status ON product_mappings(tenant_id, mapping_status);
+CREATE INDEX IF NOT EXISTS idx_product_mappings_external ON product_mappings(tenant_id, external_product_id);
+CREATE INDEX IF NOT EXISTS idx_product_mappings_recipe ON product_mappings(mepos_product_id);
 `;
 
 export async function initializeDatabase() {

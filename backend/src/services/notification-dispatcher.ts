@@ -571,5 +571,105 @@ export function setupNotificationDispatcher() {
     });
   });
 
+  // ============================================================
+  // IMPORT EVENTS
+  // ============================================================
+
+  eventBus.on(Events.IMPORT_STARTED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'synchronization',
+      category: CATEGORIES.inventory,
+      priority: PRIORITIES.medium,
+      title: 'Import démarré',
+      message: `Import de ${data.rowCount} produits lancé.`,
+      icon: 'upload',
+      color: '#8b5cf6',
+      createdBy: data.userId,
+    });
+  });
+
+  eventBus.on(Events.IMPORT_COMPLETED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'success',
+      category: CATEGORIES.inventory,
+      priority: PRIORITIES.medium,
+      title: 'Import terminé',
+      message: `${data.productsCreated} produits, ${data.ingredientsCreated} ingrédients créés.`,
+      entityType: 'recipe',
+      icon: 'check-circle',
+      color: '#10b981',
+      actionUrl: '/app/products',
+      createdBy: data.userId,
+    });
+  });
+
+  eventBus.on(Events.IMPORT_FAILED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'error',
+      category: CATEGORIES.inventory,
+      priority: PRIORITIES.high,
+      title: 'Échec de l\'import',
+      message: `Erreur: ${data.error}`,
+      icon: 'x-circle',
+      color: '#ef4444',
+      actionUrl: '/app/products',
+      createdBy: data.userId,
+      minRole: 'admin',
+    });
+  });
+
+  // ============================================================
+  // MAPPING EVENTS
+  // ============================================================
+
+  eventBus.on(Events.MAPPING_CREATED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'success',
+      category: CATEGORIES.synchronization,
+      priority: PRIORITIES.low,
+      title: 'Mapping créé',
+      message: `Nouveau mapping pour "${data.mapping?.external_product_name || 'produit'}".`,
+      entityType: 'mapping',
+      entityId: data.mapping?.id,
+      icon: 'link',
+      color: '#8b5cf6',
+    });
+  });
+
+  eventBus.on(Events.MAPPING_AUTO_MATCHED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'success',
+      category: CATEGORIES.synchronization,
+      priority: PRIORITIES.medium,
+      title: 'Auto-mapping terminé',
+      message: `${data.matched} produits mappés sur ${data.total} pour "${data.connectorType}".`,
+      icon: 'zap',
+      color: '#10b981',
+      actionUrl: '/app/mappings',
+      minRole: 'admin',
+    });
+  });
+
+  eventBus.on(Events.SYNC_BLOCKED_MISSING_MAPPING, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'warning',
+      category: CATEGORIES.synchronization,
+      priority: PRIORITIES.high,
+      title: 'Synchronisation bloquée',
+      message: `Produit POS "${data.externalProductName}" non mappé.`,
+      entityType: 'mapping',
+      actionUrl: '/app/mappings',
+      icon: 'alert-triangle',
+      color: '#f59e0b',
+      minRole: 'admin',
+    });
+  });
+
   console.log('[NotificationDispatcher] Handlers registered for all events.');
 }

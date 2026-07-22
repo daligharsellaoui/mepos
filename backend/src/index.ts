@@ -30,6 +30,8 @@ import tenantsRouter from './routes/tenants';
 import notificationsRouter from './routes/notifications';
 import pushRouter from './routes/push';
 import suppliersRouter from './routes/suppliers';
+import importRouter from './routes/import';
+import mappingsRouter from './routes/mappings';
 
 dotenv.config();
 
@@ -106,6 +108,12 @@ app.use('/api/v1/push', authMiddleware, tenantContextMiddleware, pushRouter);
 
 // Supplier routes
 app.use('/api/v1/suppliers', authMiddleware, tenantContextMiddleware, suppliersRouter);
+
+// Import routes (CSV product import)
+app.use('/api/v1/import/products', authMiddleware, tenantContextMiddleware, importRouter);
+
+// Product mapping routes (POS Product Mapping)
+app.use('/api/v1/mappings', authMiddleware, tenantContextMiddleware, mappingsRouter);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {

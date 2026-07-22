@@ -41,4 +41,14 @@ export const Events = {
   SUPPLIER_RESTORED: 'supplier.restored',
   SUPPLIER_DELETED: 'supplier.deleted',
   PREFERRED_SUPPLIER_CHANGED: 'supplier.preferred.changed',
+  // Import events
+  IMPORT_STARTED: 'import.started',
+  IMPORT_COMPLETED: 'import.completed',
+  IMPORT_FAILED: 'import.failed',
+  // Mapping events
+  MAPPING_CREATED: 'mapping.created',
+  MAPPING_UPDATED: 'mapping.updated',
+  MAPPING_DELETED: 'mapping.deleted',
+  MAPPING_AUTO_MATCHED: 'mapping.auto.matched',
+  SYNC_BLOCKED_MISSING_MAPPING: 'sync.blocked.missing.mapping',
 };

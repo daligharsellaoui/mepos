@@ -134,6 +134,30 @@ export const api = {
   getVapidPublicKey: () => client.get('/push/vapid-public-key'),
   pushSubscribe: (sub) => client.post('/push/subscribe', sub),
   pushUnsubscribe: (endpoint) => client.delete('/push/unsubscribe', { data: { endpoint } }),
+
+  // Import (CSV Product Import)
+  downloadCsvTemplate: () => client.get('/import/products/csv-template', { responseType: 'blob' }),
+  validateCsv: (file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return client.post('/import/products/validate', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+  executeImport: (data) => client.post('/import/products/execute', data),
+
+  // Mappings (POS Product Mapping)
+  getMappings: (params) => client.get('/mappings', { params }),
+  getMapping: (id) => client.get(`/mappings/${id}`),
+  createMapping: (data) => client.post('/mappings', data),
+  updateMapping: (id, data) => client.put(`/mappings/${id}`, data),
+  deleteMapping: (id) => client.delete(`/mappings/${id}`),
+  bulkMapMappings: (data) => client.post('/mappings/bulk', data),
+  autoMatchMappings: (data) => client.post('/mappings/auto-match', data),
+  getUnmappedProducts: (params) => client.get('/mappings/unmapped', { params }),
+  getMappingStats: () => client.get('/mappings/stats'),
+  validateMappings: () => client.get('/mappings/validate'),
+  importPosProducts: (data) => client.post('/mappings/import-pos', data),
 }
 
 export default client
