@@ -24,6 +24,7 @@ const navItems = [
   { path: '/app', label: 'Tableau de Bord', icon: 'dashboard' },
   { path: '/app/notifications', label: 'Notifications', icon: 'notifications' },
   { path: '/app/inventory', label: 'Inventaire', icon: 'inventory' },
+  { path: '/app/suppliers', label: 'Fournisseurs', icon: 'suppliers', notForCook: true },
   { path: '/app/recipes', label: 'Recettes', icon: 'recipes', cookOnly: true },
   { path: '/app/losses', label: 'Pertes & Gâche', icon: 'losses' },
   { path: '/app/forecast', label: 'Prévisions', icon: 'forecast', adminOnly: true },
@@ -38,6 +39,7 @@ const visibleItems = computed(() =>
   navItems.filter(item => {
     if (item.adminOnly) return auth.user?.role === 'admin'
     if (item.cookOnly) return auth.user?.role === 'cook'
+    if (item.notForCook) return auth.user?.role !== 'cook'
     return true
   })
 )
@@ -162,6 +164,23 @@ const toggleOffline = () => {
               x2="12"
               y2="12"
             />
+          </svg>
+          <svg
+            v-else-if="item.icon === 'suppliers'"
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="1" y="3" width="15" height="13" rx="2" />
+            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+            <circle cx="5.5" cy="18.5" r="2.5" />
+            <circle cx="18.5" cy="18.5" r="2.5" />
           </svg>
           <svg
             v-else-if="item.icon === 'recipes'"
