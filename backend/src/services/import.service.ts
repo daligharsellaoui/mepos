@@ -291,29 +291,36 @@ export async function executeImport(
         }
       }
 
-      // Create recipe
-      const recipeId = (demoDb.recipes || []).length + 1;
-      const newRecipe = {
-        id: recipeId,
-        tenant_id: tenantId,
-        name: row.productName,
-        sale_price: row.sellingPrice,
-        is_active: true,
-        created_at: new Date()
-      };
-      demoDb.recipes.push(newRecipe);
-      stats.recipesCreated++;
-      stats.productsCreated++;
+      // Check if recipe already exists
+      const existingRecipe = (demoDb.recipes || []).find(
+        (r: any) => r.tenant_id === tenantId && r.name.toLowerCase() === row.productName.toLowerCase()
+      );
 
-      // Emit PRODUCT_CREATED event
-      eventBus.emit(Events.PRODUCT_CREATED, {
-        tenantId,
-        productId: recipeId,
-        name: row.productName,
-        salePrice: row.sellingPrice,
-        source: 'web_application',
-        createdBy: userId,
-      });
+      let recipeId: number;
+      if (existingRecipe) {
+        recipeId = existingRecipe.id;
+        existingRecipe.sale_price = row.sellingPrice;
+        existingRecipe.is_active = true;
+        stats.productsCreated++;
+
+        demoDb.recipe_ingredients = (demoDb.recipe_ingredients || []).filter(
+          (ri: any) => !(ri.tenant_id === tenantId && ri.recipe_id === recipeId)
+        );
+      } else {
+        recipeId = (demoDb.recipes || []).length + 1;
+        const newRecipe = {
+          id: recipeId,
+          tenant_id: tenantId,
+          name: row.productName,
+          sale_price: row.sellingPrice,
+          is_active: true,
+          created_at: new Date()
+        };
+        if (!demoDb.recipes) (demoDb as any).recipes = [];
+        demoDb.recipes.push(newRecipe);
+        stats.recipesCreated++;
+        stats.productsCreated++;
+      }
 
       // Create recipe ingredients
       for (let i = 0; i < ingredientIds.length; i++) {
@@ -326,6 +333,36 @@ export async function executeImport(
         };
         if (!demoDb.recipe_ingredients) (demoDb as any).recipe_ingredients = [];
         demoDb.recipe_ingredients.push(ri);
+      }
+
+      if (existingRecipe) {
+        eventBus.emit(Events.PRODUCT_UPDATED, {
+          tenantId,
+          productId: recipeId,
+          name: row.productName,
+          salePrice: row.sellingPrice,
+          source: 'web_application',
+          updatedBy: userId,
+        });
+        eventBus.emit(Events.PRODUCT_RECIPE_MODIFIED, {
+          tenantId,
+          recipeId,
+          name: row.productName,
+        });
+      } else {
+        eventBus.emit(Events.PRODUCT_CREATED, {
+          tenantId,
+          productId: recipeId,
+          name: row.productName,
+          salePrice: row.sellingPrice,
+          source: 'web_application',
+          createdBy: userId,
+        });
+        eventBus.emit(Events.RECIPE_CREATED, {
+          tenantId,
+          recipeId,
+          name: row.productName
+        });
       }
     }
   } else {
@@ -380,16 +417,34 @@ export async function executeImport(
           }
         }
 
-        // Create recipe
-        const recipeResult = await client.query(
-          `INSERT INTO recipes (tenant_id, name, sale_price, is_active)
-           VALUES ($1, $2, $3, true)
-           RETURNING id`,
-          [tenantId, row.productName, row.sellingPrice]
+        // Check if recipe already exists
+        const existingRecipeResult = await client.query(
+          'SELECT id FROM recipes WHERE tenant_id = $1 AND LOWER(name) = LOWER($2)',
+          [tenantId, row.productName]
         );
-        const recipeId = recipeResult.rows[0].id;
-        stats.recipesCreated++;
-        stats.productsCreated++;
+        const isExisting = existingRecipeResult.rows.length > 0;
+
+        let recipeId: number;
+        if (isExisting) {
+          recipeId = existingRecipeResult.rows[0].id;
+          await client.query(
+            `UPDATE recipes SET sale_price = $1, is_active = true WHERE id = $2 AND tenant_id = $3`,
+            [row.sellingPrice, recipeId, tenantId]
+          );
+          stats.productsCreated++;
+
+          await client.query('DELETE FROM recipe_ingredients WHERE recipe_id = $1 AND tenant_id = $2', [recipeId, tenantId]);
+        } else {
+          const recipeResult = await client.query(
+            `INSERT INTO recipes (tenant_id, name, sale_price, is_active)
+             VALUES ($1, $2, $3, true)
+             RETURNING id`,
+            [tenantId, row.productName, row.sellingPrice]
+          );
+          recipeId = recipeResult.rows[0].id;
+          stats.recipesCreated++;
+          stats.productsCreated++;
+        }
 
         // Create recipe ingredients (deduplicate by aggregating quantities)
         const ingredientQtyMap = new Map<number, number>();
@@ -405,20 +460,35 @@ export async function executeImport(
           );
         }
 
-        // Emit product created and recipe created events
-        eventBus.emit(Events.PRODUCT_CREATED, {
-          tenantId,
-          productId: recipeId,
-          name: row.productName,
-          salePrice: row.sellingPrice,
-          source: 'web_application',
-          createdBy: userId,
-        });
-        eventBus.emit(Events.RECIPE_CREATED, {
-          tenantId,
-          recipeId,
-          name: row.productName
-        });
+        if (isExisting) {
+          eventBus.emit(Events.PRODUCT_UPDATED, {
+            tenantId,
+            productId: recipeId,
+            name: row.productName,
+            salePrice: row.sellingPrice,
+            source: 'web_application',
+            updatedBy: userId,
+          });
+          eventBus.emit(Events.PRODUCT_RECIPE_MODIFIED, {
+            tenantId,
+            recipeId,
+            name: row.productName,
+          });
+        } else {
+          eventBus.emit(Events.PRODUCT_CREATED, {
+            tenantId,
+            productId: recipeId,
+            name: row.productName,
+            salePrice: row.sellingPrice,
+            source: 'web_application',
+            createdBy: userId,
+          });
+          eventBus.emit(Events.RECIPE_CREATED, {
+            tenantId,
+            recipeId,
+            name: row.productName
+          });
+        }
       }
 
       await client.query('COMMIT');
