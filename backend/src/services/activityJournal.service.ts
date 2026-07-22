@@ -718,6 +718,24 @@ function generateUUID(): string {
  * This function MUST be called during server startup.
  */
 export function setupActivityJournal() {
+  // ── Logout Event ──
+  eventBus.on(Events.USER_LOGOUT, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'auth.logout',
+      correlationId: data.correlationId,
+      entityType: 'user',
+      entityId: String(data.userId),
+      performedByUserId: data.userId,
+      performedByRole: data.role || 'user',
+      performedBySource: 'web_application',
+      severity: 'info',
+      title: 'Déconnexion utilisateur',
+      description: `${data.username} s'est déconnecté.`,
+      metadata: { username: data.username },
+    });
+  });
+
   // ── Authentication Events ──
   eventBus.on(Events.USER_LOGIN, async (data: any) => {
     await writeJournalEntry({

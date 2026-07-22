@@ -9,6 +9,7 @@ import {
   updateUser,
   deleteUser,
 } from '../services/auth.service';
+import { eventBus, Events } from '../services/event.service';
 import { tenantContextMiddleware } from '../middleware/tenantContext';
 
 const router = Router();
@@ -136,6 +137,28 @@ router.post('/login', async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     res.status(401).json({ status: 'error', message: error.message });
+  }
+});
+
+/**
+ * POST /api/v1/auth/logout
+ * Log out the current user (records the logout event in the activity journal)
+ */
+router.post('/logout', jwtAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (user) {
+      eventBus.emit(Events.USER_LOGOUT, {
+        tenantId: user.tenantId || 1,
+        userId: user.id,
+        username: user.username,
+        role: user.role,
+      });
+    }
+
+    res.json({ status: 'success', message: 'Déconnexion réussie.' });
+  } catch (error: any) {
+    res.status(500).json({ status: 'error', message: error.message });
   }
 });
 
