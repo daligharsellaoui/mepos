@@ -22,6 +22,18 @@ const routes = [
         component: () => import('../views/DashboardView.vue')
       },
       {
+        path: 'suppliers',
+        name: 'Suppliers',
+        component: () => import('../views/SuppliersView.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'suppliers/:id',
+        name: 'SupplierDetails',
+        component: () => import('../views/SupplierDetailsView.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
         path: 'inventory',
         name: 'Inventory',
         component: () => import('../views/InventoryView.vue')
