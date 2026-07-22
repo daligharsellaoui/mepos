@@ -11,19 +11,35 @@ const app = useAppStore()
 const isAdmin = computed(() => auth.isAdmin)
 const isCook = computed(() => auth.isCook)
 
+const search = ref('')
+
 const isModalOpen = ref(false)
 
 const lossPage = ref(1)
 const lossPerPage = ref(10)
 
-const paginatedLosses = computed(() => {
-  const start = (lossPage.value - 1) * lossPerPage.value
-  return app.losses.slice(start, start + lossPerPage.value)
+const filteredLosses = computed(() => {
+  let list = app.losses
+  if (search.value) {
+    const q = search.value.toLowerCase()
+    list = list.filter(l =>
+      l.ingredient_name?.toLowerCase().includes(q) ||
+      l.department_name?.toLowerCase().includes(q) ||
+      l.reported_by_username?.toLowerCase().includes(q)
+    )
+  }
+  return list
 })
 
-const totalLossPages = computed(() => Math.max(1, Math.ceil(app.losses.length / lossPerPage.value)))
+const paginatedLosses = computed(() => {
+  const start = (lossPage.value - 1) * lossPerPage.value
+  return filteredLosses.value.slice(start, start + lossPerPage.value)
+})
+
+const totalLossPages = computed(() => Math.max(1, Math.ceil(filteredLosses.value.length / lossPerPage.value)))
 
 watch(() => app.losses.length, () => { lossPage.value = 1 })
+watch(search, () => { lossPage.value = 1 })
 const selectedDept = ref('')
 const selectedIng = ref('')
 const quantity = ref('')
@@ -127,8 +143,16 @@ async function submitLoss(qtyVal) {
     </div>
 
     <div class="glass-panel table-wrapper">
+      <div style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color);">
+        <input
+          v-model="search"
+          class="form-input"
+          placeholder="Rechercher un ingrédient, un dépôt ou un déclarant..."
+          style="width: 100%; max-width: 320px;"
+        >
+      </div>
       <div
-        v-if="app.losses.length === 0"
+        v-if="filteredLosses.length === 0"
         style="padding: 2rem; text-align: center; color: var(--text-secondary);"
       >
         Aucune perte déclarée.

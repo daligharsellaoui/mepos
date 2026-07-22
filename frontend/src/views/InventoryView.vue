@@ -12,6 +12,8 @@ const app = useAppStore()
 const isAdmin = computed(() => auth.isAdmin)
 const isCook = computed(() => auth.isCook)
 
+const search = ref('')
+
 const showHistoryModal = ref(false)
 const showAdjustModal = ref(false)
 const showTransferModal = ref(false)
@@ -63,17 +65,27 @@ const filteredStocks = computed(() =>
   })
 )
 
+const searchedStocks = computed(() => {
+  if (!search.value) return filteredStocks.value
+  const q = search.value.toLowerCase()
+  return filteredStocks.value.filter(s =>
+    s.ingredient_name?.toLowerCase().includes(q) ||
+    s.department_name?.toLowerCase().includes(q)
+  )
+})
+
 const stockPage = ref(1)
 const stockPerPage = ref(10)
 
 const paginatedStocks = computed(() => {
   const start = (stockPage.value - 1) * stockPerPage.value
-  return filteredStocks.value.slice(start, start + stockPerPage.value)
+  return searchedStocks.value.slice(start, start + stockPerPage.value)
 })
 
-const totalStockPages = computed(() => Math.max(1, Math.ceil(filteredStocks.value.length / stockPerPage.value)))
+const totalStockPages = computed(() => Math.max(1, Math.ceil(searchedStocks.value.length / stockPerPage.value)))
 
 watch([filteredStocks, selectedDept], () => { stockPage.value = 1 })
+watch(search, () => { stockPage.value = 1 })
 </script>
 
 <template>
@@ -129,8 +141,16 @@ watch([filteredStocks, selectedDept], () => { stockPage.value = 1 })
     </div>
 
     <div class="glass-panel table-wrapper">
+      <div style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color);">
+        <input
+          v-model="search"
+          class="form-input"
+          placeholder="Rechercher un ingrédient ou un dépôt..."
+          style="width: 100%; max-width: 320px;"
+        >
+      </div>
       <div
-        v-if="filteredStocks.length === 0"
+        v-if="searchedStocks.length === 0"
         style="padding: 2rem; text-align: center; color: var(--text-secondary);"
       >
         Aucun ingrédient répertorié pour ce dépôt.
