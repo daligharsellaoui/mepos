@@ -530,13 +530,6 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
         >
           Transfert
         </button>
-        <button
-          class="touch-btn touch-btn-secondary"
-          style="padding: 0.4rem 1rem; min-height: 36px; font-size: 0.85rem;"
-          @click="app.fetchData(auth.user)"
-        >
-          Actualiser
-        </button>
       </template>
     </PageContainer>
 

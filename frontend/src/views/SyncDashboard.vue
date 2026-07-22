@@ -3,12 +3,6 @@
     title="🔄 Tableau de Bord de Synchronisation"
     subtitle="Surveillez l'état et la santé de vos agents de synchronisation POS."
   >
-    <template #actions>
-      <button class="touch-btn touch-btn-secondary" @click="syncStore.fetchDashboardData" :disabled="syncStore.isLoading" style="min-height: 40px;">
-        🔄 Actualiser
-      </button>
-    </template>
-
     <!-- Loading State -->
     <div v-if="syncStore.isLoading && !syncStore.agents.length" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
       <div class="spinner" style="margin: 0 auto 1rem;" />

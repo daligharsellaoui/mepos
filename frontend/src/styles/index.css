@@ -59,7 +59,7 @@ body {
   box-shadow: var(--shadow-flat);
 }
 
-.panel-content-scroll { max-height: 320px; overflow-y: auto; padding-right: 0.5rem; }
+.panel-content-scroll { max-height: 442px; overflow-y: auto; padding-right: 0.5rem; }
 
 /* ── App Layout ── */
 .app-container {

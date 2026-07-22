@@ -23,7 +23,7 @@ const getRoleText = (role) => {
 const navItems = [
   { path: '/app', label: 'Tableau de Bord', icon: 'dashboard' },
   { path: '/app/notifications', label: 'Notifications', icon: 'notifications' },
-  { path: '/app/journal', label: 'Journal d\'Activité', icon: 'journal' },
+  { path: '/app/journal', label: 'Journal d\'Activité', icon: 'journal', adminOnly: true },
   { path: '/app/inventory', label: 'Inventaire', icon: 'inventory' },
   { path: '/app/suppliers', label: 'Fournisseurs', icon: 'suppliers', notForCook: true },
   { path: '/app/recipes', label: 'Recettes', icon: 'recipes', cookOnly: true },

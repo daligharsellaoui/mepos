@@ -208,12 +208,6 @@ onMounted(async () => {
         <p class="view-subtitle">Associez les produits externes aux recettes mePOS</p>
       </div>
       <div class="header-actions">
-        <button class="btn btn-ghost" @click="refresh">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-          </svg>
-          Actualiser
-        </button>
         <button v-if="isAdmin" class="btn btn-primary" @click="runAutoMatch" :disabled="isAutoMatching">
           <svg v-if="!isAutoMatching" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
