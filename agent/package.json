@@ -1,0 +1,13 @@
+{
+  "name": "mepos-sync-agent",
+  "version": "3.0.0",
+  "description": "mePOS STOCK — Secure Multi-Tenant Synchronization Agent",
+  "main": "sync_agent_v2.js",
+  "scripts": {
+    "start": "node sync_agent_v2.js",
+    "start:legacy": "node sync_agent.js"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  }
+}

@@ -1,0 +1,170 @@
+# ======================================================
+# mePOS STOCK — Continuous Deployment
+# ======================================================
+# Runs when a version tag (v*) is pushed.
+# Builds and pushes Docker images to Docker Hub.
+# To trigger: git tag v2.1.0 && git push origin v2.1.0
+
+name: CD
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  NODE_VERSION: "20"
+  # Set DOCKER_IMAGE_NAME secret in GitHub repo settings
+  # Format: dockerhub-username/mepos-stock  (e.g. "johndoe/mepos-stock")
+  # Or use Docker Hub organization: "orgname/mepos-stock"
+
+jobs:
+  # ─── Test first (gate) ──────────────────────────
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Backend tests
+        working-directory: ./backend
+        run: |
+          npm ci
+          npx tsc --noEmit
+          npm test
+
+      - name: Frontend build
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npx tsc --noEmit
+          npm run build
+
+  # ─── Build & Publish Backend ────────────────────
+  publish-backend:
+    name: Publish Backend Docker Image
+    runs-on: ubuntu-latest
+    needs: [test]
+    if: github.ref_type == 'tag'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_IMAGE_NAME || 'your-dockerhub-username/mepos-stock' }}-backend
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─── Build & Publish Frontend ───────────────────
+  publish-frontend:
+    name: Publish Frontend Docker Image
+    runs-on: ubuntu-latest
+    needs: [test]
+    if: github.ref_type == 'tag'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_IMAGE_NAME || 'your-dockerhub-username/mepos-stock' }}-frontend
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          build-args: |
+            VITE_API_URL=/api/v1
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─── Deploy Notification ────────────────────────
+  notify:
+    name: Release Summary
+    runs-on: ubuntu-latest
+    needs: [publish-backend, publish-frontend]
+    if: always()
+
+    steps:
+      - name: Check publish status
+        id: status
+        run: |
+          if [[ "${{ needs.publish-backend.result }}" != "success" ]] || \
+             [[ "${{ needs.publish-frontend.result }}" != "success" ]]; then
+            echo "result=failure" >> $GITHUB_OUTPUT
+          else
+            echo "result=success" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate release summary
+        run: |
+          STATUS="${{ steps.status.outputs.result }}"
+          if [ "$STATUS" = "success" ]; then
+            EMOJI="✅"
+            STATUS_TEXT="Published"
+          else
+            EMOJI="❌"
+            STATUS_TEXT="Failed"
+          fi
+
+          echo "## $EMOJI mePOS STOCK Release ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Image | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend | \`${{ secrets.DOCKER_IMAGE_NAME || 'your-dockerhub-username/mepos-stock' }}-backend:${{ github.ref_name }}\` | $EMOJI $STATUS_TEXT |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | \`${{ secrets.DOCKER_IMAGE_NAME || 'your-dockerhub-username/mepos-stock' }}-frontend:${{ github.ref_name }}\` | $EMOJI $STATUS_TEXT |" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$STATUS" = "success" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Quick Start" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`yaml" >> $GITHUB_STEP_SUMMARY
+            echo "services:" >> $GITHUB_STEP_SUMMARY
+            echo "  backend:" >> $GITHUB_STEP_SUMMARY
+            echo "    image: ${{ secrets.DOCKER_IMAGE_NAME || 'your-dockerhub-username/mepos-stock' }}-backend:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+            echo "  frontend:" >> $GITHUB_STEP_SUMMARY
+            echo "    image: ${{ secrets.DOCKER_IMAGE_NAME || 'your-dockerhub-username/mepos-stock' }}-frontend:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi

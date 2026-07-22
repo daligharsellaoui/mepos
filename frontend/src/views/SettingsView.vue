@@ -1,0 +1,2072 @@
+<script setup>
+import { ref, computed, watch, onMounted } from 'vue'
+import { useAuthStore } from '../stores/auth'
+import { useAppStore } from '../stores/app'
+import { useSupplierStore } from '../stores/suppliers'
+import { useImportStore } from '../stores/import'
+import { api } from '../api'
+import Modal from '../components/base/Modal.vue'
+import ConfirmDialog from '../components/base/ConfirmDialog.vue'
+import PageContainer from '../components/base/PageContainer.vue'
+import ActionToolbar from '../components/base/ActionToolbar.vue'
+import EmptyState from '../components/base/EmptyState.vue'
+import RowActionMenu from '../components/base/RowActionMenu.vue'
+import InventoryHistoryModal from '../components/base/InventoryHistoryModal.vue'
+import RecipeUsageModal from '../components/base/RecipeUsageModal.vue'
+
+const auth = useAuthStore()
+const app = useAppStore()
+const supplierStore = useSupplierStore()
+const importStore = useImportStore()
+
+const subTab = ref('ingredients')
+const isSaving = ref(false)
+
+// ── Ingredient Form (Create) ──
+const ingName = ref('')
+const ingUnit = ref('g')
+const ingPurchaseUnit = ref('paquet')
+const ingPurchaseUnitPrice = ref('')
+const ingConversionFactor = ref('')
+const ingAlertThreshold = ref('')
+const ingPreferredSupplierId = ref(null)
+const ingError = ref(null)
+const ingSuccess = ref(null)
+
+// ── Ingredient Edit ──
+const showEditModal = ref(false)
+const editingIngredient = ref(null)
+const editName = ref('')
+const editUnit = ref('g')
+const editPurchaseUnit = ref('paquet')
+const editPurchaseUnitPrice = ref('')
+const editConversionFactor = ref('')
+const editAlertThreshold = ref('')
+const editPreferredSupplierId = ref(null)
+const editError = ref(null)
+const editLoading = ref(false)
+
+// ── Ingredient Delete ──
+const showDeleteDialog = ref(false)
+const deletingIngredient = ref(null)
+const deleteLoading = ref(false)
+const deleteError = ref(null)
+const deleteWarnings = ref([])
+
+// ── Ingredient Search / Sort / Pagination ──
+const ingSearch = ref('')
+const ingSortBy = ref('name')
+const ingSortDir = ref('asc')
+const ingPage = ref(1)
+const ingPerPage = ref(5)
+
+// ── Additional Ingredient Dialogs ──
+const showInventoryHistory = ref(false)
+const inventoryHistoryIngredient = ref(null)
+const showRecipeUsage = ref(false)
+const recipeUsageIngredient = ref(null)
+const showStockMovements = ref(false)
+const stockMovementsIngredient = ref(null)
+const ingredientLoading = ref(false)
+
+const filteredIngredients = computed(() => {
+  let list = [...app.ingredients]
+  const q = ingSearch.value.toLowerCase().trim()
+  if (q) {
+    list = list.filter(i =>
+      i.name.toLowerCase().includes(q) ||
+      (i.purchase_unit && i.purchase_unit.toLowerCase().includes(q))
+    )
+  }
+  list.sort((a, b) => {
+    let cmp = 0
+    if (ingSortBy.value === 'name') cmp = a.name.localeCompare(b.name)
+    else if (ingSortBy.value === 'purchase_unit') cmp = (a.purchase_unit || '').localeCompare(b.purchase_unit || '')
+    else if (ingSortBy.value === 'purchase_unit_price') cmp = parseFloat(a.purchase_unit_price) - parseFloat(b.purchase_unit_price)
+    else if (ingSortBy.value === 'conversion_factor') cmp = parseFloat(a.conversion_factor) - parseFloat(b.conversion_factor)
+    return ingSortDir.value === 'asc' ? cmp : -cmp
+  })
+  return list
+})
+
+const paginatedIngredients = computed(() => {
+  const start = (ingPage.value - 1) * ingPerPage.value
+  return filteredIngredients.value.slice(start, start + ingPerPage.value)
+})
+
+const totalIngPages = computed(() => Math.max(1, Math.ceil(filteredIngredients.value.length / ingPerPage.value)))
+
+watch([ingSearch, ingSortBy, ingSortDir], () => { ingPage.value = 1 })
+
+function toggleSort(col) {
+  if (ingSortBy.value === col) {
+    ingSortDir.value = ingSortDir.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    ingSortBy.value = col
+    ingSortDir.value = 'asc'
+  }
+}
+
+function sortIcon(col) {
+  if (ingSortBy.value !== col) return ''
+  return ingSortDir.value === 'asc' ? ' ▲' : ' ▼'
+}
+
+// ── Recipe Form ──
+const recName = ref('')
+const recSalePrice = ref('')
+const recError = ref(null)
+const recSuccess = ref(null)
+
+// ── Fiche Technique ──
+const selectedRecipeId = ref('')
+const ficheIngredients = ref([])
+const selectedIngId = ref('')
+const ingQtyNeeded = ref('')
+const ficheError = ref(null)
+const ficheSuccess = ref(null)
+
+// ── Stock Adjustment ──
+const depts = ref([])
+const movements = ref([])
+const adjDeptId = ref('')
+const adjIngId = ref('')
+const adjQty = ref('')
+const adjType = ref('purchase')
+const adjRef = ref('')
+const adjError = ref(null)
+const adjSuccess = ref(null)
+const historySearch = ref('')
+const historyTypeFilter = ref('all')
+
+// ── Users ──
+const users = ref([])
+const userId = ref(null)
+const userUsername = ref('')
+const userPassword = ref('')
+const userRole = ref('cook')
+const userFirstName = ref('')
+const userLastName = ref('')
+const userError = ref(null)
+const userSuccess = ref(null)
+
+// ── Recipe Edit ──
+const showRecipeEditModal = ref(false)
+const editingRecipe = ref(null)
+const editRecipeName = ref('')
+const editRecipePrice = ref('')
+const editRecipeError = ref(null)
+const editRecipeLoading = ref(false)
+
+// ── User Delete Dialog ──
+const showUserDeleteDialog = ref(false)
+const deletingUserId = ref(null)
+const deletingUserName = ref('')
+
+// ── Department Delete Dialog ──
+const showDeptDeleteDialog = ref(false)
+const deletingDeptId = ref(null)
+const deletingDeptName = ref('')
+
+// ── Departments ──
+const deptId = ref(null)
+const deptName = ref('')
+const deptStockType = ref('isolated')
+const deptDescription = ref('')
+const deptError = ref(null)
+const deptSuccess = ref(null)
+
+const getCalculatedBasePrice = (price, factor) => {
+  const p = parseFloat(price)
+  const f = parseFloat(factor)
+  if (!isNaN(p) && !isNaN(f) && f > 0) return (p / f).toFixed(3)
+  return '0.000'
+}
+
+const filteredMovements = computed(() =>
+  movements.value.filter(mov => {
+    const q = historySearch.value.toLowerCase()
+    const match = mov.ingredient_name.toLowerCase().includes(q) || (mov.reference_id && mov.reference_id.toLowerCase().includes(q)) || mov.department_name.toLowerCase().includes(q)
+    if (!match) return false
+    if (historyTypeFilter.value === 'all') return true
+    const qty = parseFloat(mov.quantity)
+    if (historyTypeFilter.value === 'purchase_pos') return mov.type === 'purchase' && qty >= 0
+    if (historyTypeFilter.value === 'purchase_neg') return mov.type === 'purchase' && qty < 0
+    if (historyTypeFilter.value === 'reconciliation') return mov.type === 'reconciliation'
+    return true
+  })
+)
+
+async function fetchDeptsAndMovements() {
+  try {
+    const [deptsRes, movRes] = await Promise.all([
+      api.getDepartments(),
+      api.getMovements()
+    ])
+    if (deptsRes.data.status === 'success') depts.value = deptsRes.data.data
+    if (movRes.data.status === 'success') movements.value = movRes.data.data
+  } catch (err) { console.error(err) }
+}
+
+async function fetchUsers() {
+  try {
+    const { data: res } = await api.getUsers()
+    if (res.status === 'success') users.value = res.data
+  } catch (err) { console.error(err) }
+}
+
+// ── Import Wizard ──
+const showImportWizard = ref(false)
+const dragActive = ref(false)
+const csvFileInput = ref(null)
+const stepLabels = ['Téléverser', 'Validation', 'Aperçu', 'Résoudre', 'Confirmer', 'Importation', 'Terminé']
+
+function openWizard() {
+  importStore.reset()
+  showImportWizard.value = true
+}
+
+function closeWizard() {
+  showImportWizard.value = false
+  importStore.reset()
+}
+
+function handleDragOver(e) { e.preventDefault(); dragActive.value = true }
+function handleDragLeave() { dragActive.value = false }
+function handleDrop(e) {
+  e.preventDefault(); dragActive.value = false
+  const files = e.dataTransfer.files
+  if (files.length > 0 && files[0].name.endsWith('.csv')) handleFileUpload(files[0])
+}
+function handleFileSelect(e) {
+  const files = e.target.files
+  if (files.length > 0) handleFileUpload(files[0])
+}
+async function handleFileUpload(file) {
+  try { await importStore.uploadAndValidate(file) } catch (err) { console.error('Upload error:', err) }
+}
+async function downloadTemplate() { await importStore.downloadTemplate() }
+async function confirmImport() {
+  try { await importStore.executeImport() } catch (err) { console.error('Import error:', err) }
+}
+
+watch(subTab, (tab) => {
+  if (tab === 'stocks' || tab === 'depts') fetchDeptsAndMovements()
+  else if (tab === 'users') fetchUsers()
+})
+
+onMounted(() => {
+  supplierStore.fetchSuppliers()
+})
+
+// ── Ingredient CRUD ──
+async function handleCreateIngredient(e) {
+  e.preventDefault(); ingError.value = null; ingSuccess.value = null
+  const priceVal = parseFloat(ingPurchaseUnitPrice.value)
+  const factorVal = parseFloat(ingConversionFactor.value)
+  if (!ingName.value || !ingUnit.value || isNaN(priceVal) || isNaN(factorVal) || factorVal <= 0) {
+    ingError.value = 'Veuillez remplir tous les champs correctement.'; return
+  }
+  isSaving.value = true
+  try {
+      const { data: j } = await api.createIngredient({
+        name: ingName.value, unit: ingUnit.value, purchase_unit: ingPurchaseUnit.value,
+        purchase_unit_price: priceVal, conversion_factor: factorVal,
+        alert_threshold: parseFloat(ingAlertThreshold.value) || 0,
+        preferred_supplier_id: ingPreferredSupplierId.value || null,
+      })
+      if (j.status === 'success') {
+        ingSuccess.value = `Ingrédient '${ingName.value}' créé !`
+        ingName.value = ''; ingPurchaseUnitPrice.value = ''; ingConversionFactor.value = ''
+        ingPreferredSupplierId.value = null
+        app.fetchData(auth.user)
+    } else ingError.value = j.message || 'Erreur.'
+  } catch { ingError.value = "Impossible de contacter l'API." }
+  finally { isSaving.value = false }
+}
+
+function openEditModal(ing) {
+  editingIngredient.value = ing
+  editName.value = ing.name
+  editUnit.value = ing.unit
+  editPurchaseUnit.value = ing.purchase_unit || 'paquet'
+  editPurchaseUnitPrice.value = ing.purchase_unit_price?.toString() || ''
+  editConversionFactor.value = ing.conversion_factor?.toString() || ''
+  editAlertThreshold.value = ing.alert_threshold?.toString() || ''
+  editPreferredSupplierId.value = ing.preferred_supplier_id || null
+  editError.value = null
+  showEditModal.value = true
+}
+
+function closeEditModal() {
+  showEditModal.value = false
+  editingIngredient.value = null
+}
+
+async function handleEditIngredient() {
+  editError.value = null; editLoading.value = true
+  const priceVal = parseFloat(editPurchaseUnitPrice.value)
+  const factorVal = parseFloat(editConversionFactor.value)
+  if (!editName.value || !editUnit.value || isNaN(priceVal) || isNaN(factorVal) || factorVal <= 0) {
+    editError.value = 'Veuillez remplir tous les champs correctement.'; editLoading.value = false; return
+  }
+  try {
+    const { data: j } = await api.updateIngredient(editingIngredient.value.id, {
+      name: editName.value, unit: editUnit.value,
+      purchase_unit: editPurchaseUnit.value,
+      purchase_unit_price: priceVal, conversion_factor: factorVal,
+      alert_threshold: parseFloat(editAlertThreshold.value) || 0,
+      preferred_supplier_id: editPreferredSupplierId.value || null,
+    })
+    if (j.status === 'success') {
+      closeEditModal()
+      app.fetchData(auth.user)
+    } else editError.value = j.message || 'Erreur.'
+  } catch { editError.value = "Impossible de contacter l'API." }
+  finally { editLoading.value = false }
+}
+
+function openDeleteDialog(ing) {
+  deletingIngredient.value = ing
+  deleteWarnings.value = []
+  deleteError.value = null
+  showDeleteDialog.value = true
+}
+
+function closeDeleteDialog() {
+  showDeleteDialog.value = false
+  deletingIngredient.value = null
+  deleteWarnings.value = []
+}
+
+async function handleDeleteIngredient() {
+  deleteLoading.value = true; deleteError.value = null
+  try {
+    const { data: j } = await api.deleteIngredient(deletingIngredient.value.id)
+    if (j.status === 'success') {
+      closeDeleteDialog()
+      app.fetchData(auth.user)
+    } else {
+      if (j.dependencies) {
+        const warnings = []
+        if (j.dependencies.recipes?.length > 0) {
+          warnings.push(`Utilisé dans les recettes : ${j.dependencies.recipes.join(', ')}`)
+        }
+        if (j.dependencies.stocks > 0) {
+          warnings.push(`Stock restant dans ${j.dependencies.stocks} dépôt(s)`)
+        }
+        deleteWarnings.value = warnings
+      }
+      deleteError.value = j.message || 'Erreur.'
+    }
+  } catch { deleteError.value = "Impossible de contacter l'API." }
+  finally { deleteLoading.value = false }
+}
+
+function handleRowClick(ing, event) {
+  const target = event.target
+  if (target.closest('button') || target.closest('.row-action-trigger') || target.closest('.row-action-dropdown') || target.closest('input') || target.closest('select') || target.closest('label') || target.closest('.row-action-menu-wrap')) return
+  openEditModal(ing)
+}
+
+async function handleDuplicate(ing) {
+  try {
+    const { data: res } = await api.createIngredient({
+      name: `${ing.name} (Copie)`,
+      unit: ing.unit,
+      purchase_unit: ing.purchase_unit || 'paquet',
+      purchase_unit_price: parseFloat(ing.purchase_unit_price) || 0,
+      conversion_factor: parseFloat(ing.conversion_factor) || 1,
+      alert_threshold: parseFloat(ing.alert_threshold) || 0
+    })
+    if (res.status === 'success') {
+      app.fetchData(auth.user)
+      openEditModal({ ...res.data, id: res.data.id })
+    }
+  } catch { /* ignore */ }
+}
+
+function openInventoryHistory(ing) {
+  inventoryHistoryIngredient.value = ing
+  showInventoryHistory.value = true
+}
+
+function openRecipeUsage(ing) {
+  recipeUsageIngredient.value = ing
+  showRecipeUsage.value = true
+}
+
+function openStockMovements(ing) {
+  stockMovementsIngredient.value = ing
+  showStockMovements.value = true
+}
+
+function getRowActions(ing) {
+  return [
+    {
+      key: 'edit',
+      label: 'Modifier',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+      hidden: !auth.isAdmin && !auth.isManager
+    },
+    {
+      key: 'duplicate',
+      label: 'Dupliquer',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+      hidden: !auth.isAdmin && !auth.isManager
+    },
+    {
+      key: 'inventory_history',
+      label: 'Historique des Stocks',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+      hidden: auth.isCook
+    },
+    {
+      key: 'recipe_usage',
+      label: 'Recettes liées',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>',
+      hidden: auth.isCook
+    },
+    {
+      key: 'stock_movements',
+      label: 'Mouvements de Stock',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+      hidden: auth.isCook
+    },
+    {
+      key: 'delete',
+      label: 'Supprimer',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+      danger: true,
+      hidden: !auth.isAdmin
+    }
+  ]
+}
+
+function handleRowAction(key, ing) {
+  if (key === 'edit') openEditModal(ing)
+  else if (key === 'duplicate') handleDuplicate(ing)
+  else if (key === 'inventory_history') openInventoryHistory(ing)
+  else if (key === 'recipe_usage') openRecipeUsage(ing)
+  else if (key === 'stock_movements') openStockMovements(ing)
+  else if (key === 'delete') openDeleteDialog(ing)
+}
+
+// ── Recipe CRUD ──
+async function handleCreateRecipe(e) {
+  e.preventDefault(); recError.value = null; recSuccess.value = null
+  const priceVal = parseFloat(recSalePrice.value)
+  if (!recName.value || isNaN(priceVal)) { recError.value = 'Nom et prix requis.'; return }
+  isSaving.value = true
+  try {
+    const { data: j } = await api.createRecipe({ name: recName.value, sale_price: priceVal })
+    if (j.status === 'success') {
+      recSuccess.value = `Recette '${recName.value}' créée !`
+      recName.value = ''; recSalePrice.value = ''
+      app.fetchData(auth.user)
+    } else recError.value = j.message || 'Erreur.'
+  } catch { recError.value = "Impossible de contacter l'API." }
+  finally { isSaving.value = false }
+}
+
+function openRecipeEditModal(rec) {
+  editingRecipe.value = rec
+  editRecipeName.value = rec.name
+  editRecipePrice.value = rec.sale_price?.toString() || ''
+  editRecipeError.value = null
+  showRecipeEditModal.value = true
+}
+
+function closeRecipeEditModal() {
+  showRecipeEditModal.value = false
+  editingRecipe.value = null
+}
+
+async function handleEditRecipe() {
+  editRecipeError.value = null; editRecipeLoading.value = true
+  const priceVal = parseFloat(editRecipePrice.value)
+  if (!editRecipeName.value || isNaN(priceVal)) { editRecipeError.value = 'Nom et prix requis.'; editRecipeLoading.value = false; return }
+  try {
+    const payload = { name: editRecipeName.value, sale_price: priceVal }
+    const { data: j } = await api.updateRecipe(editingRecipe.value.id, payload)
+    if (j.status === 'success') {
+      closeRecipeEditModal()
+      app.fetchData(auth.user)
+    } else editRecipeError.value = j.message || 'Erreur.'
+  } catch { editRecipeError.value = "Impossible de contacter l'API." }
+  finally { editRecipeLoading.value = false }
+}
+
+function handleSelectRecipeForFiche(recipeIdStr) {
+  selectedRecipeId.value = recipeIdStr; ficheError.value = null; ficheSuccess.value = null
+  if (!recipeIdStr) { ficheIngredients.value = []; return }
+  const recipe = app.recipes.find(r => r.id === parseInt(recipeIdStr))
+  ficheIngredients.value = recipe?.ingredients?.map(i => ({
+    ingredient_id: i.ingredient_id,
+    quantity_needed: parseFloat(i.quantity_needed)
+  })) || []
+}
+
+function handleAddIngredientToFiche() {
+  ficheError.value = null
+  if (!selectedIngId.value || !ingQtyNeeded.value) { ficheError.value = 'Sélectionnez un ingrédient et saisissez une quantité.'; return }
+  const qty = parseFloat(ingQtyNeeded.value)
+  if (isNaN(qty) || qty <= 0) { ficheError.value = 'Quantité > 0 requise.'; return }
+  if (ficheIngredients.value.some(i => i.ingredient_id === parseInt(selectedIngId.value))) { ficheError.value = 'Déjà présent.'; return }
+  ficheIngredients.value.push({ ingredient_id: parseInt(selectedIngId.value), quantity_needed: qty })
+  selectedIngId.value = ''; ingQtyNeeded.value = ''
+}
+
+function handleRemoveIngredientFromFiche(ingId) {
+  ficheIngredients.value = ficheIngredients.value.filter(i => i.ingredient_id !== ingId)
+}
+
+async function handleSaveFiche() {
+  ficheError.value = null; ficheSuccess.value = null
+  if (!selectedRecipeId.value) { ficheError.value = 'Sélectionnez un produit.'; return }
+  isSaving.value = true
+  try {
+    const { data: j } = await api.saveRecipeIngredients(parseInt(selectedRecipeId.value), ficheIngredients.value)
+    if (j.status === 'success') { ficheSuccess.value = 'Fiche technique mise à jour !'; app.fetchData(auth.user) }
+    else ficheError.value = j.message || 'Erreur.'
+  } catch { ficheError.value = "Impossible de contacter l'API." }
+  finally { isSaving.value = false }
+}
+
+// ── Stock Adjustment ──
+async function handleAdjustStock(e) {
+  e.preventDefault(); adjError.value = null; adjSuccess.value = null
+  const qtyVal = parseFloat(adjQty.value)
+  if (!adjDeptId.value || !adjIngId.value || isNaN(qtyVal) || qtyVal < 0) { adjError.value = 'Champs requis.'; return }
+  const data = {
+    department_id: parseInt(adjDeptId.value),
+    ingredient_id: parseInt(adjIngId.value),
+    quantity: adjType.value === 'decrease' ? -qtyVal : qtyVal,
+    type: adjType.value === 'decrease' ? 'purchase' : adjType.value,
+    reference_id: adjRef.value || undefined
+  }
+  isSaving.value = true
+  try {
+    const success = await app.handleAdjustSubmit(data, auth.user)
+    if (success) {
+      adjSuccess.value = 'Ajustement enregistré !'
+      adjQty.value = ''; adjRef.value = ''
+      fetchDeptsAndMovements()
+    } else adjError.value = 'Erreur.'
+  } catch { adjError.value = "Impossible de contacter l'API." }
+  finally { isSaving.value = false }
+}
+
+// ── User CRUD ──
+async function handleUserSubmit(e) {
+  e.preventDefault(); userError.value = null; userSuccess.value = null
+  if (!userUsername.value || !userRole.value) { userError.value = 'Username et rôle requis.'; return }
+  if (!userId.value && !userPassword.value) { userError.value = 'Mot de passe requis pour nouveau compte.'; return }
+  isSaving.value = true
+  try {
+    const payload = {
+      username: userUsername.value,
+      password: userPassword.value || undefined,
+      role: userRole.value,
+      first_name: userFirstName.value,
+      last_name: userLastName.value
+    }
+    const { data: j } = userId.value
+      ? await api.updateUser(userId.value, payload)
+      : await api.createUser(payload)
+    if (j.status === 'success') {
+      userSuccess.value = userId.value ? 'Compte mis à jour !' : 'Compte créé !'
+      userId.value = null; userUsername.value = ''; userPassword.value = ''
+      userRole.value = 'cook'; userFirstName.value = ''; userLastName.value = ''
+      fetchUsers()
+    } else userError.value = j.message || 'Erreur.'
+  } catch { userError.value = "Impossible de contacter l'API." }
+  finally { isSaving.value = false }
+}
+
+function handleEditUser(u) {
+  userId.value = u.id; userUsername.value = u.username; userPassword.value = ''
+  userRole.value = u.role; userFirstName.value = u.first_name || ''; userLastName.value = u.last_name || ''
+}
+
+function handleDeleteUserClick(id, username) {
+  deletingUserId.value = id
+  deletingUserName.value = username
+  showUserDeleteDialog.value = true
+}
+
+async function handleDeleteUserConfirm() {
+  try {
+    const { data: j } = await api.deleteUser(deletingUserId.value)
+    if (j.status === 'success') { userSuccess.value = 'Supprimé.'; fetchUsers() }
+    else userError.value = j.message
+  } catch { userError.value = 'Erreur.' }
+  finally { showUserDeleteDialog.value = false; deletingUserId.value = null }
+}
+
+// ── Department CRUD ──
+async function handleDeptSubmit(e) {
+  e.preventDefault(); deptError.value = null; deptSuccess.value = null
+  if (!deptName.value) { deptError.value = 'Nom requis.'; return }
+  isSaving.value = true
+  try {
+    const payload = { name: deptName.value, stock_type: deptStockType.value, description: deptDescription.value }
+    const { data: j } = deptId.value
+      ? await api.updateDepartment(deptId.value, payload)
+      : await api.createDepartment(payload)
+    if (j.status === 'success') {
+      deptSuccess.value = deptId.value ? 'Dépôt mis à jour !' : 'Dépôt créé !'
+      deptId.value = null; deptName.value = ''; deptDescription.value = ''
+      fetchDeptsAndMovements()
+      app.fetchData(auth.user)
+    } else deptError.value = j.message
+  } catch { deptError.value = 'Erreur.' }
+  finally { isSaving.value = false }
+}
+
+function handleEditDept(d) {
+  deptId.value = d.id; deptName.value = d.name
+  deptStockType.value = d.stock_type; deptDescription.value = d.description || ''
+}
+
+function handleDeleteDeptClick(id, name) {
+  deletingDeptId.value = id
+  deletingDeptName.value = name
+  showDeptDeleteDialog.value = true
+}
+
+async function handleDeleteDeptConfirm() {
+  try {
+    const { data: j } = await api.deleteDepartment(deletingDeptId.value)
+    if (j.status === 'success') {
+      deptSuccess.value = 'Supprimé.'
+      fetchDeptsAndMovements()
+      app.fetchData(auth.user)
+    } else deptError.value = j.message
+  } catch { deptError.value = 'Erreur.' }
+  finally { showDeptDeleteDialog.value = false; deletingDeptId.value = null }
+}
+</script>
+
+<template>
+  <PageContainer
+    title="⚙️ Paramétrage Système"
+    subtitle="Gestion des matières premières, fiches techniques, stocks et comptes utilisateurs."
+  >
+    <template #actions>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button
+          class="touch-btn touch-btn-secondary"
+          style="padding: 0.5rem 1rem; min-height: 40px;"
+          @click="app.toggleOfflineManual()"
+        >
+          {{ app.isOffline ? '🟢 En ligne' : '🔴 Hors ligne' }}
+        </button>
+      </div>
+    </template>
+
+    <div class="dept-filter-section">
+      <div
+        v-for="tab in ['ingredients', 'recipes', 'stocks', 'users', 'depts']"
+        :key="tab"
+        :class="['dept-pill', { active: subTab === tab }]"
+        @click="subTab = tab"
+      >
+        {{ tab === 'ingredients' ? 'Matières Premières' : tab === 'recipes' ? 'Fiches Techniques' : tab === 'stocks' ? 'Ajustements' : tab === 'users' ? 'Utilisateurs' : 'Dépôts' }}
+      </div>
+    </div>
+
+    <!-- ══════════════ INGREDIENTS TAB ══════════════ -->
+    <div
+      v-if="subTab === 'ingredients'"
+      class="settings-ingredients-grid"
+      style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 2rem; align-items: start;"
+    >
+      <div
+        class="glass-panel"
+        style="padding: 2rem;"
+      >
+        <h2 style="font-size: 1.25rem; margin-bottom: 1.25rem;">
+          Nouvel Ingrédient
+        </h2>
+        <div
+          v-if="app.isOffline"
+          class="alert-banner alert-banner-danger"
+          style="margin-bottom: 1.5rem;"
+        >
+          Création désactivée hors ligne.
+        </div>
+        <div
+          v-if="ingError"
+          class="alert-banner alert-banner-danger"
+        >
+          {{ ingError }}
+        </div>
+        <div
+          v-if="ingSuccess"
+          class="alert-banner"
+          style="background: rgba(16,185,129,0.05); border-color: rgba(16,185,129,0.15); color: var(--emerald);"
+        >
+          {{ ingSuccess }}
+        </div>
+        <form @submit.prevent="handleCreateIngredient">
+          <div class="form-group">
+            <label class="form-label">Nom *</label>
+            <input
+              v-model="ingName"
+              class="form-input"
+              placeholder="Ex: Fromage Cheddar"
+              required
+            >
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; overflow-x: auto;">
+            <div class="form-group" style="min-width: 0;">
+              <label class="form-label">Unité Cuisine *</label>
+              <select
+                v-model="ingUnit"
+                class="form-select"
+              >
+                <option value="g">gramme (g)</option>
+                <option value="ml">millilitre (ml)</option>
+                <option value="pcs">pièce (pcs)</option>
+                <option value="kg">kilogramme (kg)</option>
+                <option value="l">litre (l)</option>
+              </select>
+            </div>
+            <div class="form-group" style="min-width: 0;">
+              <label class="form-label">Unité Achat *</label>
+              <input
+                v-model="ingPurchaseUnit"
+                class="form-input"
+                placeholder="carton, sac..."
+                required
+              >
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; overflow-x: auto;">
+            <div class="form-group" style="min-width: 0;">
+              <label class="form-label">Capacité Paquet *</label>
+              <input
+                v-model="ingConversionFactor"
+                type="number"
+                step="any"
+                class="form-input"
+                placeholder="5000 (si 5kg en g)"
+                required
+              >
+            </div>
+            <div class="form-group" style="min-width: 0;">
+              <label class="form-label">Prix Paquet (TND) *</label>
+              <input
+                v-model="ingPurchaseUnitPrice"
+                type="number"
+                step="0.01"
+                class="form-input"
+                placeholder="120.00"
+                required
+              >
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Seuil d'Alerte</label>
+            <input
+              v-model="ingAlertThreshold"
+              type="number"
+              step="any"
+              class="form-input"
+              placeholder="2000"
+            >
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fournisseur préféré</label>
+            <select v-model="ingPreferredSupplierId" class="form-select">
+              <option :value="null">— Aucun —</option>
+              <option v-for="s in supplierStore.suppliers" :key="s.id" :value="s.id" :disabled="s.status === 'archived'">
+                {{ s.name }}{{ s.company_name ? ' — ' + s.company_name : '' }}{{ s.status === 'archived' ? ' (Archivé)' : '' }}
+              </option>
+            </select>
+          </div>
+          <div style="padding: 1rem; background: rgba(255,255,255,0.01); border: 1px dashed var(--border-color); border-radius: 8px; margin-bottom: 1.5rem;">
+            <span style="color: var(--text-secondary); font-size: 0.875rem;">Coût unitaire de base :</span>
+            <div style="font-size: 1.2rem; font-weight: 800; color: var(--indigo-light); margin-top: 0.25rem;">
+              {{ getCalculatedBasePrice(ingPurchaseUnitPrice, ingConversionFactor) }} TND / {{ ingUnit }}
+            </div>
+          </div>
+          <button
+            type="submit"
+            class="touch-btn"
+            style="width: 100%;"
+            :disabled="app.isOffline || isSaving"
+          >
+            <span
+              v-if="isSaving"
+              class="spinner"
+              style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%;"
+            />
+            <span v-else>Enregistrer l'ingrédient</span>
+          </button>
+        </form>
+      </div>
+
+      <div
+        class="glass-panel"
+        style="padding: 2rem;"
+      >
+        <h2 style="font-size: 1.25rem; margin-bottom: 1.25rem;">
+          Catalogue des Ingrédients ({{ app.ingredients.length }})
+        </h2>
+
+        <div class="table-search-bar">
+          <input
+            v-model="ingSearch"
+            class="form-input"
+            placeholder="Rechercher par nom ou unité d'achat..."
+            aria-label="Rechercher un ingrédient"
+          >
+          <span v-if="ingSearch" class="search-clear-btn" @click="ingSearch = ''" aria-label="Effacer la recherche">&times;</span>
+        </div>
+
+        <div
+          v-if="ingredientLoading"
+          style="display: flex; flex-direction: column; gap: 0.75rem; padding: 0.5rem 0;"
+        >
+          <div
+            v-for="n in 5"
+            :key="n"
+            class="skeleton"
+            style="height: 52px; width: 100%; border-radius: var(--radius-sm);"
+          />
+        </div>
+        <div
+          v-else-if="app.ingredients.length === 0"
+          style="padding: 2.5rem 0;"
+        >
+          <EmptyState
+            title="Aucun ingrédient"
+            description="Créez votre premier ingrédient pour commencer à gérer vos matières premières."
+            compact
+          />
+        </div>
+        <div
+          v-else-if="filteredIngredients.length === 0"
+          style="padding: 2.5rem 0;"
+        >
+          <EmptyState
+            title="Aucun résultat"
+            description="Aucun ingrédient ne correspond à votre recherche."
+            compact
+          />
+        </div>
+        <div
+          v-else
+          class="table-wrapper"
+        >
+          <table
+            class="mepos-table ing-table"
+            role="grid"
+            aria-label="Liste des ingrédients"
+          >
+            <thead>
+              <tr>
+                <th
+                  class="sortable-th"
+                  aria-sort="ascending"
+                  @click="toggleSort('name')"
+                >
+                  Nom{{ sortIcon('name') }}
+                </th>
+                <th
+                  class="sortable-th"
+                  @click="toggleSort('purchase_unit')"
+                >
+                  Unité Achat{{ sortIcon('purchase_unit') }}
+                </th>
+                <th
+                  class="sortable-th"
+                  @click="toggleSort('conversion_factor')"
+                >
+                  Capacité{{ sortIcon('conversion_factor') }}
+                </th>
+                <th
+                  class="sortable-th"
+                  @click="toggleSort('purchase_unit_price')"
+                >
+                  Prix Colis{{ sortIcon('purchase_unit_price') }}
+                </th>
+                <th>Coût Cuisine</th>
+                <th>Fournisseur</th>
+                <th class="actions-th">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="ing in paginatedIngredients"
+                :key="ing.id"
+                class="ing-row"
+                tabindex="0"
+                :aria-label="`${ing.name} — cliquer pour modifier`"
+                @click="handleRowClick(ing, $event)"
+                @keydown.enter="openEditModal(ing)"
+              >
+                <td class="cell-name" data-label="Nom">
+                  <strong style="color: var(--text-primary);">{{ ing.name }}</strong>
+                </td>
+                <td data-label="Unité Achat"><span class="badge badge-success">{{ ing.purchase_unit || '—' }}</span></td>
+                <td class="cell-num" data-label="Capacité">{{ parseFloat(ing.conversion_factor).toLocaleString() }} {{ ing.unit }}</td>
+                <td class="cell-num" data-label="Prix Colis">{{ parseFloat(ing.purchase_unit_price).toFixed(3) }} TND</td>
+                <td class="cell-cost" data-label="Coût Cuisine">
+                  {{ parseFloat(ing.purchase_price_per_unit).toFixed(3) }} TND/{{ ing.unit }}
+                </td>
+                <td data-label="Fournisseur">{{ ing.preferred_supplier_name || '—' }}</td>
+                <td class="cell-actions" data-label="Actions" @click.stop>
+                  <RowActionMenu
+                    class="row-action-menu-wrap"
+                    :actions="getRowActions(ing)"
+                    @action="(key) => handleRowAction(key, ing)"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div
+            v-if="totalIngPages > 1"
+            class="pagination-bar"
+          >
+            <span class="pagination-info">
+              {{ filteredIngredients.length }} résultat(s) — Page {{ ingPage }} / {{ totalIngPages }}
+            </span>
+            <div style="display: flex; gap: 0.3rem;">
+              <button
+                class="touch-btn touch-btn-secondary pagination-btn"
+                :disabled="ingPage <= 1"
+                aria-label="Page précédente"
+                @click="ingPage = Math.max(1, ingPage - 1)"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <span
+                v-for="p in totalIngPages"
+                :key="p"
+                class="pagination-dot"
+                :class="{ active: p === ingPage }"
+                @click="ingPage = p"
+              >{{ p }}</span>
+              <button
+                class="touch-btn touch-btn-secondary pagination-btn"
+                :disabled="ingPage >= totalIngPages"
+                aria-label="Page suivante"
+                @click="ingPage = Math.min(totalIngPages, ingPage + 1)"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ RECIPES TAB ══════════════ -->
+    <div
+      v-if="subTab === 'recipes'"
+      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem;"
+    >
+      <div style="display: flex; flex-direction: column; gap: 2rem;">
+        <div
+          class="glass-panel"
+          style="padding: 2rem;"
+        >
+          <h2 style="font-size: 1.25rem; margin-bottom: 1.25rem;">
+            Nouveau Produit
+          </h2>
+          <div
+            v-if="app.isOffline"
+            class="alert-banner alert-banner-danger"
+            style="margin-bottom: 1.5rem;"
+          >
+            Création désactivée hors ligne.
+          </div>
+          <div
+            v-if="recError"
+            class="alert-banner alert-banner-danger"
+          >
+            {{ recError }}
+          </div>
+          <div
+            v-if="recSuccess"
+            class="alert-banner"
+            style="background: rgba(16,185,129,0.05); border-color: rgba(16,185,129,0.15); color: var(--emerald);"
+          >
+            {{ recSuccess }}
+          </div>
+          <form @submit.prevent="handleCreateRecipe">
+            <div class="form-group">
+              <label class="form-label">Nom du Produit *</label>
+              <input
+                v-model="recName"
+                class="form-input"
+                placeholder="Ex: Cheeseburger"
+                required
+              >
+            </div>
+            <div class="form-group">
+              <label class="form-label">Prix de Vente (TND) *</label>
+              <input
+                v-model="recSalePrice"
+                type="number"
+                step="0.01"
+                class="form-input"
+                placeholder="15.00"
+                required
+              >
+            </div>
+            <button
+              type="submit"
+              class="touch-btn"
+              style="width: 100%; margin-top: 0.5rem;"
+              :disabled="app.isOffline || isSaving"
+            >
+              <span
+                v-if="isSaving"
+                class="spinner"
+                style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%;"
+              />
+              <span v-else>Créer le produit</span>
+            </button>
+          </form>
+        </div>
+        <div
+          class="glass-panel"
+          style="padding: 2rem;"
+        >
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+    <h2 style="font-size: 1.25rem; margin: 0;">
+      Menu mePOS ({{ app.recipes.length }})
+    </h2>
+    <div style="display: flex; gap: 0.5rem;">
+      <button class="touch-btn" style="background: var(--bg-secondary); border: 1px solid var(--border-color); font-size: 0.8rem; padding: 0.4rem 0.8rem;" @click="downloadTemplate">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        Modèle CSV
+      </button>
+      <button v-if="auth.isManager" class="touch-btn" style="background: var(--blue); color: white; font-size: 0.8rem; padding: 0.4rem 0.8rem;" @click="openWizard">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        Importer CSV
+      </button>
+    </div>
+  </div>
+          <div class="table-wrapper">
+            <table class="mepos-table">
+              <thead><tr><th>Produit</th><th>Prix</th><th>Nb Ingr.</th><th>Actions</th></tr></thead>
+              <tbody>
+                <tr
+                  v-for="rec in app.recipes"
+                  :key="rec.id"
+                  style="cursor: pointer;"
+                  @click="handleSelectRecipeForFiche(rec.id.toString())"
+                >
+                  <td><strong style="color: var(--text-primary);">{{ rec.name }}</strong></td>
+                  <td style="color: var(--emerald); font-weight: 600;">
+                    {{ parseFloat(rec.sale_price).toFixed(3) }} TND
+                  </td>
+                  <td>{{ rec.ingredients?.length || 0 }} réf(s)</td>
+                  <td>
+                    <button
+                      class="badge badge-info"
+                      style="border: none; cursor: pointer; padding: 0.35rem 0.6rem;"
+                      @click.stop="openRecipeEditModal(rec)"
+                    >
+                      Modifier
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div
+        class="glass-panel"
+        style="padding: 2rem;"
+      >
+        <h2 style="font-size: 1.25rem; margin-bottom: 1.25rem;">
+          Fiche Technique
+        </h2>
+        <div
+          v-if="app.isOffline"
+          class="alert-banner alert-banner-danger"
+          style="margin-bottom: 1.5rem;"
+        >
+          Modification désactivée hors ligne.
+        </div>
+        <div
+          v-if="ficheError"
+          class="alert-banner alert-banner-danger"
+        >
+          {{ ficheError }}
+        </div>
+        <div
+          v-if="ficheSuccess"
+          class="alert-banner"
+          style="background: rgba(16,185,129,0.05); border-color: rgba(16,185,129,0.15); color: var(--emerald);"
+        >
+          {{ ficheSuccess }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Produit à configurer *</label>
+          <select
+            v-model="selectedRecipeId"
+            class="form-select"
+            @change="handleSelectRecipeForFiche(selectedRecipeId)"
+          >
+            <option value="">-- Choisir --</option>
+            <option
+              v-for="rec in app.recipes"
+              :key="rec.id"
+              :value="rec.id"
+            >
+              {{ rec.name }}
+            </option>
+          </select>
+        </div>
+        <div
+          v-if="selectedRecipeId"
+          style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;"
+        >
+          <div style="padding: 1rem; background: rgba(255,255,255,0.01); border: 1px solid var(--border-color); border-radius: 12px;">
+            <h3 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 1rem; text-transform: uppercase; color: var(--text-secondary);">
+              Ajouter un ingrédient
+            </h3>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+              <div
+                class="form-group"
+                style="margin-bottom: 0;"
+              >
+                <label class="form-label">Ingrédient</label>
+                <select
+                  v-model="selectedIngId"
+                  class="form-select"
+                >
+                  <option value="">-- Choisir --</option>
+                  <option
+                    v-for="ing in app.ingredients"
+                    :key="ing.id"
+                    :value="ing.id"
+                  >
+                    {{ ing.name }} ({{ ing.unit }})
+                  </option>
+                </select>
+              </div>
+              <div
+                class="form-group"
+                style="margin-bottom: 0;"
+              >
+                <label class="form-label">Grammage requis</label>
+                <input
+                  v-model="ingQtyNeeded"
+                  type="number"
+                  step="any"
+                  class="form-input"
+                  placeholder="150 (g)"
+                >
+              </div>
+              <button
+                type="button"
+                class="touch-btn touch-btn-secondary"
+                :disabled="app.isOffline"
+                @click="handleAddIngredientToFiche"
+              >
+                + Insérer
+              </button>
+            </div>
+          </div>
+          <div v-if="ficheIngredients.length > 0">
+            <h3 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 0.75rem; text-transform: uppercase; color: var(--text-secondary);">
+              Composition actuelle
+            </h3>
+            <div
+              class="table-wrapper"
+              style="max-height: 250px; overflow-y: auto;"
+            >
+              <table class="mepos-table">
+                <thead><tr><th>Ingrédient</th><th>Grammage</th><th>Action</th></tr></thead>
+                <tbody>
+                  <tr
+                    v-for="item in ficheIngredients"
+                    :key="item.ingredient_id"
+                  >
+                    <td><strong style="color: var(--text-primary);">{{ app.ingredients.find(i => i.id === item.ingredient_id)?.name || 'Unknown' }}</strong></td>
+                    <td>{{ item.quantity_needed }} {{ app.ingredients.find(i => i.id === item.ingredient_id)?.unit || '' }}</td>
+                    <td>
+                      <button
+                        class="badge badge-danger"
+                        style="border: none; cursor: pointer;"
+                        @click="handleRemoveIngredientFromFiche(item.ingredient_id)"
+                      >
+                        Retirer
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <button
+            class="touch-btn"
+            style="width: 100%;"
+            :disabled="app.isOffline || isSaving"
+            @click="handleSaveFiche"
+          >
+            <span
+              v-if="isSaving"
+              class="spinner"
+              style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%;"
+            />
+            <span v-else>Sauvegarder la fiche</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ STOCKS TAB ══════════════ -->
+    <div
+      v-if="subTab === 'stocks'"
+      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem;"
+    >
+      <div
+        class="glass-panel"
+        style="padding: 2rem;"
+      >
+        <h2 style="font-size: 1.25rem; margin-bottom: 1.25rem;">
+          Modification de Stock
+        </h2>
+        <div
+          v-if="adjError"
+          class="alert-banner alert-banner-danger"
+        >
+          {{ adjError }}
+        </div>
+        <div
+          v-if="adjSuccess"
+          class="alert-banner"
+          style="background: rgba(16,185,129,0.05); border-color: rgba(16,185,129,0.15); color: var(--emerald);"
+        >
+          {{ adjSuccess }}
+        </div>
+        <form @submit.prevent="handleAdjustStock">
+          <div class="form-group">
+            <label class="form-label">Dépôt *</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.25rem;">
+              <div
+                v-for="d in depts"
+                :key="d.id"
+                :style="{ padding: '0.8rem', borderRadius: 'var(--radius-md)', background: adjDeptId === d.id.toString() ? 'rgba(99,102,241,0.08)' : 'var(--bg-input)', border: `1px solid ${adjDeptId === d.id.toString() ? 'var(--indigo)' : 'var(--border-color)'}`, cursor: 'pointer', textAlign: 'center' }"
+                @click="adjDeptId = d.id.toString()"
+              >
+                <span style="font-size: 0.85rem; font-weight: 700;">{{ d.name }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ingrédient *</label>
+            <select
+              v-model="adjIngId"
+              class="form-select"
+              required
+            >
+              <option value="">-- Choisir --</option>
+              <option
+                v-for="ing in app.ingredients"
+                :key="ing.id"
+                :value="ing.id"
+              >
+                {{ ing.name }}
+              </option>
+            </select>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label">Type d'ajustement *</label>
+              <select
+                v-model="adjType"
+                class="form-select"
+              >
+                <option value="purchase">Entrée (Achat)</option>
+                <option value="reconciliation">Réconciliation</option>
+                <option value="decrease">Sortie (Retrait)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Quantité *</label>
+              <input
+                v-model="adjQty"
+                type="number"
+                step="any"
+                class="form-input"
+                placeholder="5.0"
+                required
+              >
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Référence</label>
+            <input
+              v-model="adjRef"
+              class="form-input"
+              placeholder="Bon de commande, etc."
+            >
+          </div>
+          <button
+            type="submit"
+            class="touch-btn"
+            style="width: 100%; margin-top: 0.5rem;"
+            :disabled="isSaving"
+          >
+            <span
+              v-if="isSaving"
+              class="spinner"
+              style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%;"
+            />
+            <span v-else>Appliquer l'ajustement</span>
+          </button>
+        </form>
+      </div>
+      <div
+        class="glass-panel"
+        style="padding: 2rem;"
+      >
+        <h2 style="font-size: 1.25rem; margin-bottom: 1.25rem;">
+          Historique des Mouvements
+        </h2>
+        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+          <input
+            v-model="historySearch"
+            class="form-input"
+            placeholder="Rechercher..."
+            style="flex: 1;"
+          >
+          <select
+            v-model="historyTypeFilter"
+            class="form-select"
+            style="width: auto;"
+          >
+            <option value="all">Tous</option>
+            <option value="purchase_pos">Entrées</option>
+            <option value="purchase_neg">Sorties</option>
+            <option value="reconciliation">Réconciliation</option>
+          </select>
+        </div>
+        <div
+          class="table-wrapper"
+          style="max-height: 400px; overflow-y: auto;"
+        >
+          <table class="mepos-table">
+            <thead><tr><th>Date</th><th>Ingrédient</th><th>Dépôt</th><th>Qté</th><th>Type</th><th>Réf</th></tr></thead>
+            <tbody>
+              <tr
+                v-for="mov in filteredMovements"
+                :key="mov.id"
+              >
+                <td style="color: var(--text-secondary); font-size: 0.875rem;">
+                  {{ new Date(mov.created_at).toLocaleString('fr-TN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) }}
+                </td>
+                <td><strong>{{ mov.ingredient_name }}</strong></td>
+                <td>{{ mov.department_name }}</td>
+                <td :style="{ color: parseFloat(mov.quantity) >= 0 ? 'var(--emerald)' : '#ef4444', fontWeight: 600 }">
+                  {{ parseFloat(mov.quantity) >= 0 ? '+' : '' }}{{ parseFloat(mov.quantity).toFixed(2) }} {{ mov.unit }}
+                </td>
+                <td>
+                  <span
+                    class="badge"
+                    :class="mov.type === 'purchase' ? 'badge-success' : 'badge-warn'"
+                  >{{ mov.type }}</span>
+                </td>
+                <td style="color: var(--text-muted); font-size: 0.85rem;">
+                  {{ mov.reference_id || '—' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ USERS TAB ══════════════ -->
+    <div
+      v-if="subTab === 'users'"
+      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem;"
+    >
+      <div
+        class="glass-panel"
+        style="padding: 2rem;"
+      >
+        <h2 style="font-size: 1.25rem; margin-bottom: 1.25rem;">
+          {{ userId ? 'Modifier' : 'Nouveau' }} Compte Utilisateur
+        </h2>
+        <div
+          v-if="userError"
+          class="alert-banner alert-banner-danger"
+        >
+          {{ userError }}
+        </div>
+        <div
+          v-if="userSuccess"
+          class="alert-banner"
+          style="background: rgba(16,185,129,0.05); border-color: rgba(16,185,129,0.15); color: var(--emerald);"
+        >
+          {{ userSuccess }}
+        </div>
+        <form @submit.prevent="handleUserSubmit">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label">Prénom</label>
+              <input
+                v-model="userFirstName"
+                class="form-input"
+                placeholder="Mohamed"
+              >
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nom</label>
+              <input
+                v-model="userLastName"
+                class="form-input"
+                placeholder="Ali"
+              >
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nom d'utilisateur *</label>
+            <input
+              v-model="userUsername"
+              class="form-input"
+              placeholder="med"
+              required
+            >
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mot de passe {{ userId ? '(laisser vide pour garder)' : '*' }}</label>
+            <input
+              v-model="userPassword"
+              type="password"
+              class="form-input"
+              placeholder="••••••"
+              :required="!userId"
+            >
+          </div>
+          <div class="form-group">
+            <label class="form-label">Rôle *</label>
+            <select
+              v-model="userRole"
+              class="form-select"
+            >
+              <option value="cook">Cuisinier / Comptoir</option>
+              <option value="manager">Gérant</option>
+              <option value="admin">Administrateur</option>
+            </select>
+          </div>
+          <button
+            type="submit"
+            class="touch-btn"
+            style="width: 100%; margin-top: 0.5rem;"
+            :disabled="isSaving"
+          >
+            <span
+              v-if="isSaving"
+              class="spinner"
+              style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%;"
+            />
+            <span v-else>{{ userId ? 'Mettre à jour' : 'Créer le compte' }}</span>
+          </button>
+        </form>
+      </div>
+      <div
+        class="glass-panel"
+        style="padding: 2rem;"
+      >
+        <h2 style="font-size: 1.25rem; margin-bottom: 1.25rem;">
+          Comptes Utilisateurs ({{ users.length }})
+        </h2>
+        <div class="table-wrapper">
+          <table class="mepos-table">
+            <thead><tr><th>Utilisateur</th><th>Nom complet</th><th>Rôle</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr
+                v-for="u in users"
+                :key="u.id"
+              >
+                <td><strong style="color: var(--text-primary);">@{{ u.username }}</strong></td>
+                <td>{{ u.first_name }} {{ u.last_name }}</td>
+                <td><span :class="['badge', u.role === 'admin' ? 'badge-danger' : u.role === 'manager' ? 'badge-warn' : 'badge-success']">{{ u.role === 'admin' ? 'Admin' : u.role === 'manager' ? 'Gérant' : 'Cuisinier' }}</span></td>
+                <td>
+                  <div style="display: flex; gap: 0.5rem;">
+                    <button
+                      class="badge badge-info"
+                      style="border: none; cursor: pointer; padding: 0.35rem 0.6rem;"
+                      @click="handleEditUser(u)"
+                    >
+                      Modifier
+                    </button>
+                    <button
+                      class="badge badge-danger"
+                      style="border: none; cursor: pointer; padding: 0.35rem 0.6rem;"
+                      @click="handleDeleteUserClick(u.id, u.username)"
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ DEPARTMENTS TAB ══════════════ -->
+    <div
+      v-if="subTab === 'depts'"
+      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem;"
+    >
+      <div
+        class="glass-panel"
+        style="padding: 2rem;"
+      >
+        <h2 style="font-size: 1.25rem; margin-bottom: 1.25rem;">
+          {{ deptId ? 'Modifier' : 'Nouveau' }} Dépôt
+        </h2>
+        <div
+          v-if="deptError"
+          class="alert-banner alert-banner-danger"
+        >
+          {{ deptError }}
+        </div>
+        <div
+          v-if="deptSuccess"
+          class="alert-banner"
+          style="background: rgba(16,185,129,0.05); border-color: rgba(16,185,129,0.15); color: var(--emerald);"
+        >
+          {{ deptSuccess }}
+        </div>
+        <form @submit.prevent="handleDeptSubmit">
+          <div class="form-group">
+            <label class="form-label">Nom du Dépôt *</label>
+            <input
+              v-model="deptName"
+              class="form-input"
+              placeholder="Ex: Cuisine Centrale"
+              required
+            >
+          </div>
+          <div class="form-group">
+            <label class="form-label">Type de Stock *</label>
+            <select
+              v-model="deptStockType"
+              class="form-select"
+            >
+              <option value="isolated">Stock Isolé (Physique)</option>
+              <option value="inherited">Stock Hérité (Virtuel)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <input
+              v-model="deptDescription"
+              class="form-input"
+              placeholder="Description optionnelle"
+            >
+          </div>
+          <button
+            type="submit"
+            class="touch-btn"
+            style="width: 100%; margin-top: 0.5rem;"
+            :disabled="isSaving"
+          >
+            <span
+              v-if="isSaving"
+              class="spinner"
+              style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%;"
+            />
+            <span v-else>{{ deptId ? 'Mettre à jour' : 'Créer le dépôt' }}</span>
+          </button>
+        </form>
+      </div>
+      <div
+        class="glass-panel"
+        style="padding: 2rem;"
+      >
+        <h2 style="font-size: 1.25rem; margin-bottom: 1.25rem;">
+          Dépôts ({{ depts.length }})
+        </h2>
+        <div class="table-wrapper">
+          <table class="mepos-table">
+            <thead><tr><th>Nom</th><th>Type</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr
+                v-for="d in depts"
+                :key="d.id"
+              >
+                <td><strong style="color: var(--text-primary);">{{ d.name }}</strong></td>
+                <td><span :class="['badge', d.stock_type === 'inherited' ? 'badge-warn' : 'badge-success']">{{ d.stock_type === 'inherited' ? 'Hérité' : 'Isolé' }}</span></td>
+                <td>
+                  <div style="display: flex; gap: 0.5rem;">
+                    <button
+                      class="badge badge-info"
+                      style="border: none; cursor: pointer; padding: 0.35rem 0.6rem;"
+                      @click="handleEditDept(d)"
+                    >
+                      Modifier
+                    </button>
+                    <button
+                      class="badge badge-danger"
+                      style="border: none; cursor: pointer; padding: 0.35rem 0.6rem;"
+                      @click="handleDeleteDeptClick(d.id, d.name)"
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </PageContainer>
+
+  <!-- ══════════════ EDIT INGREDIENT MODAL ══════════════ -->
+  <Modal
+    :is-open="showEditModal"
+    title="Modifier l'ingrédient"
+    max-width="520px"
+    @close="closeEditModal"
+  >
+    <div
+      v-if="editError"
+      class="alert-banner alert-banner-danger"
+      style="margin-bottom: 1rem;"
+    >
+      {{ editError }}
+    </div>
+    <form @submit.prevent="handleEditIngredient">
+      <div class="form-group">
+        <label class="form-label">Nom *</label>
+        <input
+          v-model="editName"
+          class="form-input"
+          placeholder="Ex: Fromage Cheddar"
+          required
+        >
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; overflow-x: auto;">
+        <div class="form-group" style="min-width: 0;">
+          <label class="form-label">Unité Cuisine *</label>
+          <select
+            v-model="editUnit"
+            class="form-select"
+          >
+            <option value="g">gramme (g)</option>
+            <option value="ml">millilitre (ml)</option>
+            <option value="pcs">pièce (pcs)</option>
+            <option value="kg">kilogramme (kg)</option>
+            <option value="l">litre (l)</option>
+          </select>
+        </div>
+        <div class="form-group" style="min-width: 0;">
+          <label class="form-label">Unité Achat *</label>
+          <input
+            v-model="editPurchaseUnit"
+            class="form-input"
+            placeholder="carton, sac..."
+            required
+          >
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; overflow-x: auto;">
+        <div class="form-group" style="min-width: 0;">
+          <label class="form-label">Capacité Paquet *</label>
+          <input
+            v-model="editConversionFactor"
+            type="number"
+            step="any"
+            class="form-input"
+            placeholder="5000"
+            required
+          >
+        </div>
+        <div class="form-group" style="min-width: 0;">
+          <label class="form-label">Prix Paquet (TND) *</label>
+          <input
+            v-model="editPurchaseUnitPrice"
+            type="number"
+            step="0.01"
+            class="form-input"
+            placeholder="120.00"
+            required
+          >
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Seuil d'Alerte</label>
+        <input
+          v-model="editAlertThreshold"
+          type="number"
+          step="any"
+          class="form-input"
+          placeholder="2000"
+        >
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fournisseur préféré</label>
+        <select v-model="editPreferredSupplierId" class="form-select">
+          <option :value="null">— Aucun —</option>
+          <option v-for="s in supplierStore.suppliers" :key="s.id" :value="s.id" :disabled="s.status === 'archived'">
+            {{ s.name }}{{ s.company_name ? ' — ' + s.company_name : '' }}{{ s.status === 'archived' ? ' (Archivé)' : '' }}
+          </option>
+        </select>
+      </div>
+      <div style="padding: 1rem; background: rgba(255,255,255,0.01); border: 1px dashed var(--border-color); border-radius: 8px; margin-bottom: 1.5rem;">
+        <span style="color: var(--text-secondary); font-size: 0.875rem;">Coût unitaire de base :</span>
+        <div style="font-size: 1.2rem; font-weight: 800; color: var(--indigo-light); margin-top: 0.25rem;">
+          {{ getCalculatedBasePrice(editPurchaseUnitPrice, editConversionFactor) }} TND / {{ editUnit }}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="touch-btn touch-btn-secondary"
+          :disabled="editLoading"
+          @click="closeEditModal"
+        >
+          Annuler
+        </button>
+        <button
+          type="submit"
+          class="touch-btn"
+          :disabled="editLoading"
+        >
+          <span
+            v-if="editLoading"
+            class="spinner"
+            style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%;"
+          />
+          <span v-else>Enregistrer les modifications</span>
+        </button>
+      </div>
+    </form>
+  </Modal>
+
+  <!-- ══════════════ DELETE INGREDIENT CONFIRMATION ══════════════ -->
+  <ConfirmDialog
+    :is-open="showDeleteDialog"
+    title="Supprimer l'ingrédient"
+    :message="deletingIngredient ? `Êtes-vous sûr de vouloir supprimer « ${deletingIngredient.name} » ?` : ''"
+    confirm-label="Supprimer"
+    cancel-label="Annuler"
+    variant="danger"
+    :loading="deleteLoading"
+    :disabled="deleteWarnings.length > 0"
+    :warnings="deleteWarnings"
+    @confirm="handleDeleteIngredient"
+    @cancel="closeDeleteDialog"
+    @close="closeDeleteDialog"
+  />
+
+  <!-- ══════════════ INVENTORY HISTORY MODAL ══════════════ -->
+  <InventoryHistoryModal
+    :is-open="showInventoryHistory"
+    :ingredient="inventoryHistoryIngredient"
+    @close="showInventoryHistory = false"
+  />
+
+  <!-- ══════════════ RECIPE USAGE MODAL ══════════════ -->
+  <RecipeUsageModal
+    :is-open="showRecipeUsage"
+    :ingredient="recipeUsageIngredient"
+    @close="showRecipeUsage = false"
+  />
+
+  <!-- ══════════════ STOCK MOVEMENTS MODAL ══════════════ -->
+  <InventoryHistoryModal
+    :is-open="showStockMovements"
+    :ingredient="stockMovementsIngredient"
+    @close="showStockMovements = false"
+  />
+
+  <!-- ══════════════ EDIT RECIPE MODAL ══════════════ -->
+  <Modal
+    :is-open="showRecipeEditModal"
+    title="Modifier le produit"
+    max-width="440px"
+    @close="closeRecipeEditModal"
+  >
+    <div
+      v-if="editRecipeError"
+      class="alert-banner alert-banner-danger"
+      style="margin-bottom: 1rem;"
+    >
+      {{ editRecipeError }}
+    </div>
+    <form @submit.prevent="handleEditRecipe">
+      <div class="form-group">
+        <label class="form-label">Nom du Produit *</label>
+        <input
+          v-model="editRecipeName"
+          class="form-input"
+          placeholder="Ex: Cheeseburger"
+          required
+        >
+      </div>
+      <div class="form-group">
+        <label class="form-label">Prix de Vente (TND) *</label>
+        <input
+          v-model="editRecipePrice"
+          type="number"
+          step="0.01"
+          class="form-input"
+          placeholder="15.00"
+          required
+        >
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="touch-btn touch-btn-secondary"
+          :disabled="editRecipeLoading"
+          @click="closeRecipeEditModal"
+        >
+          Annuler
+        </button>
+        <button
+          type="submit"
+          class="touch-btn"
+          :disabled="editRecipeLoading"
+        >
+          <span
+            v-if="editRecipeLoading"
+            class="spinner"
+            style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%;"
+          />
+          <span v-else>Enregistrer</span>
+        </button>
+      </div>
+    </form>
+  </Modal>
+
+  <!-- ══════════════ DELETE USER CONFIRMATION ══════════════ -->
+  <ConfirmDialog
+    :is-open="showUserDeleteDialog"
+    title="Supprimer l'utilisateur"
+    :message="`Êtes-vous sûr de vouloir supprimer le compte « ${deletingUserName} » ?`"
+    confirm-label="Supprimer"
+    cancel-label="Annuler"
+    variant="danger"
+    @confirm="handleDeleteUserConfirm"
+    @cancel="showUserDeleteDialog = false"
+    @close="showUserDeleteDialog = false"
+  />
+
+  <!-- ══════════════ DELETE DEPARTMENT CONFIRMATION ══════════════ -->
+  <ConfirmDialog
+    :is-open="showDeptDeleteDialog"
+    title="Supprimer le dépôt"
+    :message="`Êtes-vous sûr de vouloir supprimer le dépôt « ${deletingDeptName} » ?`"
+    confirm-label="Supprimer"
+    cancel-label="Annuler"
+    variant="danger"
+    @confirm="handleDeleteDeptConfirm"
+    @cancel="showDeptDeleteDialog = false"
+    @close="showDeptDeleteDialog = false"
+  />
+
+  <!-- Import Wizard Modal -->
+  <Teleport to="body">
+    <Transition name="modal">
+      <div v-if="showImportWizard" class="modal-overlay" @click.self="closeWizard">
+        <div class="glass-panel" style="max-width: 800px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; border-radius: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color);">
+            <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0;">Import de Produits CSV</h2>
+            <button style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; padding: 0.5rem; border-radius: 0.375rem;" @click="closeWizard">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Step Indicator -->
+          <div style="display: flex; justify-content: space-between; padding: 1rem 1.25rem; gap: 0.25rem;">
+            <div v-for="(label, idx) in stepLabels" :key="idx" style="display: flex; flex-direction: column; align-items: center; gap: 0.25rem; flex: 1;">
+              <div :style="{
+                width: '28px', height: '28px', borderRadius: '50%',
+                background: importStore.currentStep > idx ? '#10b981' : (importStore.currentStep === idx ? 'var(--blue)' : 'var(--bg-secondary)'),
+                border: '2px solid ' + (importStore.currentStep > idx ? '#10b981' : (importStore.currentStep === idx ? 'var(--blue)' : 'var(--border-color)')),
+                color: (importStore.currentStep > idx || importStore.currentStep === idx) ? 'white' : 'var(--text-secondary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '600'
+              }">{{ importStore.currentStep > idx ? '✓' : idx + 1 }}</div>
+              <span :style="{ fontSize: '0.65rem', color: importStore.currentStep === idx ? 'var(--blue)' : 'var(--text-secondary)', fontWeight: importStore.currentStep === idx ? '600' : '400' }">{{ label }}</span>
+            </div>
+          </div>
+
+          <!-- Wizard Content -->
+          <div style="flex: 1; overflow-y: auto; padding: 1.5rem; min-height: 300px;">
+            <!-- Step 0: Upload -->
+            <div v-if="importStore.currentStep === 0">
+              <div :style="{ border: '2px dashed ' + (dragActive ? 'var(--blue)' : 'var(--border-color)'), borderRadius: '12px', padding: '3rem', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s', background: dragActive ? 'rgba(59, 130, 246, 0.05)' : 'transparent' }" @dragover="handleDragOver" @dragleave="handleDragLeave" @drop="handleDrop" @click="csvFileInput?.click()">
+                <input ref="csvFileInput" type="file" accept=".csv" style="display: none;" @change="handleFileSelect" />
+                <div style="font-size: 3rem; margin-bottom: 1rem;">📄</div>
+                <h3>Glissez votre fichier CSV ici</h3>
+                <p style="color: var(--text-secondary);">ou cliquez pour sélectionner un fichier</p>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Format: .csv (max 10 Mo)</p>
+              </div>
+            </div>
+
+            <!-- Step 1: Validating -->
+            <div v-else-if="importStore.currentStep === 1" style="display: flex; flex-direction: column; align-items: center; padding: 3rem; gap: 1rem;">
+              <div style="width: 48px; height: 48px; border: 3px solid var(--border-color); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+              <h3>Validation en cours...</h3>
+              <p style="color: var(--text-secondary);">Analyse du fichier CSV</p>
+            </div>
+
+            <!-- Step 2: Preview -->
+            <div v-else-if="importStore.currentStep === 2">
+              <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 120px; padding: 1rem; border-radius: 8px; text-align: center; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);">
+                  <span style="display: block; font-size: 1.5rem; font-weight: 800;">{{ importStore.totalProducts }}</span>
+                  <span style="font-size: 0.75rem; color: var(--text-secondary);">Produits valides</span>
+                </div>
+                <div v-if="importStore.hasErrors" style="flex: 1; min-width: 120px; padding: 1rem; border-radius: 8px; text-align: center; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);">
+                  <span style="display: block; font-size: 1.5rem; font-weight: 800;">{{ importStore.errorRows.length }}</span>
+                  <span style="font-size: 0.75rem; color: var(--text-secondary);">Erreurs</span>
+                </div>
+              </div>
+              <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                  <thead><tr style="background: var(--bg-secondary);"><th style="padding: 0.75rem; text-align: left;">#</th><th style="padding: 0.75rem; text-align: left;">Produit</th><th style="padding: 0.75rem; text-align: left;">Prix</th><th style="padding: 0.75rem; text-align: left;">Ingrédients</th></tr></thead>
+                  <tbody>
+                    <tr v-for="row in importStore.validRows.slice(0, 20)" :key="row.rowNum" style="border-bottom: 1px solid var(--border-color);">
+                      <td style="padding: 0.75rem;">{{ row.rowNum }}</td>
+                      <td style="padding: 0.75rem;"><strong>{{ row.productName }}</strong></td>
+                      <td style="padding: 0.75rem;">{{ row.sellingPrice?.toFixed(2) }} TND</td>
+                      <td style="padding: 0.75rem;"><span v-for="(ing, idx) in row.ingredients" :key="idx" :style="{ display: 'inline-block', padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.7rem', margin: '0.1rem', background: ing.isNew ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)', color: ing.isNew ? '#10b981' : 'var(--blue)' }">{{ ing.name }} {{ ing.isNew ? '(nouveau)' : '✅' }}</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Step 3: Resolve Issues -->
+            <div v-else-if="importStore.currentStep === 3">
+              <div style="margin-bottom: 1.25rem;">
+                <h3 style="font-size: 1rem; font-weight: 700; margin: 0 0 0.25rem;">⚠️ Résolution des Problèmes</h3>
+                <p style="color: var(--text-secondary); font-size: 0.8rem; margin: 0;">Corrigez ou supprimez les lignes problématiques avant d'importer</p>
+              </div>
+              <div style="display: flex; gap: 1rem; margin-bottom: 1.25rem;">
+                <div style="padding: 0.75rem 1.25rem; border-radius: 8px; background: rgba(16, 185, 129, 0.1); text-align: center;"><span style="font-size: 1.5rem; font-weight: 800; color: #10b981;">{{ importStore.effectiveTotalProducts }}</span><br/><span style="font-size: 0.7rem; color: var(--text-secondary);">à importer</span></div>
+                <div v-if="importStore.errorRows.length > 0" style="padding: 0.75rem 1.25rem; border-radius: 8px; background: rgba(239, 68, 68, 0.1); text-align: center;"><span style="font-size: 1.5rem; font-weight: 800; color: #ef4444;">{{ importStore.errorRows.length }}</span><br/><span style="font-size: 0.7rem; color: var(--text-secondary);">erreurs</span></div>
+              </div>
+              <div v-if="importStore.errorRows.length > 0" style="margin-bottom: 1.25rem;">
+                <h4 style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: #ef4444; margin: 0 0 0.75rem;">Erreurs à corriger ({{ importStore.errorRows.length }})</h4>
+                <div v-for="err in importStore.errorRows" :key="err.rowNum" style="padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 0.5rem; border-left: 3px solid #ef4444;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;"><span style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); font-family: monospace;">Ligne {{ err.rowNum }}</span><button style="padding: 0.3rem 0.6rem; border: none; border-radius: 5px; font-size: 0.7rem; font-weight: 600; cursor: pointer; background: rgba(239, 68, 68, 0.1); color: #ef4444;" @click="importStore.removeRow(err.rowNum)">Supprimer</button></div>
+                  <div style="display: flex; gap: 0.75rem; margin-bottom: 0.5rem;">
+                    <div style="flex: 1;"><label style="display: block; font-size: 0.65rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem;">NOM</label><input :value="err.productName" @input="importStore.editRow(err.rowNum, { productName: $event.target.value })" style="width: 100%; padding: 0.4rem 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--text-primary); font-size: 0.8rem;" /></div>
+                    <div style="flex: 1;"><label style="display: block; font-size: 0.65rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem;">PRIX (TND)</label><input type="number" step="0.01" min="0" :value="err.sellingPrice" @input="importStore.editRow(err.rowNum, { sellingPrice: parseFloat($event.target.value) || 0 })" style="width: 100%; padding: 0.4rem 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--text-primary); font-size: 0.8rem;" /></div>
+                  </div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 0.35rem;"><span v-for="(e, idx) in err.errors" :key="idx" style="padding: 0.15rem 0.5rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; border-radius: 6px; font-size: 0.65rem;">{{ e }}</span></div>
+                </div>
+              </div>
+              <div>
+                <h4 style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: #10b981; margin: 0 0 0.75rem;">Produits valides ({{ importStore.validRows.length }})</h4>
+                <div v-for="row in importStore.validRows" :key="row.rowNum" :style="{ padding: '0.5rem 0.75rem', background: 'var(--bg-secondary)', borderRadius: '8px', marginBottom: '0.35rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: importStore.removedRowNums.includes(row.rowNum) ? 0.5 : 1, textDecoration: importStore.removedRowNums.includes(row.rowNum) ? 'line-through' : 'none' }">
+                  <span style="font-weight: 600; font-size: 0.8rem;">{{ row.productName }} <span style="color: var(--blue); font-size: 0.75rem;">{{ row.sellingPrice?.toFixed(2) }} TND</span></span>
+                  <button v-if="!importStore.removedRowNums.includes(row.rowNum)" style="padding: 0.2rem 0.4rem; border: none; background: var(--bg-card); color: var(--text-muted); border-radius: 4px; cursor: pointer; font-size: 0.7rem;" @click="importStore.removeRow(row.rowNum)">✕</button>
+                  <button v-else style="padding: 0.2rem 0.4rem; border: none; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 4px; cursor: pointer; font-size: 0.7rem;" @click="importStore.restoreRow(row.rowNum)">↩</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 4: Confirm -->
+            <div v-else-if="importStore.currentStep === 4" style="text-align: center; padding: 2rem;">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+              <h3 style="margin: 0 0 1.5rem;">Confirmer l'importation</h3>
+              <div style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap;">
+                <div style="padding: 1rem 1.5rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px;">
+                  <span style="display: block; font-size: 2rem; font-weight: 800; color: var(--blue);">{{ importStore.effectiveTotalProducts }}</span>
+                  <span style="font-size: 0.8rem; color: var(--text-secondary);">Produits à créer</span>
+                </div>
+                <div v-if="importStore.removedRowNums.length > 0" style="padding: 1rem 1.5rem; background: var(--bg-secondary); border-radius: 8px;">
+                  <span style="display: block; font-size: 2rem; font-weight: 800; color: var(--text-muted);">{{ importStore.removedRowNums.length }}</span>
+                  <span style="font-size: 0.8rem; color: var(--text-secondary);">Lignes ignorées</span>
+                </div>
+              </div>
+              <p style="color: var(--text-secondary); max-width: 400px; margin: 0 auto;">Les produits seront créés avec leurs recettes et ingrédients. Les ingrédients existants seront réutilisés.</p>
+            </div>
+
+            <!-- Step 5: Importing -->
+            <div v-else-if="importStore.currentStep === 5" style="display: flex; flex-direction: column; align-items: center; padding: 3rem; gap: 1rem;">
+              <div style="width: 48px; height: 48px; border: 3px solid var(--border-color); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+              <h3>Importation en cours...</h3>
+              <p style="color: var(--text-secondary);">Création des produits et ingrédients</p>
+            </div>
+
+            <!-- Step 6: Done -->
+            <div v-else-if="importStore.currentStep === 6" style="text-align: center; padding: 2rem;">
+              <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+              <h3>Importation terminée!</h3>
+              <div style="display: flex; justify-content: center; gap: 2rem; margin-top: 1.5rem;">
+                <div><span style="display: block; font-size: 2rem; font-weight: 800; color: var(--blue);">{{ importStore.importResult?.productsCreated || 0 }}</span><span style="font-size: 0.8rem; color: var(--text-secondary);">Produits créés</span></div>
+                <div><span style="display: block; font-size: 2rem; font-weight: 800; color: var(--blue);">{{ importStore.importResult?.ingredientsCreated || 0 }}</span><span style="font-size: 0.8rem; color: var(--text-secondary);">Nouveaux ingrédients</span></div>
+                <div><span style="display: block; font-size: 2rem; font-weight: 800; color: var(--blue);">{{ importStore.importResult?.ingredientsReused || 0 }}</span><span style="font-size: 0.8rem; color: var(--text-secondary);">Réutilisés</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div style="display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.25rem; border-top: 1px solid var(--border-color);">
+            <button v-if="importStore.currentStep > 0 && importStore.currentStep < 5" class="touch-btn" style="background: var(--bg-secondary); border: 1px solid var(--border-color);" @click="importStore.goToStep(importStore.currentStep - 1)">Retour</button>
+            <div style="flex: 1;" />
+            <button v-if="importStore.currentStep === 2" class="touch-btn" style="background: var(--blue); color: white;" @click="importStore.goToStep(3)">Résoudre les problèmes</button>
+            <button v-if="importStore.currentStep === 3" class="touch-btn" style="background: var(--blue); color: white;" @click="importStore.goToStep(4)">Continuer ({{ importStore.effectiveTotalProducts }} produits)</button>
+            <button v-if="importStore.currentStep === 4" class="touch-btn" style="background: var(--blue); color: white;" @click="confirmImport" :disabled="importStore.isLoading || importStore.effectiveTotalProducts === 0">Lancer l'importation ({{ importStore.effectiveTotalProducts }})</button>
+            <button v-if="importStore.currentStep === 6" class="touch-btn" style="background: var(--blue); color: white;" @click="closeWizard">Fermer</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+</template>
+
+<style scoped>
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 600px) {
+  .view-title-section {
+    margin-bottom: 1rem;
+  }
+  .view-title-section .touch-btn {
+    width: 100%;
+  }
+  .dept-filter-section {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-search-bar .form-input {
+    font-size: 16px;
+  }
+  .pagination-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+@media (max-width: 900px) {
+  .settings-ingredients-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+</style>

@@ -1,0 +1,17 @@
+{
+  "name": "mePOS Stock",
+  "short_name": "mePOS",
+  "description": "Gestion d'inventaire et de stock pour restaurants",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

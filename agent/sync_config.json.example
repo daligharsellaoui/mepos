@@ -1,0 +1,17 @@
+{
+  "_comment": "mePOS STOCK Sync Agent Configuration",
+  "_instructions": "Copy this file to sync_config.json and fill in your values.",
+  "api_url": "http://localhost:5000/api/v1/sales/sync",
+  "api_key": "YOUR_API_KEY_HERE",
+  "department_id": 2,
+  "sync_interval": 10,
+  "max_batch_size": 50,
+  "max_retries": 5,
+  "base_backoff": 1,
+  "max_backoff": 60,
+  "backoff_jitter": 0.5,
+  "circuit_breaker_threshold": 3,
+  "circuit_breaker_reset": 30,
+  "log_level": "INFO",
+  "log_file": ""
+}

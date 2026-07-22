@@ -1,0 +1,11 @@
+node_modules
+dist
+logs
+.git
+*.md
+.env
+.env.local
+.eslint*
+.gitignore
+.DS_Store
+*.log
