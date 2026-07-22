@@ -1331,6 +1331,42 @@ export function setupActivityJournal() {
     });
   });
 
+  // ── User Updated Events ──
+  eventBus.on(Events.USER_UPDATED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'user.updated',
+      correlationId: data.correlationId,
+      entityType: 'user',
+      entityId: String(data.userId),
+      performedByUserId: data.updatedBy,
+      performedBySource: data.source || 'web_application',
+      severity: 'info',
+      title: 'Utilisateur mis à jour',
+      description: `Utilisateur "${data.username}" a été modifié.`,
+      metadata: { username: data.username, changes: data.changes },
+      previousValues: data.previousValues,
+      newValues: data.newValues,
+    });
+  });
+
+  // ── User Role Changed Events ──
+  eventBus.on(Events.USER_ROLE_CHANGED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'user.role_changed',
+      correlationId: data.correlationId,
+      entityType: 'user',
+      entityId: String(data.userId),
+      performedByUserId: data.changedBy,
+      performedBySource: data.source || 'web_application',
+      severity: 'notice',
+      title: 'Rôle utilisateur modifié',
+      description: `Le rôle de "${data.username}" est passé de "${data.oldRole}" à "${data.newRole}".`,
+      metadata: { username: data.username, oldRole: data.oldRole, newRole: data.newRole },
+    });
+  });
+
   eventBus.on(Events.USER_DISABLED, async (data: any) => {
     await writeJournalEntry({
       tenantId: data.tenantId,
