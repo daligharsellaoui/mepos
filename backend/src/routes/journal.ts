@@ -209,6 +209,63 @@ router.get('/event-types', async (_req: Request, res: Response) => {
 });
 
 // ======================================================
+// GET /api/v1/journal/export
+// Export journal entries (CSV / Excel / PDF)
+// Must be placed BEFORE /:id to avoid Express route collision
+// RBAC: only managers and above can export
+// ======================================================
+router.get('/export', async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const tenantId = (req as any).tenantId || 1;
+
+    // RBAC: only managers and above can export
+    if (!user || (user.role !== 'admin' && user.role !== 'platform_admin' && user.role !== 'manager')) {
+      return res.status(403).json({ status: 'error', message: 'Accès refusé. Seuls les gestionnaires et administrateurs peuvent exporter le journal.' });
+    }
+
+    const { format = 'csv', event_types, entity_type, severity, search, start_date, end_date } = req.query as any;
+
+    if (!['csv', 'excel', 'pdf'].includes(format)) {
+      return res.status(400).json({ status: 'error', message: 'Invalid format. Supported: csv, excel, pdf' });
+    }
+
+    const data = await exportJournal(
+      {
+        tenantId,
+        eventTypes: event_types ? event_types.split(',') : undefined,
+        entityType: entity_type,
+        severity,
+        search,
+        startDate: start_date,
+        endDate: end_date,
+        limit: 10000,
+        offset: 0,
+      },
+      format
+    );
+
+    const mimeTypes: Record<string, string> = {
+      csv: 'text/csv',
+      excel: 'text/tab-separated-values',
+      pdf: 'text/plain',
+    };
+
+    const extensions: Record<string, string> = {
+      csv: '.csv',
+      excel: '.xls',
+      pdf: '.txt',
+    };
+
+    res.setHeader('Content-Type', mimeTypes[format]);
+    res.setHeader('Content-Disposition', `attachment; filename="activity-journal-${Date.now()}${extensions[format]}"`);
+    return res.send(data);
+  } catch (err: any) {
+    return res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+// ======================================================
 // GET /api/v1/journal/:id
 // Get a single journal entry with correlated events
 // ======================================================
@@ -270,62 +327,6 @@ router.get('/sale/:ticketId/expansion', async (req: Request, res: Response) => {
       status: 'success',
       data: expansion,
     });
-  } catch (err: any) {
-    return res.status(500).json({ status: 'error', message: err.message });
-  }
-});
-
-// ======================================================
-// GET /api/v1/journal/export
-// Export journal entries (CSV / Excel / PDF)
-// RBAC: only admins and platform_admins can export
-// ======================================================
-router.get('/export', async (req: Request, res: Response) => {
-  try {
-    const user = (req as any).user;
-    const tenantId = (req as any).tenantId || 1;
-
-    // RBAC: only managers and above can export
-    if (!user || (user.role !== 'admin' && user.role !== 'platform_admin' && user.role !== 'manager')) {
-      return res.status(403).json({ status: 'error', message: 'Accès refusé. Seuls les gestionnaires et administrateurs peuvent exporter le journal.' });
-    }
-
-    const { format = 'csv', event_types, entity_type, severity, search, start_date, end_date } = req.query as any;
-
-    if (!['csv', 'excel', 'pdf'].includes(format)) {
-      return res.status(400).json({ status: 'error', message: 'Invalid format. Supported: csv, excel, pdf' });
-    }
-
-    const data = await exportJournal(
-      {
-        tenantId,
-        eventTypes: event_types ? event_types.split(',') : undefined,
-        entityType: entity_type,
-        severity,
-        search,
-        startDate: start_date,
-        endDate: end_date,
-        limit: 10000,
-        offset: 0,
-      },
-      format
-    );
-
-    const mimeTypes: Record<string, string> = {
-      csv: 'text/csv',
-      excel: 'text/tab-separated-values',
-      pdf: 'text/plain',
-    };
-
-    const extensions: Record<string, string> = {
-      csv: '.csv',
-      excel: '.xls',
-      pdf: '.txt',
-    };
-
-    res.setHeader('Content-Type', mimeTypes[format]);
-    res.setHeader('Content-Disposition', `attachment; filename="activity-journal-${Date.now()}${extensions[format]}"`);
-    return res.send(data);
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });
   }

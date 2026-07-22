@@ -187,7 +187,6 @@ function handleRowAction(key, s) {
           <th>Préféré</th>
           <th>Statut</th>
           <th>Ingrédients</th>
-          <th>Dernier achat</th>
           <th class="actions-th">Actions</th>
         </tr>
       </thead>
@@ -208,7 +207,6 @@ function handleRowAction(key, s) {
             <span :class="['badge', s.status === 'active' ? 'badge-success' : 'badge-warn']">{{ s.status === 'active' ? 'Actif' : 'Archivé' }}</span>
           </td>
           <td data-label="Ingrédients">{{ s.ingredients_count || 0 }}</td>
-          <td data-label="Dernier achat">{{ s.last_purchase_date || '—' }}</td>
           <td data-label="Actions" @click.stop>
             <RowActionMenu :actions="rowActions(s)" @action="(key) => handleRowAction(key, s)" />
           </td>
