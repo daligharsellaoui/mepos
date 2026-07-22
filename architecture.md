@@ -1,7 +1,7 @@
 # mePOS STOCK — Architecture Document
 
-> **Version:** 2.4.0  
-> **Last Updated:** July 20, 2026  
+> **Version:** 3.0.0  
+> **Last Updated:** July 22, 2026  
 > **Stack:** Vue 3 + JavaScript (Frontend) · Express + TypeScript (Backend) · PostgreSQL · Docker
 
 ---
@@ -39,6 +39,7 @@ mePOS-STOCK/
 │   │   │   ├── transfer.service.ts # Transfer execution & approval
 │   │   │   ├── inventory.service.ts# CRUD: depts, ingredients, recipes, movements, adjustments
 │   │   │   ├── forecast.service.ts # 7-day moving average, depletion analysis
+│   │   │   ├── push.service.ts     # Web Push subscription management & sending
 │   │   │   └── __tests__/          # Vitest unit tests
 │   │   │       ├── auth.service.test.ts
 │   │   │       └── stock.service.test.ts
@@ -48,7 +49,8 @@ mePOS-STOCK/
 │   │       ├── losses.ts
 │   │       ├── transfers.ts
 │   │       ├── inventory.ts        # Depts, ingredients, recipes, stocks, movements, adjustments
-│   │       └── forecast.ts
+│   │       ├── forecast.ts
+│   │       └── push.ts             # Web Push subscription management
 │   ├── dist/                       # Compiled JS
 │   ├── logs/                       # Morgan access logs
 │   ├── Dockerfile                  # Multi-stage build (node:20-alpine)
@@ -66,7 +68,8 @@ mePOS-STOCK/
 │   │   │   └── index.js            # Vue Router with auth guards
 │   │   ├── stores/                 # Pinia stores
 │   │   │   ├── auth.js             # Session, login, logout, offline fallback
-│   │   │   └── app.js              # Data, offline queue, alerts, polling
+│   │   │   ├── app.js              # Data, offline queue, alerts, polling
+│   │   │   └── notifications.js    # SSE, push subscription, fetch/mark/archive
 │   │   ├── composables/            # Vue composables (reusable logic)
 │   │   │   ├── useOffline.js       # Online/offline detection
 │   │   │   └── usePolling.js       # Generic API polling
@@ -95,6 +98,10 @@ mePOS-STOCK/
 │   │   │   └── LoginPage.vue       # Authentication
 │   │   └── styles/
 │   │       └── index.css           # HSL design system (dark mode, tactile)
+│   ├── public/
+│   │   ├── favicon.svg             # App icon
+│   │   ├── manifest.json           # PWA manifest
+│   │   └── sw.js                   # Service worker (push, notificationclick)
 │   ├── nginx.conf                  # SPA proxy config for production
 │   ├── Dockerfile                  # Multi-stage: node build → nginx serve
 │   ├── eslint.config.js            # ESLint flat config (Vue plugin)
@@ -230,6 +237,51 @@ router.beforeEach((to, from, next) => {
 
 ---
 
+## Notification System
+
+### Real-time (SSE)
+- **Endpoint:** `GET /api/v1/notifications/stream?token=<jwt>`
+- Each authenticated client connects to an SSE stream scoped to their tenant
+- Broadcast filtering: `assigned_to` (user-specific), `minRole` (role-based), or tenant-wide
+- Fallback polling every 15s via `fetchUnreadCount()`
+
+### Background Push (Web Push API)
+- **PWA manifest** at `/manifest.json` enables "Add to Home Screen"
+- **Service worker** at `/sw.js` handles `push` events (shows system notification) and `notificationclick` (opens app)
+- **Subscription flow:** App registers SW → gets VAPID public key from `GET /api/v1/push/vapid-public-key` → calls `PushManager.subscribe()` → sends subscription to `POST /api/v1/push/subscribe`
+- **Sending:** On `notification:created`, the backend calls `sendPushForNotification()` which targets `assigned_to` user or all users matching `minRole`
+- **VAPID keys:** Set `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` in backend env. Generate with:
+  ```bash
+  npx web-push generate-vapid-keys
+  ```
+  If not set, push silently skips (SSE still works).
+
+### Notification Routing Rules
+
+| Notification Type | Target | Mechanism |
+|---|---|---|
+| Transfer requested | All managers | `minRole: 'manager'` → per-user duplicates |
+| Transfer completed | Requester (cook) | `assignedTo: requestedBy` |
+| Transfer rejected | Requester (cook) | `assignedTo: requestedBy` |
+| Loss declared | All managers | `minRole: 'manager'` |
+| Low stock / stock out / critical | Managers / Admins | `minRole` + tenant fallback threshold |
+| User login | The user themself | `assignedTo: userId` |
+| Ingredient CRUD | All admins | `minRole: 'admin'` |
+| Sync / Agent events | Admins | `minRole: 'admin'` |
+
+### Low Stock Thresholds
+- Uses `ingredient.alert_threshold` if defined (> 0)
+- Falls back to tenant setting `stock_alert_threshold` (category `notifications`)
+- Default: 10 units
+
+### New Tables (v3.0.0)
+
+| Table | Purpose |
+|---|---|
+| `push_subscriptions` | Stores Web Push subscription endpoints per user |
+
+---
+
 ## API Endpoints
 
 | Method | Path | Auth | Description |
@@ -262,6 +314,10 @@ router.beforeEach((to, from, next) => {
 | POST | /api/v1/transfers/requests/:id/validate | JWT | Approve transfer |
 | POST | /api/v1/transfers/requests/:id/reject | JWT | Reject transfer |
 | GET | /api/v1/forecast | JWT | 7-day moving average forecast |
+| GET | /api/v1/notifications/stream | JWT | SSE real-time stream |
+| GET | /api/v1/push/vapid-public-key | JWT | Get VAPID public key |
+| POST | /api/v1/push/subscribe | JWT | Subscribe to Web Push |
+| DELETE | /api/v1/push/unsubscribe | JWT | Unsubscribe from Web Push |
 | GET | /health | None | Health check |
 
 ---
@@ -333,6 +389,9 @@ agent/
 | API_KEY | mepos_sec_key_prod_abc123 | API key for POS sync agent |
 | JWT_SECRET | change_me_in_production | JWT signing secret |
 | FRONTEND_URL | http://localhost | CORS allowed origin |
+| VAPID_PUBLIC_KEY | (none) | Web Push public key (generate with `npx web-push generate-vapid-keys`) |
+| VAPID_PRIVATE_KEY | (none) | Web Push private key |
+| VAPID_SUBJECT | mailto:admin@mepos.app | Contact email for push service |
 | NODE_ENV | production | Environment mode |
 
 ### Frontend (Vite env)

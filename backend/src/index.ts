@@ -15,6 +15,7 @@ import { tenantContextMiddleware } from './middleware/tenantContext';
 import { eventBus } from './services/event.service';
 import { setupNotificationDispatcher } from './services/notification-dispatcher';
 import { getUnreadCount } from './services/notification.service';
+import { sendPushForNotification } from './services/push.service';
 
 // Import Routes
 import authRouter from './routes/auth';
@@ -27,6 +28,7 @@ import agentsRouter from './routes/agents';
 import settingsRouter from './routes/settings';
 import tenantsRouter from './routes/tenants';
 import notificationsRouter from './routes/notifications';
+import pushRouter from './routes/push';
 
 dotenv.config();
 
@@ -98,6 +100,8 @@ app.use('/api/v1/tenants', authMiddleware, tenantContextMiddleware, tenantsRoute
 app.use('/api/v1/settings', authMiddleware, tenantContextMiddleware, settingsRouter);
 // Notification routes
 app.use('/api/v1/notifications', authMiddleware, tenantContextMiddleware, notificationsRouter);
+// Push notification subscription routes
+app.use('/api/v1/push', authMiddleware, tenantContextMiddleware, pushRouter);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
@@ -173,6 +177,8 @@ eventBus.on('notification:created', async ({ notification, minRole }: { notifica
     const payload = JSON.stringify({ type: 'notification', notification, unreadCount });
     client.res.write(`data: ${payload}\n\n`);
   });
+
+  sendPushForNotification(notification.tenant_id, notification, minRole);
 });
 
 // Config endpoint for frontend (no secrets exposed)

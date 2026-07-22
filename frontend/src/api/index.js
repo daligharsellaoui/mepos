@@ -120,6 +120,9 @@ export const api = {
   deleteTenant: (id) => client.delete(`/tenants/${id}`),
   suspendTenant: (id) => client.post(`/tenants/${id}/suspend`),
   activateTenant: (id) => client.post(`/tenants/${id}/activate`),
+  getVapidPublicKey: () => client.get('/push/vapid-public-key'),
+  pushSubscribe: (sub) => client.post('/push/subscribe', sub),
+  pushUnsubscribe: (endpoint) => client.delete('/push/unsubscribe', { data: { endpoint } }),
 }
 
 export default client

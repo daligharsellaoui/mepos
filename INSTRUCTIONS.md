@@ -1,6 +1,6 @@
 # Guide d'Utilisation et de Démarrage - mePOS STOCK
 
-> **Version:** 2.4.0  
+> **Version:** 3.0.0  
 > **Stack:** Vue 3 + JavaScript · Express + TypeScript · PostgreSQL · Docker
 
 ---
@@ -10,11 +10,12 @@
 2. [Structure du Projet](#2-structure-du-projet)
 3. [Démarrage Rapide (Docker)](#3-démarrage-rapide-docker)
 4. [Démarrage Manuel](#4-démarrage-manuel)
-5. [Agent de Synchronisation](#5-agent-de-synchronisation)
-6. [Comptes de Test et Rôles](#6-comptes-de-test-et-rôles)
-7. [Scénarios de Test](#7-scénarios-de-test)
-8. [Développement](#8-développement)
-9. [Commandes Utiles](#9-commandes-utiles)
+5. [Notifications Push](#5-notifications-push-web-push-api)
+6. [Agent de Synchronisation](#6-agent-de-synchronisation)
+7. [Comptes de Test et Rôles](#7-comptes-de-test-et-rôles)
+8. [Scénarios de Test](#8-scénarios-de-test)
+9. [Développement](#9-développement)
+10. [Commandes Utiles](#10-commandes-utiles)
 
 ---
 
@@ -129,13 +130,51 @@ DATABASE_URL=postgres://mepos_user:mepos_password@localhost:5432/mepos_stock
 API_KEY=mepos_sec_key_prod_abc123
 JWT_SECRET=change_me_in_production
 FRONTEND_URL=http://localhost:5173
+VAPID_PUBLIC_KEY=BJITpI6W3qCHlQcbrnUjJ7dRCtFKKKsOWlKyXiTfC076lEsxry7xCRVHABR40WK0LDdu7RE4fiqfV3OcNI6XG70
+VAPID_PRIVATE_KEY=PN7B1xNIjZ9CnOU5A04NrfFFg4TpMF2etOUKoj4AAdU
+VAPID_SUBJECT=mailto:admin@mepos.app
 ```
 
 ---
 
-## 5. Agent de Synchronisation
+## 5. Notifications Push (Web Push API)
 
-L'agent simule une caisse tactile locale qui envoie périodiquement ses ventes au serveur.
+L'application supporte les notifications en arrière-plan via le **Web Push API** (PWA).
+
+### Configuration
+
+```bash
+# Générer les clés VAPID (une seule fois)
+cd backend && npx web-push generate-vapid-keys
+
+# Ajouter les clés dans backend/.env :
+# VAPID_PUBLIC_KEY=<public-key>
+# VAPID_PRIVATE_KEY=<private-key>
+```
+
+Les clés générées ci-dessus sont déjà pré-remplies dans le `.env` ci-dessous.
+
+### Fonctionnement
+
+1. L'utilisateur se connecte → la permission de notification est demandée
+2. Le service worker (`/sw.js`) est enregistré
+3. L'abonnement push est envoyé au backend (`POST /api/v1/push/subscribe`)
+4. À chaque notification créée, le backend envoie une push notification aux utilisateurs ciblés
+5. Le service worker affiche la notification même si l'application est en arrière-plan
+6. Un clic sur la notification ouvre l'application à l'URL d'action
+
+### Support navigateur
+
+| Navigateur | Notifications en arrière-plan |
+|---|---|
+| **Chrome (Android)** | ✅ Oui |
+| **Firefox (Android)** | ✅ Oui |
+| **Safari (iOS 16.4+)** | ✅ Oui (après ajout à l'écran d'accueil) |
+| **Chrome/Firefox (Desktop)** | ✅ Oui |
+
+---
+
+## 6. Agent de Synchronisation
 
 ### Version Node.js (Recommandée)
 
@@ -154,7 +193,7 @@ python sync_agent.py       # Lancer l'agent
 
 ---
 
-## 6. Comptes de Test et Rôles
+## 7. Comptes de Test et Rôles
 
 | Profil | Utilisateur | Mot de passe | Droits |
 |--------|-------------|--------------|--------|
@@ -164,7 +203,7 @@ python sync_agent.py       # Lancer l'agent
 
 ---
 
-## 7. Scénarios de Test
+## 8. Scénarios de Test
 
 ### Scénario 1 : Création d'ingrédient et fiche technique (Admin)
 
@@ -195,7 +234,7 @@ python sync_agent.py       # Lancer l'agent
 
 ---
 
-## 8. Développement
+## 9. Développement
 
 ### Conventions du Projet
 
@@ -221,7 +260,7 @@ python sync_agent.py       # Lancer l'agent
 
 ---
 
-## 9. Commandes Utiles
+## 10. Commandes Utiles
 
 ```bash
 # Docker

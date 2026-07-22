@@ -30,6 +30,7 @@ export const useNotificationStore = defineStore('notifications', () => {
   })
 
   let eventSource = null
+  let pushSubscription = null
 
   async function fetchNotifications(reset = false) {
     if (isLoading.value) return
@@ -141,6 +142,62 @@ export const useNotificationStore = defineStore('notifications', () => {
     }
   }
 
+  async function registerServiceWorker() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+    if (!('Notification' in window) || Notification.permission === 'denied') return
+    if (Notification.permission === 'default') {
+      const result = await Notification.requestPermission()
+      if (result !== 'granted') return
+    }
+
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      await navigator.serviceWorker.ready
+
+      const existingSub = await reg.pushManager.getSubscription()
+      if (existingSub) {
+        pushSubscription = existingSub
+        return
+      }
+
+      const { data: keyRes } = await api.getVapidPublicKey()
+      if (keyRes.status !== 'success') return
+      const vapidKey = keyRes.data.publicKey
+      if (!vapidKey) return
+
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      })
+
+      pushSubscription = sub
+
+      await api.pushSubscribe({
+        endpoint: sub.endpoint,
+        keys: sub.toJSON().keys,
+      })
+    } catch (err) {
+      console.warn('[Push] registration error:', err)
+    }
+  }
+
+  async function unregisterPush() {
+    if (pushSubscription) {
+      try {
+        await api.pushUnsubscribe(pushSubscription.endpoint)
+        await pushSubscription.unsubscribe()
+      } catch (_) { /* noop */ }
+      pushSubscription = null
+    }
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+    const rawData = atob(base64)
+    return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)))
+  }
+
   function showDesktopNotification(notif) {
     if ('Notification' in window && Notification.permission === 'granted' && !document.hasFocus()) {
       try {
@@ -217,5 +274,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     fetchNotifications, fetchUnreadCount, markAsRead,
     markAllAsRead, archiveNotification, deleteNotification,
     setFilters, connectSSE, disconnectSSE,
+    requestDesktopPermission, registerServiceWorker, registerPush: registerServiceWorker,
+    unregisterPush,
   }
 })

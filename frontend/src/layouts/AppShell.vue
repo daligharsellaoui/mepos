@@ -30,11 +30,14 @@ onMounted(() => {
     app.setupNetworkListeners()
     app.fetchData(auth.user)
   }
+
+  notifStore.registerPush()
 })
 
 onUnmounted(() => {
   if (pollInterval) clearInterval(pollInterval)
   notifStore.disconnectSSE()
+  notifStore.unregisterPush()
 })
 
 const getRoleText = (role) => {

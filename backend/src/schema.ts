@@ -406,6 +406,21 @@ CREATE INDEX IF NOT EXISTS idx_notifications_priority ON notifications(tenant_id
 CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_entity ON notifications(tenant_id, entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_notification_prefs_user ON notification_preferences(tenant_id, user_id);
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    endpoint TEXT NOT NULL,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(tenant_id, user_id, endpoint)
+);
+
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(tenant_id, user_id);
 `;
 
 export async function initializeDatabase() {
