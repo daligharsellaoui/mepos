@@ -9,3 +9,7 @@ coverage/
 # Agent config (copy from sync_config.json.example)
 sync_config.json
 agent/sync_config.json
+
+# Temporary/scratch files
+id.txt
+todo.md
