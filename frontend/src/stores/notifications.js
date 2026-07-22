@@ -8,7 +8,7 @@ export const useNotificationStore = defineStore('notifications', () => {
   const isLoading = ref(false)
   const hasMore = ref(true)
   const total = ref(0)
-  const limit = 30
+  const limit = 5
   const offset = ref(0)
   const filters = ref({
     types: [],
@@ -32,13 +32,13 @@ export const useNotificationStore = defineStore('notifications', () => {
   let eventSource = null
   let pushSubscription = null
 
-  async function fetchNotifications(reset = false) {
+  async function fetchNotifications(reset = false, startOffset) {
     if (isLoading.value) return
     isLoading.value = true
 
     try {
       if (reset) {
-        offset.value = 0
+        offset.value = startOffset !== undefined ? startOffset : 0
         hasMore.value = true
       }
 

@@ -146,8 +146,7 @@ const totalPages = computed(() => Math.ceil(notifStore.total / notifStore.limit)
 
 function goToPage(page) {
   const newOffset = (page - 1) * notifStore.limit
-  notifStore.offset = newOffset
-  notifStore.fetchNotifications(true)
+  notifStore.fetchNotifications(true, newOffset)
 }
 
 function goToPrevPage() {
