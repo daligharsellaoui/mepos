@@ -235,7 +235,17 @@ export async function updateTenant(tenantId: number, input: UpdateTenantInput): 
     `UPDATE tenants SET ${fields.join(', ')} WHERE id = $${paramIdx} RETURNING *`,
     values
   );
-  return result.rows[0] || null;
+
+  const updatedTenant = result.rows[0] || null;
+  if (updatedTenant) {
+    eventBus.emit(Events.TENANT_UPDATED, {
+      tenantId,
+      name: updatedTenant.name,
+      changes: input,
+    });
+  }
+
+  return updatedTenant;
 }
 
 /**
@@ -388,6 +398,9 @@ export async function setTenantSetting(
     eventBus.emit(Events.SETTINGS_UPDATED, {
       tenantId, category, key,
     });
+    eventBus.emit(Events.TENANT_SETTINGS_CHANGED, {
+      tenantId, category, key,
+    });
     return newSetting;
   }
 
@@ -400,6 +413,9 @@ export async function setTenantSetting(
     [tenantId, category, key, storedValue, encrypt]
   );
   eventBus.emit(Events.SETTINGS_UPDATED, {
+    tenantId, category, key,
+  });
+  eventBus.emit(Events.TENANT_SETTINGS_CHANGED, {
     tenantId, category, key,
   });
   return result.rows[0];

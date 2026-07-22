@@ -158,6 +158,13 @@ export const api = {
   getMappingStats: () => client.get('/mappings/stats'),
   validateMappings: () => client.get('/mappings/validate'),
   importPosProducts: (data) => client.post('/mappings/import-pos', data),
+
+  // Activity Journal
+  getJournalEntries: (params) => client.get('/journal', { params }),
+  getJournalEntry: (id) => client.get(`/journal/${id}`),
+  getJournalEventTypes: () => client.get('/journal/event-types'),
+  getSaleExpansion: (ticketId) => client.get(`/journal/sale/${ticketId}/expansion`),
+  exportJournal: (params) => client.get('/journal/export', { params, responseType: 'blob' }),
 }
 
 export default client

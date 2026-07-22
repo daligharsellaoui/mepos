@@ -247,6 +247,19 @@ export async function updateUser(
       });
     }
 
+    // Emit USER_UPDATED / USER_ROLE_CHANGED for activity journal
+    eventBus.emit(Events.USER_UPDATED, {
+      tenantId: tid, userId, username: demoDb.users[idx].username,
+      changes: { role: role || demoDb.users[idx].role },
+    });
+    if (role && role !== demoDb.users[idx].role) {
+      eventBus.emit(Events.USER_ROLE_CHANGED, {
+        tenantId: tid, userId, username: demoDb.users[idx].username,
+        oldRole: demoDb.users[idx].role || '',
+        newRole: role,
+      });
+    }
+
     return safeUser(demoDb.users[idx]);
   }
 
@@ -302,7 +315,27 @@ export async function updateUser(
     throw new Error('Utilisateur non trouvé');
   }
 
-  return safeUser(result.rows[0]);
+  const updatedUser = result.rows[0];
+
+  // Emit USER_UPDATED / USER_ROLE_CHANGED for activity journal
+  eventBus.emit(Events.USER_UPDATED, {
+    tenantId: tid, userId, username: updatedUser.username,
+    changes: { role: updatedUser.role },
+  });
+  if (role) {
+    // Get old role to detect changes
+    const oldUserRes = await query('SELECT role FROM users WHERE id = $1 AND tenant_id = $2', [userId, tid]);
+    const oldRole = oldUserRes.rows[0]?.role;
+    if (oldRole && oldRole !== role) {
+      eventBus.emit(Events.USER_ROLE_CHANGED, {
+        tenantId: tid, userId, username: updatedUser.username,
+        oldRole,
+        newRole: role,
+      });
+    }
+  }
+
+  return safeUser(updatedUser);
 }
 
 // ──────────────────────────────────────────────

@@ -96,6 +96,12 @@ const routes = [
         component: () => import('../views/NotificationCenter.vue')
       },
       {
+        path: 'journal',
+        name: 'ActivityJournal',
+        component: () => import('../views/ActivityJournalView.vue'),
+        meta: { requiresAdmin: true }
+      },
+      {
         path: 'notifications/preferences',
         name: 'NotificationPreferences',
         component: () => import('../views/NotificationPreferences.vue')

@@ -1044,6 +1044,15 @@ export async function adjustStock(data: {
       });
     }
 
+    // Emit STOCK_ADJUSTED for activity journal
+    eventBus.emit(Events.INGREDIENT_UPDATED, {
+      tenantId: tid,
+      id: ingId,
+      name: demoDb.ingredients.find((i: any) => i.id === ingId)?.name || 'Inconnu',
+      changes: { type, delta, previousQty: currentQty, newQty },
+      source: 'web_application',
+    });
+
     getStockWarning(targetDeptId, ingId, undefined, null, tid);
 
     return { new_quantity: newQty, movement };
@@ -1111,6 +1120,16 @@ export async function adjustStock(data: {
         quantity: qtyVal, unit: ingData.unit || '',
       });
     }
+
+    // Emit STOCK_ADJUSTED for activity journal (also via INGREDIENT_UPDATED)
+    const ingResult2 = await query('SELECT name FROM ingredients WHERE id = $1 AND tenant_id = $2', [ingId, tid]);
+    eventBus.emit(Events.INGREDIENT_UPDATED, {
+      tenantId: tid,
+      id: ingId,
+      name: ingResult2.rows[0]?.name || 'Inconnu',
+      changes: { type, delta, newQty },
+      source: 'web_application',
+    });
 
     return { new_quantity: newQty, movement: movementInsert.rows[0] };
   } catch (err) {

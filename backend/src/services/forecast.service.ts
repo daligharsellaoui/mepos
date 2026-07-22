@@ -1,5 +1,6 @@
 import { Decimal } from 'decimal.js';
 import { query, isDemoMode, demoDb } from '../database';
+import { eventBus, Events } from './event.service';
 
 // ──────────────────────────────────────────────
 // TYPES
@@ -236,6 +237,16 @@ export async function getForecast(tenantId?: number | null): Promise<ForecastRes
   }
 
   const estimatedDailyRevenue = recipes.reduce((sum, r) => sum + r.avg_daily_revenue, 0);
+
+  // Emit forecast generated event for activity journal
+  // Use the resolved filter value if tenantId is not provided (null = platform admin)
+  eventBus.emit(Events.FORECAST_GENERATED, {
+    tenantId: tenantId === null ? undefined : (tenantId || filter || 1),
+    recipesCount: recipes.length,
+    ingredientsCount: ingredients.length,
+    daysAnalyzed,
+    generatedAt,
+  });
 
   return {
     generated_at: generatedAt, days_analyzed: daysAnalyzed, recipes, ingredients,

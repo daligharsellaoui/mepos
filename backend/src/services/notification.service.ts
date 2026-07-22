@@ -281,6 +281,22 @@ export async function createNotification(params: {
 
   const notif = result.rows[0];
   eventBus.emit('notification:created', { notification: notif, minRole });
+
+  // Emit NOTIFICATION_GENERATED for the activity journal
+  eventBus.emit(Events.NOTIFICATION_GENERATED, {
+    tenantId,
+    notificationId: notif.id,
+    type,
+    category,
+    priority,
+    title,
+    message: message || '',
+    entityType,
+    entityId,
+    createdBy,
+    assignedTo,
+  });
+
   return notif;
 }
 

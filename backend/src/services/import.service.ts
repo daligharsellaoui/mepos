@@ -254,6 +254,11 @@ export async function executeImport(
         if (existing) {
           ingredientIds.push(existing.id);
           stats.ingredientsReused++;
+          eventBus.emit(Events.IMPORT_INGREDIENT_REUSED, {
+            tenantId,
+            ingredientId: existing.id,
+            name: ing.name,
+          });
         } else {
           const newId = (demoDb.ingredients || []).length + 1;
           const newIngredient = {
@@ -272,6 +277,12 @@ export async function executeImport(
           demoDb.ingredients.push(newIngredient);
           ingredientIds.push(newId);
           stats.ingredientsCreated++;
+          eventBus.emit(Events.IMPORT_INGREDIENT_CREATED, {
+            tenantId,
+            ingredientId: newId,
+            name: ing.name,
+            source: 'web_application',
+          });
         }
       }
 
@@ -322,6 +333,11 @@ export async function executeImport(
           if (existingResult.rows.length > 0) {
             ingredientIds.push(existingResult.rows[0].id);
             stats.ingredientsReused++;
+            eventBus.emit(Events.IMPORT_INGREDIENT_REUSED, {
+              tenantId,
+              ingredientId: existingResult.rows[0].id,
+              name: ing.name,
+            });
           } else {
             const newIngResult = await client.query(
               `INSERT INTO ingredients (tenant_id, name, unit, purchase_price_per_unit, alert_threshold, purchase_unit, purchase_unit_price, conversion_factor)
@@ -339,6 +355,12 @@ export async function executeImport(
               name: ing.name,
               createdBy: userId,
               alertThreshold: 0
+            });
+            eventBus.emit(Events.IMPORT_INGREDIENT_CREATED, {
+              tenantId,
+              ingredientId: newIngResult.rows[0].id,
+              name: ing.name,
+              source: 'web_application',
             });
           }
         }

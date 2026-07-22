@@ -602,6 +602,69 @@ export async function initializeDatabase() {
       console.warn('Notification migration warning:', notifErr.message);
     }
 
+    // ============================================================
+    // Activity Journal Migration (Phase 3 — v3.6.0)
+    // ============================================================
+    try {
+      await query(`
+        DO $$ BEGIN
+          CREATE TYPE journal_source AS ENUM (
+            'web_application', 'legacy_pos_agent', 'api',
+            'synchronization_service', 'system', 'scheduler', 'forecast_engine'
+          );
+        EXCEPTION WHEN duplicate_object THEN null;
+        END $$;
+      `);
+      await query(`
+        DO $$ BEGIN
+          CREATE TYPE journal_severity AS ENUM ('info', 'notice', 'warning', 'error', 'critical');
+        EXCEPTION WHEN duplicate_object THEN null;
+        END $$;
+      `);
+      await query(`
+        CREATE TABLE IF NOT EXISTS activity_journal (
+            id BIGSERIAL PRIMARY KEY,
+            tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            event_id UUID NOT NULL DEFAULT gen_random_uuid(),
+            event_type VARCHAR(100) NOT NULL,
+            correlation_id VARCHAR(100),
+            entity_type VARCHAR(50),
+            entity_id VARCHAR(100),
+            performed_by_user_id INT REFERENCES users(id) ON DELETE SET NULL,
+            performed_by_role VARCHAR(20),
+            performed_by_source journal_source NOT NULL DEFAULT 'web_application',
+            occurred_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            severity journal_severity NOT NULL DEFAULT 'info',
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            metadata JSONB NOT NULL DEFAULT '{}',
+            ip_address INET,
+            user_agent TEXT,
+            session_id VARCHAR(100),
+            connector_id INT REFERENCES agents(id) ON DELETE SET NULL,
+            external_reference VARCHAR(255),
+            previous_values JSONB,
+            new_values JSONB,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Activity journal indexes
+      await query(`CREATE INDEX IF NOT EXISTS idx_activity_journal_tenant ON activity_journal(tenant_id, occurred_at DESC)`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_activity_journal_event_type ON activity_journal(tenant_id, event_type, occurred_at DESC)`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_activity_journal_entity ON activity_journal(tenant_id, entity_type, entity_id, occurred_at DESC)`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_activity_journal_user ON activity_journal(tenant_id, performed_by_user_id, occurred_at DESC)`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_activity_journal_source ON activity_journal(tenant_id, performed_by_source, occurred_at DESC)`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_activity_journal_severity ON activity_journal(tenant_id, severity, occurred_at DESC)`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_activity_journal_correlation ON activity_journal(tenant_id, correlation_id)`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_activity_journal_date ON activity_journal(tenant_id, occurred_at)`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_activity_journal_metadata ON activity_journal USING gin(metadata)`);
+
+      console.log('Activity Journal migration completed.');
+    } catch (journalErr: any) {
+      console.warn('Activity Journal migration warning:', journalErr.message);
+    }
+
     // Detect and fix tables that were just upgraded from single-tenant (missing tenant_id data)
     const checkNullTenant = await query(`
       SELECT count(*) FROM users WHERE tenant_id IS NULL

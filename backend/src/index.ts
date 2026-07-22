@@ -16,6 +16,7 @@ import { eventBus } from './services/event.service';
 import { setupNotificationDispatcher } from './services/notification-dispatcher';
 import { getUnreadCount, cleanupExpiredNotifications } from './services/notification.service';
 import { sendPushForNotification } from './services/push.service';
+import { setupActivityJournal } from './services/activityJournal.service';
 
 // Import Routes
 import authRouter from './routes/auth';
@@ -111,6 +112,10 @@ app.use('/api/v1/suppliers', authMiddleware, tenantContextMiddleware, suppliersR
 
 // Import routes (CSV product import)
 app.use('/api/v1/import/products', authMiddleware, tenantContextMiddleware, importRouter);
+
+// Activity Journal routes
+import journalRouter from './routes/journal';
+app.use('/api/v1/journal', authMiddleware, tenantContextMiddleware, journalRouter);
 
 // Product mapping routes (POS Product Mapping)
 app.use('/api/v1/mappings', authMiddleware, tenantContextMiddleware, mappingsRouter);
@@ -229,6 +234,9 @@ async function startServer() {
 
   // 3. Set up notification dispatcher
   setupNotificationDispatcher();
+
+  // 3b. Set up Activity Journal (business event logging)
+  setupActivityJournal();
 
   // 4. Schedule notification cleanup (every 15 minutes)
   setInterval(async () => {

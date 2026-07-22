@@ -132,6 +132,19 @@ export async function syncTickets(
         });
       }
 
+      // Emit SALE_IMPORTED event for activity journal
+      eventBus.emit(Events.SALE_IMPORTED, {
+        tenantId: tid,
+        ticketId,
+        externalTicketId: external_ticket_id,
+        totalAmount: total_amount,
+        itemsCount: resolvedItems.length,
+        departmentName: department.name,
+        ticketDate: ticket_date,
+        connectorType,
+        correlationId: `sale-${external_ticket_id}-${tid}-${Date.now()}`,
+      });
+
       const result = await processSaleDeduction(null, stockDeptId, stockDeptId, department.name, resolvedItems, ticketId, tid);
       deductedStocks.push(...result.deductedStocks);
       warnings.push(...result.warnings);
@@ -200,6 +213,19 @@ export async function syncTickets(
           [ticketId, tid, item.recipe_id, item.quantity, item.unit_price]
         );
       }
+
+      // Emit SALE_IMPORTED event for activity journal
+      eventBus.emit(Events.SALE_IMPORTED, {
+        tenantId: tid,
+        ticketId,
+        externalTicketId: external_ticket_id,
+        totalAmount: total_amount,
+        itemsCount: resolvedItems.length,
+        departmentName: department.name,
+        ticketDate: ticket_date,
+        connectorType,
+        correlationId: `sale-${external_ticket_id}-${tid}-${Date.now()}`,
+      });
 
       const result = await processSaleDeduction(client, deptId, stockDeptId, department.name, resolvedItems, ticketId, tid);
       deductedStocks.push(...result.deductedStocks);
