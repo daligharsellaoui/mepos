@@ -398,23 +398,29 @@ export async function getAllIngredients(tenantId?: number | null): Promise<any[]
       };
     });
   }
-  if (filter) {
-    const result = await query(
-      `SELECT i.*, s.name as preferred_supplier_name, s.company_name as preferred_supplier_company
-       FROM ingredients i
-       LEFT JOIN suppliers s ON i.preferred_supplier_id = s.id
-       WHERE i.tenant_id = $1 ORDER BY i.id`,
-      [filter]
-    );
-    return result.rows;
+  async function getAllIngredientsWithSupplier(whereClause: string, params: any[]): Promise<any[]> {
+    try {
+      const result = await query(
+        `SELECT i.*, s.name as preferred_supplier_name, s.company_name as preferred_supplier_company
+         FROM ingredients i
+         LEFT JOIN suppliers s ON i.preferred_supplier_id = s.id
+         ${whereClause} ORDER BY i.id`,
+        params
+      );
+      return result.rows;
+    } catch {
+      const result = await query(
+        `SELECT i.*, NULL as preferred_supplier_name, NULL as preferred_supplier_company
+         FROM ingredients i ${whereClause} ORDER BY i.id`,
+        params
+      );
+      return result.rows;
+    }
   }
-  const result = await query(
-    `SELECT i.*, s.name as preferred_supplier_name, s.company_name as preferred_supplier_company
-     FROM ingredients i
-     LEFT JOIN suppliers s ON i.preferred_supplier_id = s.id
-     ORDER BY i.id`
-  );
-  return result.rows;
+  if (filter) {
+    return getAllIngredientsWithSupplier('WHERE i.tenant_id = $1', [filter]);
+  }
+  return getAllIngredientsWithSupplier('', []);
 }
 
 export async function createIngredient(data: {
