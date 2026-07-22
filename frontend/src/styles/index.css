@@ -563,6 +563,13 @@ body {
 .score-bar-fill { height: 100%; border-radius: 3px; background: var(--color-score-fill); transition: width 0.5s ease; }
 .score-bar-value { font-size: 0.72rem; font-weight: 600; width: 32px; text-align: right; }
 .score-meta { margin-top: 0.5rem; font-size: 0.78rem; color: var(--text-muted); }
+.score-breakdown { margin-top: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 0.5rem; }
+.score-breakdown-title { font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; }
+.score-breakdown-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0; font-size: 0.78rem; }
+.score-breakdown-label { flex: 1; color: var(--text-primary); }
+.score-breakdown-count { width: 28px; text-align: right; color: var(--text-muted); }
+.score-breakdown-qty { width: 56px; text-align: right; color: var(--text-secondary); }
+.score-breakdown-cost { width: 70px; text-align: right; color: var(--text-secondary); font-weight: 500; }
 
 /* ── Ingredients Modal ── */
 .ingredients-modal-overlay {

@@ -206,7 +206,17 @@ async function handleDelete() {
           </div>
         </div>
         <div class="score-meta">
-          <span>{{ score.details.ingredient_count }} ingrédient(s) · {{ score.details.loss_incidents }} perte(s) · {{ score.details.total_loss_qty }} {{ ingredients[0]?.unit || 'u' }} perdus</span>
+          <span>{{ score.details.ingredient_count }} ingrédient(s) · {{ score.details.loss_incidents }} perte(s)</span>
+          <span style="margin-left: 0.5rem;">{{ score.details.total_loss_qty }} u. perdues · {{ score.details.total_loss_cost.toFixed(3) }} TND coût</span>
+        </div>
+        <div v-if="score.loss_breakdown && score.loss_breakdown.length" class="score-breakdown">
+          <div class="score-breakdown-title">Pertes par motif</div>
+          <div v-for="b in score.loss_breakdown" :key="b.reason" class="score-breakdown-row">
+            <span class="score-breakdown-label">{{ b.label }}</span>
+            <span class="score-breakdown-count">{{ b.count }}x</span>
+            <span class="score-breakdown-qty">{{ b.qty }} u.</span>
+            <span class="score-breakdown-cost">{{ b.cost.toFixed(3) }} TND</span>
+          </div>
         </div>
       </Card>
 

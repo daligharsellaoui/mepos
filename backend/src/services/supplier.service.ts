@@ -581,13 +581,23 @@ export async function getSupplierScore(id: number, tenantId?: number | null): Pr
 
     const totalLossQty = losses.reduce((s: number, l: any) => s + l.quantity, 0);
     const totalLossCost = losses.reduce((s: number, l: any) => s + l.cost_loss, 0);
+    const totalOppCost = losses.reduce((s: number, l: any) => s + (l.opportunity_loss || 0), 0);
     const totalPurchasedQty = purchaseMovements.reduce((s: number, m: any) => s + m.quantity, 0);
     const totalPurchasedCost = purchaseMovements.reduce((s: number, m: any) => {
       const ing = ingredients.find((i: any) => i.id === m.ingredient_id);
       return s + m.quantity * (ing?.purchase_price_per_unit ?? 0);
     }, 0);
 
-    return calculateScore(ingredients.length, losses.length, totalLossQty, totalLossCost, totalPurchasedQty, totalPurchasedCost);
+    const lossByReason: Record<string, { count: number; qty: number; cost: number }> = {};
+    for (const l of losses) {
+      const reason = l.loss_reason || 'other';
+      if (!lossByReason[reason]) lossByReason[reason] = { count: 0, qty: 0, cost: 0 };
+      lossByReason[reason].count++;
+      lossByReason[reason].qty += l.quantity;
+      lossByReason[reason].cost += l.cost_loss;
+    }
+
+    return calculateScore(ingredients.length, losses.length, totalLossQty, totalLossCost, totalOppCost, totalPurchasedQty, totalPurchasedCost, lossByReason);
   }
 
   const result = await query(
@@ -599,6 +609,7 @@ export async function getSupplierScore(id: number, tenantId?: number | null): Pr
        SELECT
          COALESCE(SUM(l.quantity), 0) as total_loss_qty,
          COALESCE(SUM(l.cost_loss), 0) as total_loss_cost,
+         COALESCE(SUM(l.opportunity_loss), 0) as total_opp_cost,
          COUNT(l.id) as loss_incidents
        FROM ingredient_losses l
        JOIN supplier_ingredients si ON si.id = l.ingredient_id
@@ -611,11 +622,19 @@ export async function getSupplierScore(id: number, tenantId?: number | null): Pr
        FROM stock_movements sm
        JOIN supplier_ingredients si ON si.id = sm.ingredient_id
        WHERE sm.type = 'purchase' AND sm.tenant_id = $2
+     ),
+     breakdown AS (
+       SELECT l.loss_reason, COUNT(*) as cnt, SUM(l.quantity) as qty, SUM(l.cost_loss) as cost
+       FROM ingredient_losses l
+       JOIN supplier_ingredients si ON si.id = l.ingredient_id
+       WHERE l.tenant_id = $2
+       GROUP BY l.loss_reason
      )
      SELECT
        (SELECT COUNT(*) FROM supplier_ingredients) as ingredient_count,
        ls.*,
-       ps.*
+       ps.*,
+       (SELECT json_agg(json_build_object('reason', reason, 'count', cnt, 'qty', qty, 'cost', cost)) FROM breakdown) as loss_breakdown
      FROM loss_stats ls, purchase_stats ps`,
     [id, tid]
   );
@@ -626,14 +645,17 @@ export async function getSupplierScore(id: number, tenantId?: number | null): Pr
   return calculateScore(
     row.ingredient_count, row.loss_incidents,
     parseFloat(row.total_loss_qty) || 0, parseFloat(row.total_loss_cost) || 0,
-    parseFloat(row.total_purchased_qty) || 0, parseFloat(row.total_purchased_cost) || 0
+    parseFloat(row.total_opp_cost) || 0,
+    parseFloat(row.total_purchased_qty) || 0, parseFloat(row.total_purchased_cost) || 0,
+    row.loss_breakdown || {}
   );
 }
 
 function calculateScore(
   ingredientCount: number, lossIncidents: number,
-  totalLossQty: number, totalLossCost: number,
-  totalPurchasedQty: number, totalPurchasedCost: number
+  totalLossQty: number, totalLossCost: number, totalOppCost: number,
+  totalPurchasedQty: number, totalPurchasedCost: number,
+  lossBreakdown: any
 ): any {
   let wasteRatioScore: number;
   if (totalPurchasedQty > 0) {
@@ -661,6 +683,25 @@ function calculateScore(
 
   const finalScore = Math.round(wasteRatioScore * 0.5 + frequencyScore * 0.3 + costImpactScore * 0.2);
 
+  const reasonLabels: Record<string, string> = {
+    spoilage: 'Périmé',
+    preparation_error: 'Erreur préparation',
+    overproduction: 'Surproduction',
+    theft: 'Vol',
+    customer_complaint: 'Plainte client',
+    counting_adjustment: 'Ajustement inventaire',
+  };
+
+  const breakdown = Array.isArray(lossBreakdown)
+    ? lossBreakdown.map((b: any) => ({
+        reason: b.reason,
+        label: reasonLabels[b.reason] || b.reason,
+        count: parseInt(b.count, 10) || 0,
+        qty: parseFloat(parseFloat(b.qty).toFixed(2)),
+        cost: parseFloat(parseFloat(b.cost).toFixed(2)),
+      }))
+    : [];
+
   return {
     score: Math.min(finalScore, 100),
     components: {
@@ -673,9 +714,11 @@ function calculateScore(
       loss_incidents: lossIncidents,
       total_loss_qty: parseFloat(totalLossQty.toFixed(2)),
       total_loss_cost: parseFloat(totalLossCost.toFixed(2)),
+      total_opportunity_cost: parseFloat(totalOppCost.toFixed(2)),
       total_purchased_qty: parseFloat(totalPurchasedQty.toFixed(2)),
       total_purchased_cost: parseFloat(totalPurchasedCost.toFixed(2)),
     },
+    loss_breakdown: breakdown,
     label: scoreLabel(finalScore),
   };
 }
