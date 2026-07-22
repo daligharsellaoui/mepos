@@ -1,6 +1,6 @@
 # mePOS STOCK — Architecture Document
 
-> **Version:** 3.0.0  
+> **Version:** 3.4.0  
 > **Last Updated:** July 22, 2026  
 > **Stack:** Vue 3 + JavaScript (Frontend) · Express + TypeScript (Backend) · PostgreSQL · Docker
 
@@ -33,12 +33,15 @@ mePOS-STOCK/
 │   │   ├── simulator.ts            # Background sales simulator
 │   │   ├── services/               # Business logic layer
 │   │   │   ├── auth.service.ts     # User CRUD, login, bcrypt wrappers
-│   │   │   ├── stock.service.ts    # Stock read/write, deductions, loss calc
+│   │   │   ├── stock.service.ts    # Stock read/write, deductions, loss calc + STOCK_RECOVERED
 │   │   │   ├── sales.service.ts    # Ticket sync, stats, history
 │   │   │   ├── loss.service.ts     # Loss creation & querying
 │   │   │   ├── transfer.service.ts # Transfer execution & approval
 │   │   │   ├── inventory.service.ts# CRUD: depts, ingredients, recipes, movements, adjustments
 │   │   │   ├── forecast.service.ts # 7-day moving average, depletion analysis
+│   │   │   ├── event.service.ts    # EventEmitter with typed Events enum (48 events)
+│   │   │   ├── notification.service.ts # CRUD, dedup, per-user reads, cleanup
+│   │   │   ├── notification-dispatcher.ts # 40+ event → notification handlers
 │   │   │   ├── push.service.ts     # Web Push subscription management & sending
 │   │   │   └── __tests__/          # Vitest unit tests
 │   │   │       ├── auth.service.test.ts
@@ -50,6 +53,7 @@ mePOS-STOCK/
 │   │       ├── transfers.ts
 │   │       ├── inventory.ts        # Depts, ingredients, recipes, stocks, movements, adjustments
 │   │       ├── forecast.ts
+│   │       ├── notifications.ts    # 8 notification endpoints + preferences
 │   │       └── push.ts             # Web Push subscription management
 │   ├── dist/                       # Compiled JS
 │   ├── logs/                       # Morgan access logs
@@ -68,8 +72,8 @@ mePOS-STOCK/
 │   │   │   └── index.js            # Vue Router with auth guards
 │   │   ├── stores/                 # Pinia stores
 │   │   │   ├── auth.js             # Session, login, logout, offline fallback
-│   │   │   ├── app.js              # Data, offline queue, alerts, polling
-│   │   │   └── notifications.js    # SSE, push subscription, fetch/mark/archive
+│   │   │   ├── app.js              # Data, offline queue, alerts, polling (30s)
+│   │   │   └── notifications.js    # SSE (with dedup), push sub, per-user reads
 │   │   ├── composables/            # Vue composables (reusable logic)
 │   │   │   ├── useOffline.js       # Online/offline detection
 │   │   │   └── usePolling.js       # Generic API polling
@@ -77,16 +81,16 @@ mePOS-STOCK/
 │   │   │   └── AppShell.vue        # Sidebar + MobileNav + Content + Alerts
 │   │   ├── components/
 │   │   │   ├── base/               # Design system components
-│   │   │   │   ├── Badge.vue
-│   │   │   │   ├── Card.vue
-│   │   │   │   ├── EmptyState.vue
-│   │   │   │   ├── ErrorBoundary.vue
-│   │   │   │   ├── Modal.vue
-│   │   │   │   ├── Skeleton.vue
-│   │   │   │   └── Toast.vue
 │   │   │   ├── layout/
 │   │   │   │   ├── Sidebar.vue     # Desktop navigation
 │   │   │   │   └── MobileNav.vue   # Mobile bottom navigation
+│   │   │   ├── notifications/      # Notification UI components
+│   │   │   │   ├── NotificationBell.vue
+│   │   │   │   ├── NotificationCard.vue
+│   │   │   │   ├── NotificationDrawer.vue
+│   │   │   │   ├── NotificationDropdown.vue
+│   │   │   │   ├── ToastItem.vue
+│   │   │   │   └── ToastProvider.vue
 │   │   │   └── forecast/
 │   │   │       └── ForecastPanel.vue # Critical stocks, depletion timeline, reorder
 │   │   ├── views/                  # Page components (lazy-loaded)
@@ -237,48 +241,65 @@ router.beforeEach((to, from, next) => {
 
 ---
 
-## Notification System
+## Notification System (v3.2.0+)
+
+### Architecture
+Business events → `eventBus.emit()` → `notification-dispatcher.ts` → `createNotification()` with dedup_key → DB → SSE/Web Push → Frontend
+
+### Key Features (v3.4.0)
+- **Deduplication**: Notifications carry `dedup_key`; creation skips if active notification exists
+- **Per-user read state**: `notification_reads` table tracks reads per-user, not globally
+- **Recovery events**: Stock recovered → deactivates old low/critical/out notifications
+- **Event-driven generation**: Notifications created from business events, NOT from page refreshes
+- **Expiration**: `expires_at` column; auto-archived every 15min by `cleanupExpiredNotifications()`
+
+### Database Tables
+
+| Table | Purpose | Added |
+|---|---|---|
+| `notifications` | Notification records with dedup_key, expires_at | v1.0 |
+| `notification_reads` | Per-user read state tracking | v3.2.0 |
+| `notification_preferences` | Per-user notification category preferences | v1.0 |
+| `push_subscriptions` | Web Push subscription endpoints | v3.0.0 |
 
 ### Real-time (SSE)
 - **Endpoint:** `GET /api/v1/notifications/stream?token=<jwt>`
 - Each authenticated client connects to an SSE stream scoped to their tenant
 - Broadcast filtering: `assigned_to` (user-specific), `minRole` (role-based), or tenant-wide
-- Fallback polling every 15s via `fetchUnreadCount()`
+- Fallback polling for unread count every 30s
 
 ### Background Push (Web Push API)
 - **PWA manifest** at `/manifest.json` enables "Add to Home Screen"
 - **Service worker** at `/sw.js` handles `push` events (shows system notification) and `notificationclick` (opens app)
-- **Subscription flow:** App registers SW → gets VAPID public key from `GET /api/v1/push/vapid-public-key` → calls `PushManager.subscribe()` → sends subscription to `POST /api/v1/push/subscribe`
+- **Subscription flow:** App registers SW → gets VAPID public key → calls `PushManager.subscribe()` → sends subscription to `POST /api/v1/push/subscribe`
 - **Sending:** On `notification:created`, the backend calls `sendPushForNotification()` which targets `assigned_to` user or all users matching `minRole`
-- **VAPID keys:** Set `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` in backend env. Generate with:
-  ```bash
-  npx web-push generate-vapid-keys
-  ```
-  If not set, push silently skips (SSE still works).
 
 ### Notification Routing Rules
 
 | Notification Type | Target | Mechanism |
 |---|---|---|
-| Transfer requested | All managers | `minRole: 'manager'` → per-user duplicates |
+| Transfer requested | All managers | `minRole: 'manager'` → per-user copies via `SELECT ... WHERE role = ANY(...)` |
 | Transfer completed | Requester (cook) | `assignedTo: requestedBy` |
-| Transfer rejected | Requester (cook) | `assignedTo: requestedBy` |
 | Loss declared | All managers | `minRole: 'manager'` |
-| Low stock / stock out / critical | Managers / Admins | `minRole` + tenant fallback threshold |
+| Low stock / stock out / critical | Managers / Admins | `minRole` + dedup_key |
+| Stock recovered | — | Deactivates old low/critical/out notifications |
 | User login | The user themself | `assignedTo: userId` |
-| Ingredient CRUD | All admins | `minRole: 'admin'` |
-| Sync / Agent events | Admins | `minRole: 'admin'` |
+| Agent disconnect/reconnect | Admins | `minRole: 'admin'` + dedup |
 
-### Low Stock Thresholds
-- Uses `ingredient.alert_threshold` if defined (> 0)
-- Falls back to tenant setting `stock_alert_threshold` (category `notifications`)
-- Default: 10 units
+### Notification Service Functions (`notification.service.ts`)
 
-### New Tables (v3.0.0)
-
-| Table | Purpose |
-|---|---|
-| `push_subscriptions` | Stores Web Push subscription endpoints per user |
+| Function | Purpose |
+|----------|---------|
+| `createNotification()` | Creates notification with dedup check (returns existing if match) |
+| `getNotifications()` | Paginated with per-user read state via LEFT JOIN |
+| `getUnreadCount()` | Per-user count excluding `notification_reads` |
+| `markAsRead()` | Insert into `notification_reads` (per-user, no global contamination) |
+| `markAllAsRead()` | Batch insert via `unnest` |
+| `buildDedupKey()` | Deterministic dedup key from event type + entity |
+| `findActiveNotificationByDedupKey()` | Check for existing active notification |
+| `deactivateNotificationsByDedupKey()` | Archive all matching a prefix pattern |
+| `cleanupExpiredNotifications()` | Archive expired (runs every 15 min) |
+| `getUsersForRole()` | Get users with role >= minRole (PG mode FIXED) |
 
 ---
 
@@ -314,6 +335,14 @@ router.beforeEach((to, from, next) => {
 | POST | /api/v1/transfers/requests/:id/validate | JWT | Approve transfer |
 | POST | /api/v1/transfers/requests/:id/reject | JWT | Reject transfer |
 | GET | /api/v1/forecast | JWT | 7-day moving average forecast |
+| GET | /api/v1/notifications | JWT | List notifications (paginated) |
+| GET | /api/v1/notifications/unread-count | JWT | Unread count |
+| PUT | /api/v1/notifications/:id/read | JWT | Mark as read |
+| PUT | /api/v1/notifications/read-all | JWT | Mark all as read |
+| PUT | /api/v1/notifications/:id/archive | JWT | Archive notification |
+| DELETE | /api/v1/notifications/:id | JWT | Delete notification |
+| GET | /api/v1/notifications/preferences | JWT | Get preferences |
+| PUT | /api/v1/notifications/preferences/:category | JWT | Update preferences |
 | GET | /api/v1/notifications/stream | JWT | SSE real-time stream |
 | GET | /api/v1/push/vapid-public-key | JWT | Get VAPID public key |
 | POST | /api/v1/push/subscribe | JWT | Subscribe to Web Push |

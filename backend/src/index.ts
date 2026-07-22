@@ -14,7 +14,7 @@ import { authMiddleware } from './routes/auth';
 import { tenantContextMiddleware } from './middleware/tenantContext';
 import { eventBus } from './services/event.service';
 import { setupNotificationDispatcher } from './services/notification-dispatcher';
-import { getUnreadCount } from './services/notification.service';
+import { getUnreadCount, cleanupExpiredNotifications } from './services/notification.service';
 import { sendPushForNotification } from './services/push.service';
 
 // Import Routes
@@ -230,7 +230,19 @@ async function startServer() {
   // 3. Set up notification dispatcher
   setupNotificationDispatcher();
 
-  // 4. Start listening
+  // 4. Schedule notification cleanup (every 15 minutes)
+  setInterval(async () => {
+    try {
+      const count = await cleanupExpiredNotifications();
+      if (count > 0) {
+        console.log(`[Cleanup] Archived ${count} expired notification(s).`);
+      }
+    } catch (err: any) {
+      console.error('[Cleanup] Error archiving expired notifications:', err.message);
+    }
+  }, 15 * 60 * 1000);
+
+  // 5. Start listening
   app.listen(PORT, () => {
     console.log(`[mePOS STOCK API] Server is running on port ${PORT} in ${isDemoMode ? 'DEMO' : 'PRODUCTION'} mode.`);
     
