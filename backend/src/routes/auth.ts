@@ -78,11 +78,21 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
   const authHeader = req.headers.authorization;
   const apiKey = req.headers['x-api-key'];
 
-  // Try JWT first
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.split(' ')[1];
+  // Try query token first (SSE fallback — EventSource can't set headers)
+  const queryToken = req.query.token as string | undefined;
+  if (queryToken) {
     try {
-      const decoded = verifyToken(token);
+      const decoded = verifyToken(queryToken);
+      (req as any).user = decoded;
+      return next();
+    } catch { /* fall through */ }
+  }
+
+  // Try JWT from Authorization header
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const bearerToken = authHeader.split(' ')[1];
+    try {
+      const decoded = verifyToken(bearerToken);
       (req as any).user = decoded;
       return next();
     } catch (err: any) {

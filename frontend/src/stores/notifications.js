@@ -177,7 +177,10 @@ export const useNotificationStore = defineStore('notifications', () => {
       eventSource.close()
     }
 
-    const url = `/api/v1/notifications/stream?token=${encodeURIComponent(token)}`
+    const base = import.meta.env.VITE_API_URL || '/api/v1'
+    const baseOrigin = base.replace('/api/v1', '').replace(/\/+$/, '') || ''
+    const url = `${baseOrigin}/api/v1/notifications/stream?token=${encodeURIComponent(token)}`
+    console.debug('[Notifications] SSE connecting to:', url)
 
     eventSource = new EventSource(url)
 

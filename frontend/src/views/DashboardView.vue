@@ -339,7 +339,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
         <button
           class="touch-btn touch-btn-secondary"
           style="padding: 0.4rem 1rem; min-height: 36px; font-size: 0.85rem;"
-          @click="router.push('/losses')"
+          @click="router.push('/app/losses')"
         >
           + Déclarer perte
         </button>
@@ -526,7 +526,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
         <button
           class="touch-btn touch-btn-secondary"
           style="padding: 0.4rem 1rem; min-height: 36px; font-size: 0.85rem;"
-          @click="router.push('/transfers')"
+          @click="router.push('/app/transfers')"
         >
           Transfert
         </button>

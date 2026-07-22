@@ -8,6 +8,18 @@ const router = Router();
 router.use(authMiddleware);
 router.use(tenantContextMiddleware);
 
+function requireRole(...roles: string[]) {
+  return (req: Request, res: Response, next: any) => {
+    if (!req.user) {
+      return res.status(401).json({ status: 'error', message: 'Authentification requise.' });
+    }
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ status: 'error', message: 'Accès refusé. Rôle insuffisant.' });
+    }
+    next();
+  };
+}
+
 router.post('/', async (req: Request, res: Response) => {
   const { source_department_id, destination_department_id, ingredient_id, quantity } = req.body;
 
@@ -84,7 +96,7 @@ router.post('/requests', async (req: Request, res: Response) => {
  * POST /api/v1/transfers/requests/:id/validate
  * Approve and execute a transfer request
  */
-router.post('/requests/:id/validate', async (req: Request, res: Response) => {
+router.post('/requests/:id/validate', requireRole('admin', 'manager'), async (req: Request, res: Response) => {
   const { id } = req.params;
   const { validated_by } = req.body;
 
@@ -105,7 +117,7 @@ router.post('/requests/:id/validate', async (req: Request, res: Response) => {
  * POST /api/v1/transfers/requests/:id/reject
  * Reject a transfer request
  */
-router.post('/requests/:id/reject', async (req: Request, res: Response) => {
+router.post('/requests/:id/reject', requireRole('admin', 'manager'), async (req: Request, res: Response) => {
   const { id } = req.params;
   const { validated_by } = req.body;
 
