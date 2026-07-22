@@ -57,6 +57,11 @@ const toggleOffline = () => {
   app.isOffline = !app.isOffline
 }
 
+const handleLogout = async () => {
+  await auth.logout()
+  window.location.href = '/login'
+}
+
 function toggleDropdown() {
   showDropdown.value = !showDropdown.value
 }
@@ -97,7 +102,7 @@ function toggleDropdown() {
           <button
             class="btn-logout"
             title="Se déconnecter"
-            @click="auth.logout(); router.push('/login')"
+            @click="handleLogout"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
