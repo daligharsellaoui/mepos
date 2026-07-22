@@ -305,6 +305,16 @@ export async function executeImport(
       stats.recipesCreated++;
       stats.productsCreated++;
 
+      // Emit PRODUCT_CREATED event
+      eventBus.emit(Events.PRODUCT_CREATED, {
+        tenantId,
+        productId: recipeId,
+        name: row.productName,
+        salePrice: row.sellingPrice,
+        source: 'web_application',
+        createdBy: userId,
+      });
+
       // Create recipe ingredients
       for (let i = 0; i < ingredientIds.length; i++) {
         const ri = {
@@ -395,7 +405,15 @@ export async function executeImport(
           );
         }
 
-        // Emit recipe created event
+        // Emit product created and recipe created events
+        eventBus.emit(Events.PRODUCT_CREATED, {
+          tenantId,
+          productId: recipeId,
+          name: row.productName,
+          salePrice: row.sellingPrice,
+          source: 'web_application',
+          createdBy: userId,
+        });
         eventBus.emit(Events.RECIPE_CREATED, {
           tenantId,
           recipeId,

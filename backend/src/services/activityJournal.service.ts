@@ -1013,6 +1013,89 @@ export function setupActivityJournal() {
     });
   });
 
+  // ── Product Events ──
+  eventBus.on(Events.PRODUCT_CREATED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'product.created',
+      correlationId: data.correlationId,
+      entityType: 'product',
+      entityId: String(data.productId || data.recipeId),
+      performedByUserId: data.createdBy,
+      performedBySource: data.source || 'web_application',
+      severity: 'notice',
+      title: 'Produit créé',
+      description: `Le produit "${data.name}" a été créé.`,
+      metadata: { name: data.name, salePrice: data.salePrice },
+    });
+  });
+
+  eventBus.on(Events.PRODUCT_UPDATED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'product.updated',
+      correlationId: data.correlationId,
+      entityType: 'product',
+      entityId: String(data.productId || data.recipeId),
+      performedByUserId: data.updatedBy,
+      performedBySource: data.source || 'web_application',
+      severity: 'info',
+      title: 'Produit mis à jour',
+      description: `Le produit "${data.name}" a été modifié.`,
+      metadata: { name: data.name, changes: data.changes },
+      previousValues: data.previousValues,
+      newValues: data.newValues,
+    });
+  });
+
+  eventBus.on(Events.PRODUCT_DELETED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'product.deleted',
+      correlationId: data.correlationId,
+      entityType: 'product',
+      entityId: String(data.productId || data.recipeId),
+      performedByUserId: data.deletedBy,
+      performedBySource: data.source || 'web_application',
+      severity: 'warning',
+      title: 'Produit supprimé',
+      description: `Le produit "${data.name}" a été supprimé.`,
+      metadata: { name: data.name },
+    });
+  });
+
+  eventBus.on(Events.PRODUCT_RECIPE_ATTACHED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'product.recipe_attached',
+      correlationId: data.correlationId,
+      entityType: 'product',
+      entityId: String(data.recipeId),
+      performedByUserId: data.updatedBy,
+      performedBySource: data.source || 'web_application',
+      severity: 'info',
+      title: 'Recette attachée au produit',
+      description: `La recette "${data.name}" a été liée au produit (${data.ingredientsCount} ingrédients).`,
+      metadata: { name: data.name, ingredientsCount: data.ingredientsCount },
+    });
+  });
+
+  eventBus.on(Events.PRODUCT_RECIPE_MODIFIED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'product.recipe_modified',
+      correlationId: data.correlationId,
+      entityType: 'product',
+      entityId: String(data.recipeId),
+      performedByUserId: data.updatedBy,
+      performedBySource: data.source || 'web_application',
+      severity: 'info',
+      title: 'Recette du produit modifiée',
+      description: `Les ingrédients de "${data.name}" ont été modifiés (${data.ingredientsCount} ingrédients).`,
+      metadata: { name: data.name, ingredientsCount: data.ingredientsCount },
+    });
+  });
+
   // ── Loss Events ──
   eventBus.on(Events.LOSS_DECLARED, async (data: any) => {
     await writeJournalEntry({

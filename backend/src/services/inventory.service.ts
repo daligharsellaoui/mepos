@@ -747,6 +747,9 @@ export async function createRecipe(data: { name: string; sale_price: number }, t
     eventBus.emit(Events.RECIPE_CREATED, {
       tenantId: tid, recipeId: newRec.id, name: newRec.name, salePrice: newRec.sale_price,
     });
+    eventBus.emit(Events.PRODUCT_CREATED, {
+      tenantId: tid, recipeId: newRec.id, productId: newRec.id, name: newRec.name, salePrice: newRec.sale_price,
+    });
     return newRec;
   }
 
@@ -757,6 +760,9 @@ export async function createRecipe(data: { name: string; sale_price: number }, t
   const recipe = result.rows[0];
   eventBus.emit(Events.RECIPE_CREATED, {
     tenantId: tid, recipeId: recipe.id, name: recipe.name, salePrice: recipe.sale_price,
+  });
+  eventBus.emit(Events.PRODUCT_CREATED, {
+    tenantId: tid, recipeId: recipe.id, productId: recipe.id, name: recipe.name, salePrice: recipe.sale_price,
   });
   return recipe;
 }
@@ -780,6 +786,9 @@ export async function updateRecipe(
     eventBus.emit(Events.RECIPE_UPDATED, {
       tenantId: tid, recipeId: id, name: demoDb.recipes[idx].name, salePrice: demoDb.recipes[idx].sale_price,
     });
+    eventBus.emit(Events.PRODUCT_UPDATED, {
+      tenantId: tid, recipeId: id, productId: id, name: demoDb.recipes[idx].name, salePrice: demoDb.recipes[idx].sale_price,
+    });
     return demoDb.recipes[idx];
   }
 
@@ -794,6 +803,9 @@ export async function updateRecipe(
   const recipe = result.rows[0];
   eventBus.emit(Events.RECIPE_UPDATED, {
     tenantId: tid, recipeId: recipe.id, name: recipe.name, salePrice: recipe.sale_price,
+  });
+  eventBus.emit(Events.PRODUCT_UPDATED, {
+    tenantId: tid, recipeId: recipe.id, productId: recipe.id, name: recipe.name, salePrice: recipe.sale_price,
   });
   return recipe;
 }
@@ -814,6 +826,9 @@ export async function deleteRecipe(id: number, tenantId?: number | null): Promis
     eventBus.emit(Events.RECIPE_DELETED, {
       tenantId: tid, recipeId: id, name: deleted.name,
     });
+    eventBus.emit(Events.PRODUCT_DELETED, {
+      tenantId: tid, recipeId: id, productId: id, name: deleted.name,
+    });
     return { success: true, message: 'Recette supprimée avec succès.' };
   }
 
@@ -827,6 +842,9 @@ export async function deleteRecipe(id: number, tenantId?: number | null): Promis
 
   eventBus.emit(Events.RECIPE_DELETED, {
     tenantId: tid, recipeId: id, name: recipeCheck.rows[0].name,
+  });
+  eventBus.emit(Events.PRODUCT_DELETED, {
+    tenantId: tid, recipeId: id, productId: id, name: recipeCheck.rows[0].name,
   });
   return { success: true, message: 'Recette supprimée avec succès.' };
 }
@@ -855,6 +873,11 @@ export async function saveRecipeIngredients(
         tenant_id: tid,
       });
     });
+    eventBus.emit(Events.PRODUCT_RECIPE_MODIFIED, {
+      tenantId: tid,
+      recipeId,
+      ingredientCount: ingredients.length,
+    });
     return;
   }
 
@@ -870,6 +893,11 @@ export async function saveRecipeIngredients(
       [recipeId, item.ingredient_id, item.quantity_needed, tid]
     );
   }
+  eventBus.emit(Events.PRODUCT_RECIPE_MODIFIED, {
+    tenantId: tid,
+    recipeId,
+    ingredientCount: ingredients.length,
+  });
 }
 
 // ──────────────────────────────────────────────
