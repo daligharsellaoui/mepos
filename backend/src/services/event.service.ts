@@ -35,4 +35,10 @@ export const Events = {
   TENANT_CREATED: 'tenant.created',
   SETTINGS_UPDATED: 'settings.updated',
   PURCHASE_CREATED: 'purchase.created',
+  SUPPLIER_CREATED: 'supplier.created',
+  SUPPLIER_UPDATED: 'supplier.updated',
+  SUPPLIER_ARCHIVED: 'supplier.archived',
+  SUPPLIER_RESTORED: 'supplier.restored',
+  SUPPLIER_DELETED: 'supplier.deleted',
+  PREFERRED_SUPPLIER_CHANGED: 'supplier.preferred.changed',
 };
