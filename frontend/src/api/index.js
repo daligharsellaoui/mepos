@@ -120,6 +120,16 @@ export const api = {
   deleteTenant: (id) => client.delete(`/tenants/${id}`),
   suspendTenant: (id) => client.post(`/tenants/${id}/suspend`),
   activateTenant: (id) => client.post(`/tenants/${id}/activate`),
+  // Suppliers
+  getSuppliers: (params) => client.get('/suppliers', { params }),
+  getSupplier: (id) => client.get(`/suppliers/${id}`),
+  createSupplier: (data) => client.post('/suppliers', data),
+  updateSupplier: (id, data) => client.put(`/suppliers/${id}`, data),
+  archiveSupplier: (id) => client.post(`/suppliers/${id}/archive`),
+  restoreSupplier: (id) => client.post(`/suppliers/${id}/restore`),
+  deleteSupplier: (id) => client.delete(`/suppliers/${id}`),
+  getSupplierIngredients: (id) => client.get(`/suppliers/${id}/ingredients`),
+
   getVapidPublicKey: () => client.get('/push/vapid-public-key'),
   pushSubscribe: (sub) => client.post('/push/subscribe', sub),
   pushUnsubscribe: (endpoint) => client.delete('/push/unsubscribe', { data: { endpoint } }),
