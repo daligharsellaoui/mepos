@@ -87,30 +87,40 @@ export async function getAllSuppliers(
 
   let sql = 'SELECT s.*, (SELECT COUNT(*) FROM ingredients WHERE preferred_supplier_id = s.id AND tenant_id = $1) as ingredients_count FROM suppliers s WHERE s.tenant_id = $1';
   const params: any[] = [filter ?? 1];
+  let countSql = 'SELECT COUNT(*) FROM suppliers WHERE tenant_id = $1';
+  const countParams: any[] = [filter ?? 1];
   let paramIndex = 2;
 
   if (search) {
     sql += ` AND (LOWER(s.name) LIKE $${paramIndex} OR LOWER(s.company_name) LIKE $${paramIndex} OR LOWER(s.email) LIKE $${paramIndex} OR LOWER(s.phone) LIKE $${paramIndex} OR LOWER(s.city) LIKE $${paramIndex} OR LOWER(s.tax_number) LIKE $${paramIndex} OR LOWER(s.contact_person) LIKE $${paramIndex})`;
+    countSql += ` AND (LOWER(name) LIKE $${paramIndex} OR LOWER(company_name) LIKE $${paramIndex} OR LOWER(email) LIKE $${paramIndex} OR LOWER(phone) LIKE $${paramIndex} OR LOWER(city) LIKE $${paramIndex} OR LOWER(tax_number) LIKE $${paramIndex} OR LOWER(contact_person) LIKE $${paramIndex})`;
     params.push(`%${search.toLowerCase()}%`);
+    countParams.push(`%${search.toLowerCase()}%`);
     paramIndex++;
   }
   if (status) {
     sql += ` AND s.status = $${paramIndex}`;
+    countSql += ` AND status = $${paramIndex}`;
     params.push(status);
+    countParams.push(status);
     paramIndex++;
   }
   if (preferred !== null && preferred !== undefined && preferred !== '') {
     sql += ` AND s.preferred = $${paramIndex}`;
+    countSql += ` AND preferred = $${paramIndex}`;
     params.push(preferred === 'true');
+    countParams.push(preferred === 'true');
     paramIndex++;
   }
   if (country) {
     sql += ` AND s.country = $${paramIndex}`;
+    countSql += ` AND country = $${paramIndex}`;
     params.push(country);
+    countParams.push(country);
     paramIndex++;
   }
 
-  const countResult = await query(sql.replace(/SELECT s\.\*.*?FROM/, 'SELECT COUNT(*) FROM'), params);
+  const countResult = await query(countSql, countParams);
   const total = parseInt(countResult.rows[0].count, 10);
 
   const validSortFields = ['name', 'company_name', 'city', 'email', 'created_at', 'rating', 'status'];
