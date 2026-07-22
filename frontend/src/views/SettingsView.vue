@@ -218,7 +218,7 @@ async function fetchUsers() {
 // ── Import Wizard ──
 const showImportWizard = ref(false)
 const dragActive = ref(false)
-const fileInput = ref(null)
+const csvFileInput = ref(null)
 const stepLabels = ['Téléverser', 'Validation', 'Aperçu', 'Résoudre', 'Confirmer', 'Importation', 'Terminé']
 
 function openWizard() {
@@ -1880,9 +1880,169 @@ async function handleDeleteDeptConfirm() {
     @cancel="showDeptDeleteDialog = false"
     @close="showDeptDeleteDialog = false"
   />
+
+  <!-- Import Wizard Modal -->
+  <Teleport to="body">
+    <Transition name="modal">
+      <div v-if="showImportWizard" class="modal-overlay" @click.self="closeWizard">
+        <div class="glass-panel" style="max-width: 800px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; border-radius: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color);">
+            <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0;">Import de Produits CSV</h2>
+            <button style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; padding: 0.5rem; border-radius: 0.375rem;" @click="closeWizard">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Step Indicator -->
+          <div style="display: flex; justify-content: space-between; padding: 1rem 1.25rem; gap: 0.25rem;">
+            <div v-for="(label, idx) in stepLabels" :key="idx" style="display: flex; flex-direction: column; align-items: center; gap: 0.25rem; flex: 1;">
+              <div :style="{
+                width: '28px', height: '28px', borderRadius: '50%',
+                background: importStore.currentStep > idx ? '#10b981' : (importStore.currentStep === idx ? 'var(--blue)' : 'var(--bg-secondary)'),
+                border: '2px solid ' + (importStore.currentStep > idx ? '#10b981' : (importStore.currentStep === idx ? 'var(--blue)' : 'var(--border-color)')),
+                color: (importStore.currentStep > idx || importStore.currentStep === idx) ? 'white' : 'var(--text-secondary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '600'
+              }">{{ importStore.currentStep > idx ? '✓' : idx + 1 }}</div>
+              <span :style="{ fontSize: '0.65rem', color: importStore.currentStep === idx ? 'var(--blue)' : 'var(--text-secondary)', fontWeight: importStore.currentStep === idx ? '600' : '400' }">{{ label }}</span>
+            </div>
+          </div>
+
+          <!-- Wizard Content -->
+          <div style="flex: 1; overflow-y: auto; padding: 1.5rem; min-height: 300px;">
+            <!-- Step 0: Upload -->
+            <div v-if="importStore.currentStep === 0">
+              <div :style="{ border: '2px dashed ' + (dragActive ? 'var(--blue)' : 'var(--border-color)'), borderRadius: '12px', padding: '3rem', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s', background: dragActive ? 'rgba(59, 130, 246, 0.05)' : 'transparent' }" @dragover="handleDragOver" @dragleave="handleDragLeave" @drop="handleDrop" @click="csvFileInput?.click()">
+                <input ref="csvFileInput" type="file" accept=".csv" style="display: none;" @change="handleFileSelect" />
+                <div style="font-size: 3rem; margin-bottom: 1rem;">📄</div>
+                <h3>Glissez votre fichier CSV ici</h3>
+                <p style="color: var(--text-secondary);">ou cliquez pour sélectionner un fichier</p>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Format: .csv (max 10 Mo)</p>
+              </div>
+            </div>
+
+            <!-- Step 1: Validating -->
+            <div v-else-if="importStore.currentStep === 1" style="display: flex; flex-direction: column; align-items: center; padding: 3rem; gap: 1rem;">
+              <div style="width: 48px; height: 48px; border: 3px solid var(--border-color); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+              <h3>Validation en cours...</h3>
+              <p style="color: var(--text-secondary);">Analyse du fichier CSV</p>
+            </div>
+
+            <!-- Step 2: Preview -->
+            <div v-else-if="importStore.currentStep === 2">
+              <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 120px; padding: 1rem; border-radius: 8px; text-align: center; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);">
+                  <span style="display: block; font-size: 1.5rem; font-weight: 800;">{{ importStore.totalProducts }}</span>
+                  <span style="font-size: 0.75rem; color: var(--text-secondary);">Produits valides</span>
+                </div>
+                <div v-if="importStore.hasErrors" style="flex: 1; min-width: 120px; padding: 1rem; border-radius: 8px; text-align: center; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);">
+                  <span style="display: block; font-size: 1.5rem; font-weight: 800;">{{ importStore.errorRows.length }}</span>
+                  <span style="font-size: 0.75rem; color: var(--text-secondary);">Erreurs</span>
+                </div>
+              </div>
+              <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                  <thead><tr style="background: var(--bg-secondary);"><th style="padding: 0.75rem; text-align: left;">#</th><th style="padding: 0.75rem; text-align: left;">Produit</th><th style="padding: 0.75rem; text-align: left;">Prix</th><th style="padding: 0.75rem; text-align: left;">Ingrédients</th></tr></thead>
+                  <tbody>
+                    <tr v-for="row in importStore.validRows.slice(0, 20)" :key="row.rowNum" style="border-bottom: 1px solid var(--border-color);">
+                      <td style="padding: 0.75rem;">{{ row.rowNum }}</td>
+                      <td style="padding: 0.75rem;"><strong>{{ row.productName }}</strong></td>
+                      <td style="padding: 0.75rem;">{{ row.sellingPrice?.toFixed(2) }} TND</td>
+                      <td style="padding: 0.75rem;"><span v-for="(ing, idx) in row.ingredients" :key="idx" :style="{ display: 'inline-block', padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.7rem', margin: '0.1rem', background: ing.isNew ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)', color: ing.isNew ? '#10b981' : 'var(--blue)' }">{{ ing.name }} {{ ing.isNew ? '(nouveau)' : '✅' }}</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Step 3: Resolve Issues -->
+            <div v-else-if="importStore.currentStep === 3">
+              <div style="margin-bottom: 1.25rem;">
+                <h3 style="font-size: 1rem; font-weight: 700; margin: 0 0 0.25rem;">⚠️ Résolution des Problèmes</h3>
+                <p style="color: var(--text-secondary); font-size: 0.8rem; margin: 0;">Corrigez ou supprimez les lignes problématiques avant d'importer</p>
+              </div>
+              <div style="display: flex; gap: 1rem; margin-bottom: 1.25rem;">
+                <div style="padding: 0.75rem 1.25rem; border-radius: 8px; background: rgba(16, 185, 129, 0.1); text-align: center;"><span style="font-size: 1.5rem; font-weight: 800; color: #10b981;">{{ importStore.effectiveTotalProducts }}</span><br/><span style="font-size: 0.7rem; color: var(--text-secondary);">à importer</span></div>
+                <div v-if="importStore.errorRows.length > 0" style="padding: 0.75rem 1.25rem; border-radius: 8px; background: rgba(239, 68, 68, 0.1); text-align: center;"><span style="font-size: 1.5rem; font-weight: 800; color: #ef4444;">{{ importStore.errorRows.length }}</span><br/><span style="font-size: 0.7rem; color: var(--text-secondary);">erreurs</span></div>
+              </div>
+              <div v-if="importStore.errorRows.length > 0" style="margin-bottom: 1.25rem;">
+                <h4 style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: #ef4444; margin: 0 0 0.75rem;">Erreurs à corriger ({{ importStore.errorRows.length }})</h4>
+                <div v-for="err in importStore.errorRows" :key="err.rowNum" style="padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 0.5rem; border-left: 3px solid #ef4444;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;"><span style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); font-family: monospace;">Ligne {{ err.rowNum }}</span><button style="padding: 0.3rem 0.6rem; border: none; border-radius: 5px; font-size: 0.7rem; font-weight: 600; cursor: pointer; background: rgba(239, 68, 68, 0.1); color: #ef4444;" @click="importStore.removeRow(err.rowNum)">Supprimer</button></div>
+                  <div style="display: flex; gap: 0.75rem; margin-bottom: 0.5rem;">
+                    <div style="flex: 1;"><label style="display: block; font-size: 0.65rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem;">NOM</label><input :value="err.productName" @input="importStore.editRow(err.rowNum, { productName: $event.target.value })" style="width: 100%; padding: 0.4rem 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--text-primary); font-size: 0.8rem;" /></div>
+                    <div style="flex: 1;"><label style="display: block; font-size: 0.65rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem;">PRIX (TND)</label><input type="number" step="0.01" min="0" :value="err.sellingPrice" @input="importStore.editRow(err.rowNum, { sellingPrice: parseFloat($event.target.value) || 0 })" style="width: 100%; padding: 0.4rem 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--text-primary); font-size: 0.8rem;" /></div>
+                  </div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 0.35rem;"><span v-for="(e, idx) in err.errors" :key="idx" style="padding: 0.15rem 0.5rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; border-radius: 6px; font-size: 0.65rem;">{{ e }}</span></div>
+                </div>
+              </div>
+              <div>
+                <h4 style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: #10b981; margin: 0 0 0.75rem;">Produits valides ({{ importStore.validRows.length }})</h4>
+                <div v-for="row in importStore.validRows" :key="row.rowNum" :style="{ padding: '0.5rem 0.75rem', background: 'var(--bg-secondary)', borderRadius: '8px', marginBottom: '0.35rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: importStore.removedRowNums.includes(row.rowNum) ? 0.5 : 1, textDecoration: importStore.removedRowNums.includes(row.rowNum) ? 'line-through' : 'none' }">
+                  <span style="font-weight: 600; font-size: 0.8rem;">{{ row.productName }} <span style="color: var(--blue); font-size: 0.75rem;">{{ row.sellingPrice?.toFixed(2) }} TND</span></span>
+                  <button v-if="!importStore.removedRowNums.includes(row.rowNum)" style="padding: 0.2rem 0.4rem; border: none; background: var(--bg-card); color: var(--text-muted); border-radius: 4px; cursor: pointer; font-size: 0.7rem;" @click="importStore.removeRow(row.rowNum)">✕</button>
+                  <button v-else style="padding: 0.2rem 0.4rem; border: none; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 4px; cursor: pointer; font-size: 0.7rem;" @click="importStore.restoreRow(row.rowNum)">↩</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 4: Confirm -->
+            <div v-else-if="importStore.currentStep === 4" style="text-align: center; padding: 2rem;">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+              <h3 style="margin: 0 0 1.5rem;">Confirmer l'importation</h3>
+              <div style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap;">
+                <div style="padding: 1rem 1.5rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px;">
+                  <span style="display: block; font-size: 2rem; font-weight: 800; color: var(--blue);">{{ importStore.effectiveTotalProducts }}</span>
+                  <span style="font-size: 0.8rem; color: var(--text-secondary);">Produits à créer</span>
+                </div>
+                <div v-if="importStore.removedRowNums.length > 0" style="padding: 1rem 1.5rem; background: var(--bg-secondary); border-radius: 8px;">
+                  <span style="display: block; font-size: 2rem; font-weight: 800; color: var(--text-muted);">{{ importStore.removedRowNums.length }}</span>
+                  <span style="font-size: 0.8rem; color: var(--text-secondary);">Lignes ignorées</span>
+                </div>
+              </div>
+              <p style="color: var(--text-secondary); max-width: 400px; margin: 0 auto;">Les produits seront créés avec leurs recettes et ingrédients. Les ingrédients existants seront réutilisés.</p>
+            </div>
+
+            <!-- Step 5: Importing -->
+            <div v-else-if="importStore.currentStep === 5" style="display: flex; flex-direction: column; align-items: center; padding: 3rem; gap: 1rem;">
+              <div style="width: 48px; height: 48px; border: 3px solid var(--border-color); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+              <h3>Importation en cours...</h3>
+              <p style="color: var(--text-secondary);">Création des produits et ingrédients</p>
+            </div>
+
+            <!-- Step 6: Done -->
+            <div v-else-if="importStore.currentStep === 6" style="text-align: center; padding: 2rem;">
+              <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+              <h3>Importation terminée!</h3>
+              <div style="display: flex; justify-content: center; gap: 2rem; margin-top: 1.5rem;">
+                <div><span style="display: block; font-size: 2rem; font-weight: 800; color: var(--blue);">{{ importStore.importResult?.productsCreated || 0 }}</span><span style="font-size: 0.8rem; color: var(--text-secondary);">Produits créés</span></div>
+                <div><span style="display: block; font-size: 2rem; font-weight: 800; color: var(--blue);">{{ importStore.importResult?.ingredientsCreated || 0 }}</span><span style="font-size: 0.8rem; color: var(--text-secondary);">Nouveaux ingrédients</span></div>
+                <div><span style="display: block; font-size: 2rem; font-weight: 800; color: var(--blue);">{{ importStore.importResult?.ingredientsReused || 0 }}</span><span style="font-size: 0.8rem; color: var(--text-secondary);">Réutilisés</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div style="display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.25rem; border-top: 1px solid var(--border-color);">
+            <button v-if="importStore.currentStep > 0 && importStore.currentStep < 5" class="touch-btn" style="background: var(--bg-secondary); border: 1px solid var(--border-color);" @click="importStore.goToStep(importStore.currentStep - 1)">Retour</button>
+            <div style="flex: 1;" />
+            <button v-if="importStore.currentStep === 2" class="touch-btn" style="background: var(--blue); color: white;" @click="importStore.goToStep(3)">Résoudre les problèmes</button>
+            <button v-if="importStore.currentStep === 3" class="touch-btn" style="background: var(--blue); color: white;" @click="importStore.goToStep(4)">Continuer ({{ importStore.effectiveTotalProducts }} produits)</button>
+            <button v-if="importStore.currentStep === 4" class="touch-btn" style="background: var(--blue); color: white;" @click="confirmImport" :disabled="importStore.isLoading || importStore.effectiveTotalProducts === 0">Lancer l'importation ({{ importStore.effectiveTotalProducts }})</button>
+            <button v-if="importStore.currentStep === 6" class="touch-btn" style="background: var(--blue); color: white;" @click="closeWizard">Fermer</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (max-width: 600px) {
   .view-title-section {
     margin-bottom: 1rem;

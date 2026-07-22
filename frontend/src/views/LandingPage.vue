@@ -129,7 +129,6 @@ const features = [
   { title: 'Gestion des fournisseurs', desc: 'Gérez les informations fournisseurs, prix et délais. Optimisez vos approvisionnements.', icon: '🤝', bg: 'rgba(99, 102, 241, 0.1)' },
   { title: 'Bons de commande', desc: 'Générez et suivez les bons de commande. Automatisez le réapprovisionnement.', icon: '📄', bg: 'rgba(16, 185, 129, 0.1)' },
   { title: 'Synchronisation temps réel', desc: 'Les ventes de votre caisse sont transmises automatiquement. Aucune saisie manuelle.', icon: '⚡', bg: 'rgba(245, 158, 11, 0.1)' },
-  { title: 'Multi-Tenant SaaS', desc: 'Chaque restaurant est totalement isolé. Gérez plusieurs sites depuis un seul tableau de bord.', icon: '🏢', bg: 'rgba(59, 130, 246, 0.1)' },
   { title: 'Permissions par rôles', desc: 'Contrôle d\'accès granulaire pour administrateurs, gestionnaires et personnel de cuisine.', icon: '🔐', bg: 'rgba(239, 68, 68, 0.1)' },
   { title: 'Surveillance des agents', desc: 'Surveillez les agents de synchronisation sur tous les sites. Recevez des alertes en cas de panne.', icon: '📡', bg: 'rgba(99, 102, 241, 0.1)' },
   { title: 'Rapports & Analyses', desc: 'Rapports complets sur les stocks, l\'utilisation, les pertes et les coûts.', icon: '📊', bg: 'rgba(16, 185, 129, 0.1)' },
@@ -299,7 +298,7 @@ const testimonials = [
       </div>
     </section>
 
-    <!-- 3. HOW IT WORKS -->
+    <!-- 3. HOW IT WORKS
     <section id="how-it-works" class="landing-section">
       <div class="landing-section-header landing-animate">
         <span class="landing-section-label">Comment ça marche</span>
@@ -359,7 +358,7 @@ const testimonials = [
           </div>
         </div>
       </div>
-    </section>
+    </section> -->
 
     <!-- 4. WHY CHOOSE MEPOS -->
     <section id="why-mepos" class="landing-section">
@@ -377,7 +376,7 @@ const testimonials = [
       </div>
     </section>
 
-    <!-- 5. PRODUCT SCREENSHOTS -->
+    <!-- 5. PRODUCT SCREENSHOTS 
     <section id="screenshots" class="landing-section">
       <div class="landing-section-header landing-animate">
         <span class="landing-section-label">Produit</span>
@@ -399,9 +398,9 @@ const testimonials = [
         <button v-for="(_, i) in carouselSlides" :key="i" class="landing-carousel-dot" :class="{ active: i === carouselIndex }" @click="carouselIndex = i" :aria-label="`Slide ${i + 1}`"></button>
         <button class="landing-carousel-btn" @click="nextSlide" aria-label="Suivant">→</button>
       </div>
-    </section>
+    </section> -->
 
-    <!-- 6. MULTI-TENANCY -->
+    <!-- 6. MULTI-TENANCY 
     <section id="multi-tenancy" class="landing-section">
       <div class="landing-section-header landing-animate">
         <span class="landing-section-label">Multi-Tenant</span>
@@ -428,9 +427,9 @@ const testimonials = [
         <div class="landing-tenancy-arrow">↓</div>
         <div class="landing-tenancy-isolation">Isolation totale des données</div>
       </div>
-    </section>
+    </section> -->
 
-    <!-- 7. SYNCHRONIZATION -->
+    <!-- 7. SYNCHRONIZATION 
     <section id="sync" class="landing-section">
       <div class="landing-section-header landing-animate">
         <span class="landing-section-label">Synchronisation</span>
@@ -457,7 +456,7 @@ const testimonials = [
           </div>
         </div>
       </div>
-    </section>
+    </section> -->
 
     <!-- 8. USER ROLES -->
     <section id="roles" class="landing-section">
@@ -503,7 +502,7 @@ const testimonials = [
       </div>
     </section>
 
-    <!-- 9. TESTIMONIALS -->
+    <!-- 9. TESTIMONIALS 
     <section id="testimonials" class="landing-section">
       <div class="landing-section-header landing-animate">
         <span class="landing-section-label">Témoignages</span>
@@ -522,7 +521,7 @@ const testimonials = [
           </div>
         </div>
       </div>
-    </section>
+    </section> -->
 
     <!-- 10. FAQ -->
     <section id="faq" class="landing-section">
@@ -572,11 +571,10 @@ const testimonials = [
           <ul class="landing-footer-links">
             <li><button class="landing-footer-link" @click="scrollTo('features')">Fonctionnalités</button></li>
             <li><button class="landing-footer-link" @click="scrollTo('how-it-works')">Comment ça marche</button></li>
-            <li><button class="landing-footer-link" @click="scrollTo('screenshots')">Captures d'écran</button></li>
             <li><button class="landing-footer-link" @click="scrollTo('faq')">FAQ</button></li>
           </ul>
         </div>
-        <div>
+        <!--<div>
           <div class="landing-footer-col-title">Ressources</div>
           <ul class="landing-footer-links">
             <li><button class="landing-footer-link">Documentation</button></li>
@@ -594,12 +592,12 @@ const testimonials = [
         </div>
       </div>
       <div class="landing-footer-bottom">
-        <span>&copy; {{ new Date().getFullYear() }} mePOS Inventory Intel. Tous droits réservés.</span>
+        <span>&copy; {{ new Date().getFullYear() }} mePOS Inventory Intel. Tous droits réservés. Designed by ME</span>
         <div class="landing-footer-social">
           <a href="#" aria-label="Twitter">Twitter</a>
           <a href="#" aria-label="LinkedIn">LinkedIn</a>
           <a href="#" aria-label="GitHub">GitHub</a>
-        </div>
+        </div>-->
       </div>
     </footer>
   </div>

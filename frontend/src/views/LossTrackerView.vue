@@ -118,12 +118,6 @@ async function submitLoss(qtyVal) {
       </div>
       <div class="action-buttons">
         <button
-          class="touch-btn touch-btn-secondary"
-          @click="app.fetchData(auth.user)"
-        >
-          Actualiser
-        </button>
-        <button
           class="touch-btn"
           @click="isModalOpen = true"
         >

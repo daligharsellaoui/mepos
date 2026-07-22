@@ -188,7 +188,7 @@ export async function approveTransferRequest(
     request.updated_at = new Date().toISOString();
 
     const ing = demoDb.ingredients.find((i: any) => i.id === request.ingredient_id);
-    eventBus.emit(Events.TRANSFER_COMPLETED, {
+    eventBus.emit(Events.TRANSFER_APPROVED, {
       tenantId: tid, requestId: request.id, quantity: request.quantity,
       unit: ing?.unit || '', ingredientName: ing?.name || 'Inconnu',
       requestedBy: request.requested_by,
@@ -235,7 +235,7 @@ export async function approveTransferRequest(
     const ingResult = await query('SELECT name, unit FROM ingredients WHERE id = $1 AND tenant_id = $2', [request.ingredient_id, tid]);
     const ingData = ingResult.rows[0] || {};
 
-    eventBus.emit(Events.TRANSFER_COMPLETED, {
+    eventBus.emit(Events.TRANSFER_APPROVED, {
       tenantId: tid, requestId: request.id, quantity: parseFloat(request.quantity),
       unit: ingData.unit || '', ingredientName: ingData.name || 'Inconnu',
       requestedBy: request.requested_by,

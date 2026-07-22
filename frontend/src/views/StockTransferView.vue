@@ -1,9 +1,11 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, inject } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useAppStore } from '../stores/app'
 import { api } from '../api'
 import ConfirmDialog from '../components/base/ConfirmDialog.vue'
+
+const addToast = inject('addToast')
 
 const auth = useAuthStore()
 const app = useAppStore()
@@ -117,10 +119,12 @@ async function handleSubmit() {
       })
       if (resJson.status === 'success') {
         successMsg.value = "Demande de recharge soumise !"
+        addToast({ type: 'success', title: 'Demande envoyée', message: 'Votre demande de recharge a été soumise pour validation.' })
         quantity.value = ''; selectedIng.value = ''
         fetchRequests()
       } else {
         errorMsg.value = resJson.message || "Erreur."
+        addToast({ type: 'error', title: 'Erreur', message: resJson.message || 'Erreur lors de la soumission.' })
       }
     } else {
       const success = await app.handleTransferSubmit({
@@ -131,14 +135,17 @@ async function handleSubmit() {
       }, auth.user)
       if (success) {
         successMsg.value = "Transfert effectué avec succès !"
+        addToast({ type: 'success', title: 'Transfert effectué', message: 'Le transfert de stock a été réalisé avec succès.' })
         quantity.value = ''; selectedIng.value = ''; destDept.value = ''
         fetchRequests()
       } else {
         errorMsg.value = "Erreur lors du transfert."
+        addToast({ type: 'error', title: 'Erreur', message: 'Erreur lors du transfert.' })
       }
     }
   } catch {
     errorMsg.value = "Erreur réseau."
+    addToast({ type: 'error', title: 'Erreur réseau', message: 'Impossible de contacter le serveur.' })
   } finally {
     isSubmitting.value = false
   }
@@ -160,9 +167,18 @@ async function confirmValidate() {
   pendingRequestId.value = null
   try {
     const { data: resJson } = await api.approveTransferRequest(id, auth.user?.id)
-    if (resJson.status === 'success') { successMsg.value = "Demande approuvée !"; fetchRequests(); app.fetchData(auth.user) }
-    else errorMsg.value = "Erreur: " + resJson.message
-  } catch { errorMsg.value = "Erreur de connexion." }
+    if (resJson.status === 'success') {
+      successMsg.value = "Demande approuvée !"
+      addToast({ type: 'success', title: 'Demande approuvée', message: 'Le transfert a été validé et les stocks mis à jour.' })
+      fetchRequests(); app.fetchData(auth.user)
+    } else {
+      errorMsg.value = "Erreur: " + resJson.message
+      addToast({ type: 'error', title: 'Erreur', message: resJson.message })
+    }
+  } catch {
+    errorMsg.value = "Erreur de connexion."
+    addToast({ type: 'error', title: 'Erreur réseau', message: 'Impossible de contacter le serveur.' })
+  }
 }
 
 async function confirmReject() {
@@ -171,9 +187,18 @@ async function confirmReject() {
   pendingRequestId.value = null
   try {
     const { data: resJson } = await api.rejectTransferRequest(id, auth.user?.id)
-    if (resJson.status === 'success') { successMsg.value = "Demande rejetée."; fetchRequests() }
-    else errorMsg.value = "Erreur: " + resJson.message
-  } catch { errorMsg.value = "Erreur de connexion." }
+    if (resJson.status === 'success') {
+      successMsg.value = "Demande rejetée."
+      addToast({ type: 'warning', title: 'Demande rejetée', message: 'La demande de transfert a été refusée.' })
+      fetchRequests()
+    } else {
+      errorMsg.value = "Erreur: " + resJson.message
+      addToast({ type: 'error', title: 'Erreur', message: resJson.message })
+    }
+  } catch {
+    errorMsg.value = "Erreur de connexion."
+    addToast({ type: 'error', title: 'Erreur réseau', message: 'Impossible de contacter le serveur.' })
+  }
 }
 </script>
 

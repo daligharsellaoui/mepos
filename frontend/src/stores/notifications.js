@@ -31,6 +31,11 @@ export const useNotificationStore = defineStore('notifications', () => {
 
   let eventSource = null
   let pushSubscription = null
+  let toastCallback = null
+
+  function setToastCallback(fn) {
+    toastCallback = fn
+  }
 
   async function fetchNotifications(reset = false, startOffset) {
     if (isLoading.value) return
@@ -251,6 +256,15 @@ export const useNotificationStore = defineStore('notifications', () => {
           }
           showDesktopNotification(data.notification)
           playNotificationSound()
+          if (toastCallback && data.notification.category === 'transfer') {
+            const typeMap = { success: 'success', warning: 'warning', error: 'error', critical: 'critical' }
+            toastCallback({
+              type: typeMap[data.notification.type] || 'info',
+              title: data.notification.title,
+              message: data.notification.message,
+              duration: 6000,
+            })
+          }
         }
       } catch (_) { /* noop */ }
     }
@@ -274,7 +288,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     filters, unreadNotifications, sortedByPriority,
     fetchNotifications, fetchUnreadCount, markAsRead,
     markAllAsRead, archiveNotification, deleteNotification,
-    setFilters, connectSSE, disconnectSSE,
+    setFilters, connectSSE, disconnectSSE, setToastCallback,
     requestDesktopPermission, registerServiceWorker, registerPush: registerServiceWorker,
     unregisterPush,
   }

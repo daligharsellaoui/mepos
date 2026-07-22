@@ -21,6 +21,7 @@ const addToast = inject('addToast')
 let pollInterval = null
 
 onMounted(() => {
+  notifStore.setToastCallback(addToast)
   notifStore.fetchUnreadCount()
   notifStore.connectSSE()
 

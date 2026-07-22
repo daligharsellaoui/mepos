@@ -150,6 +150,22 @@ export function setupNotificationDispatcher() {
       color: '#f97316',
       minRole: 'manager',
     });
+    if (data.requestedBy) {
+      await createNotification({
+        tenantId: data.tenantId,
+        type: 'transfer',
+        category: CATEGORIES.transfer,
+        priority: PRIORITIES.low,
+        title: 'Demande envoyée',
+        message: `Votre demande de transfert de ${data.quantity} ${data.unit} de "${data.ingredientName}" a été soumise.`,
+        entityType: 'transfer',
+        entityId: data.requestId,
+        actionUrl: `/app/transfers`,
+        icon: 'arrow-left-right',
+        color: '#f97316',
+        assignedTo: data.requestedBy,
+      });
+    }
   });
 
   eventBus.on(Events.TRANSFER_APPROVED, async (data: any) => {

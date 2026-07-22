@@ -455,28 +455,53 @@ function rolesAtOrAbove(minRole: string): string[] {
 }
 
 eventBus.on('notification:created', async ({ notification, minRole }: { notification: any; minRole?: string }) => {
-  if (minRole && !isDemoMode) {
-    const matchedRoles = rolesAtOrAbove(minRole);
-    if (matchedRoles.length === 0) return;
-    try {
-      const result = await query(
-        `INSERT INTO notifications (tenant_id, type, category, priority, title, message, icon, color,
-          entity_type, entity_id, created_by, assigned_to, action_url, metadata, read, archived, created_at, updated_at)
-         SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, u.id, $12, $13, FALSE, FALSE, NOW(), NOW()
-         FROM users u WHERE u.tenant_id = $14 AND u.role = ANY($15::text[])`,
-        [
-          notification.tenant_id, notification.type, notification.category, notification.priority,
-          notification.title, notification.message, notification.icon, notification.color,
-          notification.entity_type, notification.entity_id, notification.created_by,
-          notification.action_url, JSON.stringify(notification.metadata || {}),
-          notification.tenant_id, matchedRoles
-        ]
-      );
-      if (result.rowCount && result.rowCount > 0) {
-        await query('DELETE FROM notifications WHERE id = $1', [notification.id]);
-      }
-    } catch (_) {
-      // silent - notification remains visible to all if duplication fails
+  const effectiveMinRole = minRole || (notification.assigned_to ? undefined : 'cook');
+
+  if (!effectiveMinRole) return;
+
+  const matchedRoles = rolesAtOrAbove(effectiveMinRole);
+  if (matchedRoles.length === 0) return;
+
+  if (isDemoMode) {
+    const targetUsers = (demoDb.users || []).filter((u: any) =>
+      u.tenant_id === notification.tenant_id && matchedRoles.includes(u.role)
+    );
+    for (const user of targetUsers) {
+      const userNotif = {
+        ...notification,
+        id: ((demoDb as any).notifications?.length || 0) + 1,
+        assigned_to: user.id,
+        read: false,
+        read_at: null,
+        archived: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      (demoDb as any).notifications.push(userNotif);
     }
+    const idx = ((demoDb as any).notifications || []).findIndex((n: any) => n.id === notification.id);
+    if (idx !== -1) (demoDb as any).notifications.splice(idx, 1);
+    return;
+  }
+
+  try {
+    const result = await query(
+      `INSERT INTO notifications (tenant_id, type, category, priority, title, message, icon, color,
+        entity_type, entity_id, created_by, assigned_to, action_url, metadata, read, archived, created_at, updated_at)
+       SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, u.id, $12, $13, FALSE, FALSE, NOW(), NOW()
+       FROM users u WHERE u.tenant_id = $14 AND u.role = ANY($15::text[])`,
+      [
+        notification.tenant_id, notification.type, notification.category, notification.priority,
+        notification.title, notification.message, notification.icon, notification.color,
+        notification.entity_type, notification.entity_id, notification.created_by,
+        notification.action_url, JSON.stringify(notification.metadata || {}),
+        notification.tenant_id, matchedRoles
+      ]
+    );
+    if (result.rowCount && result.rowCount > 0) {
+      await query('DELETE FROM notifications WHERE id = $1', [notification.id]);
+    }
+  } catch (_) {
+    // silent - notification remains visible to all if duplication fails
   }
 });
