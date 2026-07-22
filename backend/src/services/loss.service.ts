@@ -1,7 +1,7 @@
 import { Decimal } from 'decimal.js';
 import { query, isDemoMode, demoDb, getClient } from '../database';
 import {
-  getEffectiveDepartmentId, ensureStockRow, updateStockQuantity, logMovement, calculateLossCosts
+  getEffectiveDepartmentId, ensureStockRow, updateStockQuantity, logMovement, calculateLossCosts, getStockWarning
 } from './stock.service';
 import { eventBus, Events } from './event.service';
 
@@ -81,6 +81,7 @@ export async function createLoss(
       [newQty.toString(), stockDeptId, ingredientId, tid]
     );
     await logMovement(client, stockDeptId, ingredientId, qtyDecimal.times(-1), 'loss', 'loss_report', tid);
+    getStockWarning(stockDeptId, ingredientId, undefined, client, tid);
 
     const insertLoss = await client.query(
       `INSERT INTO ingredient_losses (department_id, ingredient_id, quantity, loss_reason, cost_loss, opportunity_loss, reported_by, tenant_id)

@@ -1,6 +1,7 @@
 import { Decimal } from 'decimal.js';
 import { query, isDemoMode, demoDb, getClient } from '../database';
 import { eventBus, Events } from './event.service';
+import { getTenantSetting } from './tenant.service';
 
 // ======================================================
 // STOCK SERVICE
@@ -121,6 +122,8 @@ export async function updateStockQuantity(
   delta: Decimal,
   tenantId?: number
 ): Promise<Decimal> {
+  const tid = tenantId || 1;
+
   if (isDemoMode) {
     const stock = demoDb.inventory_stocks.find(
       (s: any) => s.department_id === departmentId && s.ingredient_id === ingredientId
@@ -128,12 +131,14 @@ export async function updateStockQuantity(
     if (stock) {
       const newQty = new Decimal(stock.quantity).plus(delta);
       stock.quantity = Math.max(0, newQty.toNumber());
-      return new Decimal(stock.quantity);
+      const finalQty = new Decimal(stock.quantity);
+      getStockWarning(departmentId, ingredientId, undefined, null, tid);
+      return finalQty;
     }
+    getStockWarning(departmentId, ingredientId, undefined, null, tid);
     return new Decimal(0);
   }
 
-  const tid = tenantId || 1;
   await clientOrDb.query(
     'UPDATE inventory_stocks SET quantity = GREATEST(0, quantity + $1), updated_at = CURRENT_TIMESTAMP WHERE department_id = $2 AND ingredient_id = $3 AND tenant_id = $4',
     [delta.toString(), departmentId, ingredientId, tid]
@@ -143,7 +148,9 @@ export async function updateStockQuantity(
     'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 AND tenant_id = $3',
     [departmentId, ingredientId, tid]
   );
-  return new Decimal(result.rows[0]?.quantity || 0);
+  const finalQty = new Decimal(result.rows[0]?.quantity || 0);
+  getStockWarning(departmentId, ingredientId, undefined, clientOrDb, tid);
+  return finalQty;
 }
 
 /**
@@ -183,11 +190,12 @@ export async function logMovement(
 
 /**
  * Check if stock is below alert threshold and return warning message.
+ * Falls back to tenant setting stock_alert_threshold, then default 10.
  */
 export async function getStockWarning(
   departmentId: number,
   ingredientId: number,
-  departmentName: string,
+  departmentName?: string,
   client?: any,
   tenantId?: number
 ): Promise<string | null> {
@@ -200,17 +208,27 @@ export async function getStockWarning(
     ingredientInfo = demoDb.ingredients.find((i: any) => i.id === ingredientId && i.tenant_id === tid);
     if (!ingredientInfo) return null;
 
+    if (!departmentName) {
+      const dept = demoDb.departments.find((d: any) => d.id === departmentId);
+      departmentName = dept?.name || 'Inconnu';
+    }
+
     const stock = demoDb.inventory_stocks.find(
       (s: any) => s.department_id === departmentId && s.ingredient_id === ingredientId
     );
     newQty = new Decimal(stock ? stock.quantity : 0);
   } else {
     const ingRes = await db(
-      'SELECT name, alert_threshold FROM ingredients WHERE id = $1 AND tenant_id = $2',
+      'SELECT name, unit, alert_threshold FROM ingredients WHERE id = $1 AND tenant_id = $2',
       [ingredientId, tid]
     );
     if (ingRes.rows.length === 0) return null;
     ingredientInfo = ingRes.rows[0];
+
+    if (!departmentName) {
+      const deptRes = await db('SELECT name FROM departments WHERE id = $1 AND tenant_id = $2', [departmentId, tid]);
+      departmentName = deptRes.rows[0]?.name || 'Inconnu';
+    }
 
     const stockRes = await db(
       'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 AND tenant_id = $3',
@@ -219,13 +237,23 @@ export async function getStockWarning(
     newQty = stockRes.rows.length > 0 ? new Decimal(stockRes.rows[0].quantity) : new Decimal(0);
   }
 
-  if (newQty.lessThanOrEqualTo(new Decimal(ingredientInfo.alert_threshold))) {
+  const ingredientThreshold = new Decimal(ingredientInfo.alert_threshold || 0);
+  let effectiveThreshold: Decimal;
+
+  if (ingredientThreshold.greaterThan(0)) {
+    effectiveThreshold = ingredientThreshold;
+  } else {
+    const settingVal = await getTenantSetting(tid, 'notifications', 'stock_alert_threshold');
+    effectiveThreshold = new Decimal(settingVal ? parseFloat(settingVal) : 10);
+  }
+
+  if (newQty.lessThanOrEqualTo(effectiveThreshold)) {
     if (newQty.lessThanOrEqualTo(0)) {
       eventBus.emit(Events.STOCK_OUT, {
         tenantId: tid, ingredientId, ingredientName: ingredientInfo.name,
         remainingQty: newQty.toString(), departmentName, departmentId,
       });
-    } else if (newQty.lessThanOrEqualTo(new Decimal(ingredientInfo.alert_threshold).dividedBy(2))) {
+    } else if (newQty.lessThanOrEqualTo(effectiveThreshold.dividedBy(2))) {
       eventBus.emit(Events.STOCK_CRITICAL, {
         tenantId: tid, ingredientId, ingredientName: ingredientInfo.name,
         remainingQty: newQty.toString(), departmentName, departmentId,

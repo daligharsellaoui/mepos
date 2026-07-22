@@ -1,6 +1,6 @@
 import { Decimal } from 'decimal.js';
 import { query, isDemoMode, demoDb, getClient } from '../database';
-import { getEffectiveDepartmentId } from './stock.service';
+import { getEffectiveDepartmentId, getStockWarning } from './stock.service';
 import { eventBus, Events } from './event.service';
 
 // ======================================================
@@ -972,6 +972,8 @@ export async function adjustStock(data: {
       });
     }
 
+    getStockWarning(targetDeptId, ingId, undefined, null, tid);
+
     return { new_quantity: newQty, movement };
   }
 
@@ -1017,6 +1019,8 @@ export async function adjustStock(data: {
       'UPDATE inventory_stocks SET quantity = $1, updated_at = CURRENT_TIMESTAMP WHERE department_id = $2 AND ingredient_id = $3 AND tenant_id = $4',
       [newQty, effectiveDeptId, ingId, tid]
     );
+
+    getStockWarning(effectiveDeptId, ingId, undefined, client, tid);
 
     const ref = reference_id || (type === 'purchase' ? 'Approvisionnement manuel' : 'Réajustement manuel');
     const movementInsert = await client.query(
