@@ -1,9 +1,17 @@
 <script setup>
+import { computed } from 'vue'
+
 const props = defineProps({
   notification: { type: Object, required: true },
 })
 
 const emit = defineEmits(['read', 'archive', 'delete', 'navigate'])
+
+// Use user_read (per-user) if available, fall back to legacy read field
+const isUnread = computed(() => {
+  if (props.notification.user_read !== undefined) return !props.notification.user_read
+  return !props.notification.read
+})
 
 const priorityLabels = { critical: 'Critique', high: 'Haute', medium: 'Moyenne', low: 'Basse' }
 const priorityColors = { critical: '#dc2626', high: '#f59e0b', medium: '#3b82f6', low: '#64748b' }
@@ -46,7 +54,7 @@ function formatRelative(dateStr) {
 }
 
 function handleClick() {
-  if (!props.notification.read) {
+  if (isUnread.value) {
     emit('read', props.notification.id)
   }
   if (props.notification.action_url) {
@@ -58,14 +66,14 @@ function handleClick() {
 <template>
   <div
     class="notification-card"
-    :class="{ 'unread': !notification.read }"
+    :class="{ 'unread': isUnread }"
     role="button"
     tabindex="0"
     :aria-label="notification.title"
     @click="handleClick"
     @keydown.enter="handleClick"
   >
-    <div class="card-indicator" v-if="!notification.read" />
+    <div class="card-indicator" v-if="isUnread" />
     <div
       class="card-icon"
       :style="{ background: `${notification.color}15`, color: notification.color }"
@@ -107,7 +115,7 @@ function handleClick() {
       <span class="card-time">{{ formatRelative(notification.created_at) }}</span>
       <div class="card-action-row">
         <button
-          v-if="!notification.read"
+          v-if="isUnread"
           class="card-action-btn"
           title="Marquer comme lu"
           aria-label="Marquer comme lu"

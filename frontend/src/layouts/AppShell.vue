@@ -25,9 +25,10 @@ onMounted(() => {
   notifStore.fetchUnreadCount()
   notifStore.connectSSE()
 
+  // Fallback poll for unread count (SSE pushes updates in real-time)
   pollInterval = setInterval(() => {
     notifStore.fetchUnreadCount()
-  }, 15000)
+  }, 30000)
 
   if (auth.isLoggedIn) {
     app.setupNetworkListeners()

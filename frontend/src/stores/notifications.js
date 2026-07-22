@@ -18,7 +18,13 @@ export const useNotificationStore = defineStore('notifications', () => {
     search: '',
   })
 
-  const unreadNotifications = computed(() => items.value.filter(n => !n.read))
+  // Use user_read (per-user) if available, fall back to legacy read field
+  function isUnread(n) {
+    if (n.user_read !== undefined) return !n.user_read
+    return !n.read
+  }
+
+  const unreadNotifications = computed(() => items.value.filter(n => isUnread(n)))
   const sortedByPriority = computed(() => {
     const priorityWeight = { critical: 0, high: 1, medium: 2, low: 3 }
     return [...items.value].sort((a, b) => {
@@ -93,7 +99,9 @@ export const useNotificationStore = defineStore('notifications', () => {
     try {
       await api.markAsRead(notifId)
       items.value = items.value.map(n =>
-        n.id === notifId ? { ...n, read: true, read_at: new Date().toISOString() } : n
+        n.id === notifId
+          ? { ...n, user_read: true, user_read_at: new Date().toISOString(), read: true, read_at: new Date().toISOString() }
+          : n
       )
       unreadCount.value = Math.max(0, unreadCount.value - 1)
     } catch (err) {
@@ -104,7 +112,13 @@ export const useNotificationStore = defineStore('notifications', () => {
   async function markAllAsRead() {
     try {
       await api.markAllAsRead()
-      items.value = items.value.map(n => ({ ...n, read: true, read_at: n.read_at || new Date().toISOString() }))
+      items.value = items.value.map(n => ({
+        ...n,
+        user_read: true,
+        user_read_at: n.user_read_at || new Date().toISOString(),
+        read: true,
+        read_at: n.read_at || new Date().toISOString(),
+      }))
       unreadCount.value = 0
     } catch (err) {
       console.error('[Notifications] mark all read error:', err)
@@ -114,8 +128,9 @@ export const useNotificationStore = defineStore('notifications', () => {
   async function archiveNotification(notifId) {
     try {
       await api.archiveNotification(notifId)
+      const notif = items.value.find(n => n.id === notifId)
       items.value = items.value.filter(n => n.id !== notifId)
-      if (!items.value.find(n => n.id === notifId)?.read) {
+      if (notif && isUnread(notif)) {
         unreadCount.value = Math.max(0, unreadCount.value - 1)
       }
     } catch (err) {
@@ -128,7 +143,7 @@ export const useNotificationStore = defineStore('notifications', () => {
       await api.deleteNotification(notifId)
       const notif = items.value.find(n => n.id === notifId)
       items.value = items.value.filter(n => n.id !== notifId)
-      if (notif && !notif.read) {
+      if (notif && isUnread(notif)) {
         unreadCount.value = Math.max(0, unreadCount.value - 1)
       }
     } catch (err) {
@@ -250,13 +265,17 @@ export const useNotificationStore = defineStore('notifications', () => {
       try {
         const data = JSON.parse(event.data)
         if (data.type === 'notification') {
-          items.value = [data.notification, ...items.value]
+          // Dedup: skip if notification ID already exists
+          if (!items.value.some(n => n.id === data.notification.id)) {
+            items.value = [data.notification, ...items.value]
+          }
           if (data.unreadCount !== undefined) {
             unreadCount.value = data.unreadCount
           }
           showDesktopNotification(data.notification)
           playNotificationSound()
-          if (toastCallback && data.notification.category === 'transfer') {
+          // Show toast for all categories (not just transfer)
+          if (toastCallback) {
             const typeMap = { success: 'success', warning: 'warning', error: 'error', critical: 'critical' }
             toastCallback({
               type: typeMap[data.notification.type] || 'info',

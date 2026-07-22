@@ -15,7 +15,8 @@ onMounted(() => {
   if (auth.isLoggedIn) {
     app.setupNetworkListeners()
     app.fetchData(auth.user)
-    window.setInterval(() => app.fetchData(auth.user), 8000)
+    // Background polling every 30s as fallback (SSE handles real-time, this ensures data freshness)
+    window.setInterval(() => app.fetchData(auth.user), 30000)
   }
 })
 </script>
