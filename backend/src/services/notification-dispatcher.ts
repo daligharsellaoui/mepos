@@ -1,5 +1,5 @@
 import { eventBus, Events } from './event.service';
-import { createNotification, getUsersForRole, CATEGORIES, PRIORITIES } from './notification.service';
+import { createNotification, CATEGORIES, PRIORITIES, buildDedupKey, deactivateNotificationsByDedupKey } from './notification.service';
 
 export function setupNotificationDispatcher() {
   eventBus.on(Events.INGREDIENT_CREATED, async (data: any) => {
@@ -51,6 +51,9 @@ export function setupNotificationDispatcher() {
   });
 
   eventBus.on(Events.STOCK_LOW, async (data: any) => {
+    const dedupKey = buildDedupKey('stock_low', data.tenantId, 'ingredient', data.ingredientId, String(data.departmentId));
+    // Deactivate any previous recovery notification
+    await deactivateNotificationsByDedupKey(data.tenantId, `stock_recovered:${data.tenantId}:ingredient:${data.ingredientId}`);
     await createNotification({
       tenantId: data.tenantId,
       type: 'warning',
@@ -64,10 +67,13 @@ export function setupNotificationDispatcher() {
       icon: 'alert-triangle',
       color: '#f59e0b',
       minRole: 'manager',
+      dedupKey,
     });
   });
 
   eventBus.on(Events.STOCK_OUT, async (data: any) => {
+    const dedupKey = buildDedupKey('stock_out', data.tenantId, 'ingredient', data.ingredientId, String(data.departmentId));
+    await deactivateNotificationsByDedupKey(data.tenantId, `stock_recovered:${data.tenantId}:ingredient:${data.ingredientId}`);
     await createNotification({
       tenantId: data.tenantId,
       type: 'error',
@@ -81,10 +87,13 @@ export function setupNotificationDispatcher() {
       icon: 'x-circle',
       color: '#dc2626',
       minRole: 'admin',
+      dedupKey,
     });
   });
 
   eventBus.on(Events.STOCK_CRITICAL, async (data: any) => {
+    const dedupKey = buildDedupKey('stock_critical', data.tenantId, 'ingredient', data.ingredientId, String(data.departmentId));
+    await deactivateNotificationsByDedupKey(data.tenantId, `stock_recovered:${data.tenantId}:ingredient:${data.ingredientId}`);
     await createNotification({
       tenantId: data.tenantId,
       type: 'critical',
@@ -98,7 +107,15 @@ export function setupNotificationDispatcher() {
       icon: 'alert-octagon',
       color: '#dc2626',
       minRole: 'admin',
+      dedupKey,
     });
+  });
+
+  eventBus.on(Events.STOCK_RECOVERED, async (data: any) => {
+    // Deactivate any existing low/critical/out notifications for this ingredient
+    await deactivateNotificationsByDedupKey(data.tenantId, `stock_low:${data.tenantId}:ingredient:${data.ingredientId}`);
+    await deactivateNotificationsByDedupKey(data.tenantId, `stock_critical:${data.tenantId}:ingredient:${data.ingredientId}`);
+    await deactivateNotificationsByDedupKey(data.tenantId, `stock_out:${data.tenantId}:ingredient:${data.ingredientId}`);
   });
 
   eventBus.on(Events.LOSS_DECLARED, async (data: any) => {
@@ -266,6 +283,8 @@ export function setupNotificationDispatcher() {
   });
 
   eventBus.on(Events.AGENT_DISCONNECTED, async (data: any) => {
+    const dedupKey = buildDedupKey('agent_disconnected', data.tenantId, 'agent', data.agentId);
+    await deactivateNotificationsByDedupKey(data.tenantId, `agent_reconnected:${data.tenantId}:agent:${data.agentId}`);
     await createNotification({
       tenantId: data.tenantId,
       type: 'error',
@@ -279,10 +298,13 @@ export function setupNotificationDispatcher() {
       icon: 'alert-triangle',
       color: '#ef4444',
       minRole: 'admin',
+      dedupKey,
     });
   });
 
   eventBus.on(Events.AGENT_RECONNECTED, async (data: any) => {
+    // Deactivate any existing disconnected notification
+    await deactivateNotificationsByDedupKey(data.tenantId, `agent_disconnected:${data.tenantId}:agent:${data.agentId}`);
     await createNotification({
       tenantId: data.tenantId,
       type: 'success',

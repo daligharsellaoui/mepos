@@ -13,6 +13,7 @@ export const Events = {
   STOCK_LOW: 'stock.low',
   STOCK_OUT: 'stock.out',
   STOCK_CRITICAL: 'stock.critical',
+  STOCK_RECOVERED: 'stock.recovered',
   LOSS_DECLARED: 'loss.declared',
   LOSS_LARGE: 'loss.large',
   TRANSFER_REQUESTED: 'transfer.requested',

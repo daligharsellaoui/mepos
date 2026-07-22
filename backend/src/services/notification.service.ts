@@ -52,14 +52,109 @@ function roleHasAccess(userRole: string, minRole: string): boolean {
   return (ROLE_HIERARCHY[userRole] || 0) >= (ROLE_HIERARCHY[minRole] || 0);
 }
 
-export function getUsersForRole(tenantId: number, minRole: string): any[] {
+/**
+ * FIXED: Now queries database for PostgreSQL mode instead of returning empty array.
+ * Returns users with role >= minRole within a tenant.
+ */
+export async function getUsersForRole(tenantId: number, minRole: string): Promise<any[]> {
   if (isDemoMode) {
     return (demoDb.users || []).filter((u: any) =>
       u.tenant_id === tenantId && roleHasAccess(u.role, minRole)
     );
   }
-  return []; 
+
+  const matchedRoles = rolesAtOrAbove(minRole);
+  if (matchedRoles.length === 0) return [];
+
+  const result = await query(
+    `SELECT id, role FROM users WHERE tenant_id = $1 AND role = ANY($2::text[]) AND is_active = TRUE`,
+    [tenantId, matchedRoles]
+  );
+  return result.rows;
 }
+
+// ──────────────────────────────────────────────
+// GENERATE DEDUP KEY
+// ──────────────────────────────────────────────
+
+/**
+ * Build a deterministic dedup key for notification deduplication.
+ * Format: "{event_type}:{tenant_id}:{entity_type}:{entity_id}"
+ * Example: "stock_low:1:ingredient:42:department:2"
+ */
+export function buildDedupKey(
+  eventType: string,
+  tenantId: number,
+  entityType?: string,
+  entityId?: number | null,
+  extra?: string
+): string {
+  let key = `${eventType}:${tenantId}`;
+  if (entityType) key += `:${entityType}`;
+  if (entityId != null) key += `:${entityId}`;
+  if (extra) key += `:${extra}`;
+  return key;
+}
+
+/**
+ * Check if an active (non-archived, non-expired) notification exists with the given dedup_key.
+ */
+export async function findActiveNotificationByDedupKey(
+  tenantId: number,
+  dedupKey: string
+): Promise<any | null> {
+  if (isDemoMode) {
+    return ((demoDb as any).notifications || []).find(
+      (n: any) =>
+        n.tenant_id === tenantId &&
+        n.dedup_key === dedupKey &&
+        !n.archived
+    ) || null;
+  }
+
+  const result = await query(
+    `SELECT * FROM notifications
+     WHERE tenant_id = $1 AND dedup_key = $2 AND archived = FALSE
+       AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+     LIMIT 1`,
+    [tenantId, dedupKey]
+  );
+  return result.rows[0] || null;
+}
+
+/**
+ * Deactivate (mark archived) notifications matching a dedup_key pattern.
+ * Used for recovery events (e.g., stock replenished → deactivate stock_low notifications).
+ * Returns count of deactivated notifications.
+ */
+export async function deactivateNotificationsByDedupKey(
+  tenantId: number,
+  dedupKeyPrefix: string
+): Promise<number> {
+  if (isDemoMode) {
+    const matched = ((demoDb as any).notifications || []).filter(
+      (n: any) =>
+        n.tenant_id === tenantId &&
+        n.dedup_key &&
+        n.dedup_key.startsWith(dedupKeyPrefix) &&
+        !n.archived
+    );
+    matched.forEach((n: any) => { n.archived = true; n.updated_at = new Date().toISOString(); });
+    return matched.length;
+  }
+
+  const result = await query(
+    `UPDATE notifications SET archived = TRUE, updated_at = CURRENT_TIMESTAMP
+     WHERE tenant_id = $1 AND dedup_key LIKE $2 AND archived = FALSE
+       AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)`,
+    [tenantId, `${dedupKeyPrefix}%`]
+  );
+  return result.rowCount || 0;
+}
+
+// ──────────────────────────────────────────────
+// CREATE NOTIFICATION (with dedup)
+// ──────────────────────────────────────────────
 
 export async function createNotification(params: {
   tenantId: number;
@@ -77,12 +172,22 @@ export async function createNotification(params: {
   actionUrl?: string;
   metadata?: Record<string, any>;
   minRole?: string;
-}): Promise<any> {
+  dedupKey?: string;
+  expiresAt?: string;
+}): Promise<any | null> {
   const {
     tenantId, type, category, priority, title, message,
     icon, color, entityType, entityId, createdBy, assignedTo,
-    actionUrl, metadata, minRole,
+    actionUrl, metadata, minRole, dedupKey, expiresAt,
   } = params;
+
+  // ── DEDUP CHECK ──
+  if (dedupKey) {
+    const existing = await findActiveNotificationByDedupKey(tenantId, dedupKey);
+    if (existing) {
+      return existing; // Return existing notification silently
+    }
+  }
 
   const typeColors: Record<string, string> = {
     information: '#3b82f6',
@@ -141,6 +246,8 @@ export async function createNotification(params: {
     archived: false,
     action_url: actionUrl || null,
     metadata: metadata || {},
+    dedup_key: dedupKey || null,
+    expires_at: expiresAt || null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -161,14 +268,14 @@ export async function createNotification(params: {
 
   const result = await query(
     `INSERT INTO notifications (tenant_id, type, category, priority, title, message, icon, color,
-      entity_type, entity_id, created_by, assigned_to, action_url, metadata)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      entity_type, entity_id, created_by, assigned_to, action_url, metadata, dedup_key, expires_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
      RETURNING *`,
     [
       tenantId, type, category, priority, title, message || '',
       resolvedIcon, resolvedColor, entityType || null, entityId || null,
       createdBy || null, assignedTo || null, actionUrl || null,
-      JSON.stringify(metadata || {}),
+      JSON.stringify(metadata || {}), dedupKey || null, expiresAt || null,
     ]
   );
 
@@ -176,6 +283,10 @@ export async function createNotification(params: {
   eventBus.emit('notification:created', { notification: notif, minRole });
   return notif;
 }
+
+// ──────────────────────────────────────────────
+// GET NOTIFICATIONS (with per-user read state)
+// ──────────────────────────────────────────────
 
 export async function getNotifications(
   tenantId: number,
@@ -212,7 +323,7 @@ export async function getNotifications(
           if (!n.title.toLowerCase().includes(q) && !(n.message || '').toLowerCase().includes(q)) return false;
         }
         if (n.assigned_to && n.assigned_to !== userId) return false;
-        if (!n.assigned_to) return true; 
+        if (!n.assigned_to) return true;
         return true;
       })
       .sort((a: any, b: any) => {
@@ -227,60 +338,84 @@ export async function getNotifications(
     return { data, total };
   }
 
-  let sql = 'SELECT * FROM notifications WHERE tenant_id = $1';
-  const params: any[] = [tenantId];
-  let paramIdx = 2;
-  const conditions: string[] = [];
+  // PG mode: LEFT JOIN with notification_reads for per-user read state
+  let paramIdx = 1;
+  const params: any[] = [tenantId, userId];
+  paramIdx = 3;
+
+  const conditions: string[] = [
+    `(n.assigned_to IS NULL OR n.assigned_to = $2)`
+  ];
+
+  if (archived !== undefined) {
+    conditions.push(`n.archived = $${paramIdx++}`);
+    params.push(archived);
+  } else {
+    conditions.push('n.archived = FALSE');
+  }
 
   if (read !== undefined) {
-    conditions.push(`read = $${paramIdx++}`);
-    params.push(read);
+    // Per-user read status via LEFT JOIN
+    if (read === true) {
+      conditions.push(`(nr.id IS NOT NULL OR n.read = TRUE)`);
+    } else {
+      conditions.push(`(nr.id IS NULL AND n.read = FALSE)`);
+    }
   }
-  if (archived !== undefined) {
-    conditions.push(`archived = $${paramIdx++}`);
-    params.push(archived);
-  }
+
   if (types && types.length > 0) {
-    conditions.push(`type = ANY($${paramIdx++})`);
+    conditions.push(`n.type = ANY($${paramIdx++})`);
     params.push(types);
   }
   if (categories && categories.length > 0) {
-    conditions.push(`category = ANY($${paramIdx++})`);
+    conditions.push(`n.category = ANY($${paramIdx++})`);
     params.push(categories);
   }
   if (priorities && priorities.length > 0) {
-    conditions.push(`priority = ANY($${paramIdx++})`);
+    conditions.push(`n.priority = ANY($${paramIdx++})`);
     params.push(priorities);
   }
   if (search) {
-    conditions.push(`(title ILIKE $${paramIdx} OR message ILIKE $${paramIdx})`);
+    conditions.push(`(n.title ILIKE $${paramIdx} OR n.message ILIKE $${paramIdx})`);
     params.push(`%${search}%`);
     paramIdx++;
   }
 
-  conditions.push(`(assigned_to IS NULL OR assigned_to = $${paramIdx++})`);
-  params.push(userId);
-
-  if (conditions.length > 0) {
-    sql += ' AND ' + conditions.join(' AND ');
-  }
+  const whereClause = conditions.length > 0 ? ' AND ' + conditions.join(' AND ') : '';
 
   const allowedSorts = ['created_at', 'priority', 'type', 'title'];
   const safeSort = allowedSorts.includes(sortBy) ? sortBy : 'created_at';
   const safeOrder = sortOrder === 'asc' ? 'ASC' : 'DESC';
-  sql += ` ORDER BY CASE priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 END, ${safeSort} ${safeOrder}`;
-  sql += ` LIMIT $${paramIdx++} OFFSET $${paramIdx++}`;
+
+  const sql = `
+    SELECT n.*,
+           CASE WHEN nr.id IS NOT NULL THEN TRUE ELSE FALSE END as user_read,
+           nr.read_at as user_read_at
+    FROM notifications n
+    LEFT JOIN notification_reads nr
+      ON nr.notification_id = n.id AND nr.user_id = $2
+    WHERE n.tenant_id = $1${whereClause}
+    ORDER BY
+      CASE n.priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 END,
+      n.${safeSort} ${safeOrder}
+    LIMIT $${paramIdx++} OFFSET $${paramIdx++}
+  `;
   params.push(limit, offset);
 
   const result = await query(sql, params);
 
   const countResult = await query(
-    `SELECT COUNT(*) FROM notifications WHERE tenant_id = $1 AND (assigned_to IS NULL OR assigned_to = $2)`,
+    `SELECT COUNT(*) FROM notifications n
+     WHERE n.tenant_id = $1 AND (n.assigned_to IS NULL OR n.assigned_to = $2)`,
     [tenantId, userId]
   );
 
   return { data: result.rows, total: parseInt(countResult.rows[0]?.count || '0', 10) };
 }
+
+// ──────────────────────────────────────────────
+// GET UNREAD COUNT (per-user via notification_reads)
+// ──────────────────────────────────────────────
 
 export async function getUnreadCount(tenantId: number, userId: number): Promise<number> {
   if (isDemoMode) {
@@ -290,13 +425,23 @@ export async function getUnreadCount(tenantId: number, userId: number): Promise<
   }
 
   const result = await query(
-    `SELECT COUNT(*) FROM notifications
-     WHERE tenant_id = $1 AND read = FALSE
-       AND (assigned_to IS NULL OR assigned_to = $2)`,
+    `SELECT COUNT(*) FROM notifications n
+     LEFT JOIN notification_reads nr
+       ON nr.notification_id = n.id AND nr.user_id = $2
+     WHERE n.tenant_id = $1
+       AND n.archived = FALSE
+       AND (n.assigned_to IS NULL OR n.assigned_to = $2)
+       AND (n.expires_at IS NULL OR n.expires_at > CURRENT_TIMESTAMP)
+       AND nr.id IS NULL
+       AND n.read = FALSE`,
     [tenantId, userId]
   );
   return parseInt(result.rows[0]?.count || '0', 10);
 }
+
+// ──────────────────────────────────────────────
+// MARK AS READ (per-user via notification_reads)
+// ──────────────────────────────────────────────
 
 export async function markAsRead(notifId: number, tenantId: number, userId: number): Promise<any | null> {
   if (isDemoMode) {
@@ -309,14 +454,35 @@ export async function markAsRead(notifId: number, tenantId: number, userId: numb
     return notif;
   }
 
-  const result = await query(
-    `UPDATE notifications SET read = TRUE, read_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-     WHERE id = $1 AND tenant_id = $2 AND (assigned_to IS NULL OR assigned_to = $3)
-     RETURNING *`,
-    [notifId, tenantId, userId]
+  // Verify notification exists
+  const notifResult = await query(
+    'SELECT id, read FROM notifications WHERE id = $1 AND tenant_id = $2',
+    [notifId, tenantId]
   );
-  return result.rows[0] || null;
+  if (notifResult.rows.length === 0) return null;
+
+  // Insert into notification_reads (per-user read tracking)
+  await query(
+    `INSERT INTO notification_reads (tenant_id, user_id, notification_id)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (tenant_id, user_id, notification_id) DO NOTHING`,
+    [tenantId, userId, notifId]
+  );
+
+  // Also update legacy read column for backward compat — RETURN full notification
+  const updateResult = await query(
+    `UPDATE notifications SET read = TRUE, read_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $1 AND tenant_id = $2 AND read = FALSE
+     RETURNING *`,
+    [notifId, tenantId]
+  );
+
+  return updateResult.rows[0] || notifResult.rows[0];
 }
+
+// ──────────────────────────────────────────────
+// MARK ALL AS READ (per-user via notification_reads)
+// ──────────────────────────────────────────────
 
 export async function markAllAsRead(tenantId: number, userId: number): Promise<number> {
   if (isDemoMode) {
@@ -327,13 +493,37 @@ export async function markAllAsRead(tenantId: number, userId: number): Promise<n
     return notifs.length;
   }
 
+  // Find all unseen notifications for this user
   const result = await query(
-    `UPDATE notifications SET read = TRUE, read_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-     WHERE tenant_id = $1 AND read = FALSE AND (assigned_to IS NULL OR assigned_to = $2)`,
+    `SELECT n.id FROM notifications n
+     LEFT JOIN notification_reads nr
+       ON nr.notification_id = n.id AND nr.user_id = $2
+     WHERE n.tenant_id = $1
+       AND n.archived = FALSE
+       AND (n.assigned_to IS NULL OR n.assigned_to = $2)
+       AND nr.id IS NULL
+       AND n.read = FALSE`,
     [tenantId, userId]
   );
-  return result.rowCount || 0;
+
+  if (result.rows.length === 0) return 0;
+
+  const ids = result.rows.map((r: any) => r.id);
+
+  // Batch insert into notification_reads using unnest for parameterized query
+  await query(
+    `INSERT INTO notification_reads (tenant_id, user_id, notification_id)
+     SELECT $1::int, $2::int, unnest($3::int[])
+     ON CONFLICT (tenant_id, user_id, notification_id) DO NOTHING`,
+    [tenantId, userId, ids]
+  );
+
+  return ids.length;
 }
+
+// ──────────────────────────────────────────────
+// ARCHIVE / DELETE
+// ──────────────────────────────────────────────
 
 export async function archiveNotification(notifId: number, tenantId: number): Promise<any | null> {
   if (isDemoMode) {
@@ -369,6 +559,10 @@ export async function deleteNotification(notifId: number, tenantId: number): Pro
   );
   return result.rows.length > 0;
 }
+
+// ──────────────────────────────────────────────
+// NOTIFICATION PREFERENCES
+// ──────────────────────────────────────────────
 
 export async function getUserPreferences(tenantId: number, userId: number): Promise<any[]> {
   if (isDemoMode) {
@@ -446,6 +640,35 @@ export async function setUserPreference(
   return result.rows[0];
 }
 
+// ──────────────────────────────────────────────
+// EXPIRATION CLEANUP
+// ──────────────────────────────────────────────
+
+/**
+ * Archive all expired notifications.
+ * Should be called from a scheduled job.
+ */
+export async function cleanupExpiredNotifications(): Promise<number> {
+  if (isDemoMode) {
+    const now = new Date().toISOString();
+    const expired = ((demoDb as any).notifications || []).filter(
+      (n: any) => n.expires_at && n.expires_at < now && !n.archived
+    );
+    expired.forEach((n: any) => { n.archived = true; });
+    return expired.length;
+  }
+
+  const result = await query(
+    `UPDATE notifications SET archived = TRUE, updated_at = CURRENT_TIMESTAMP
+     WHERE expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP AND archived = FALSE`
+  );
+  return result.rowCount || 0;
+}
+
+// ──────────────────────────────────────────────
+// ROLE-BASED DISTRIBUTION HANDLER
+// ──────────────────────────────────────────────
+
 function rolesAtOrAbove(minRole: string): string[] {
   const min = ROLE_HIERARCHY[minRole];
   if (min === undefined) return [];
@@ -489,7 +712,7 @@ eventBus.on('notification:created', async ({ notification, minRole }: { notifica
       `INSERT INTO notifications (tenant_id, type, category, priority, title, message, icon, color,
         entity_type, entity_id, created_by, assigned_to, action_url, metadata, read, archived, created_at, updated_at)
        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, u.id, $12, $13, FALSE, FALSE, NOW(), NOW()
-       FROM users u WHERE u.tenant_id = $14 AND u.role = ANY($15::text[])`,
+       FROM users u WHERE u.tenant_id = $14 AND u.role = ANY($15::text[]) AND u.is_active = TRUE`,
       [
         notification.tenant_id, notification.type, notification.category, notification.priority,
         notification.title, notification.message, notification.icon, notification.color,

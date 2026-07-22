@@ -268,6 +268,14 @@ export async function getStockWarning(
     return `Stock critique pour l'ingrédient '${ingredientInfo.name}' dans le département '${departmentName}' (Stock restant : ${newQty.toString()})`;
   }
 
+  // Stock has recovered above threshold — emit recovery event to deactivate old notifications
+  if (newQty.greaterThan(effectiveThreshold)) {
+    eventBus.emit(Events.STOCK_RECOVERED, {
+      tenantId: tid, ingredientId, ingredientName: ingredientInfo.name,
+      remainingQty: newQty.toString(), unit: ingredientInfo.unit || '', departmentName, departmentId,
+    });
+  }
+
   return null;
 }
 
