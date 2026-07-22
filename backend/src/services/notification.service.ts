@@ -185,7 +185,7 @@ export async function createNotification(params: {
   if (dedupKey) {
     const existing = await findActiveNotificationByDedupKey(tenantId, dedupKey);
     if (existing) {
-      return existing; // Return existing notification silently
+      return existing;
     }
   }
 
@@ -355,11 +355,11 @@ export async function getNotifications(
   }
 
   if (read !== undefined) {
-    // Per-user read status via LEFT JOIN
+    // Per-user read status via LEFT JOIN (notification_reads is single source of truth)
     if (read === true) {
-      conditions.push(`(nr.id IS NOT NULL OR n.read = TRUE)`);
+      conditions.push(`nr.id IS NOT NULL`);
     } else {
-      conditions.push(`(nr.id IS NULL AND n.read = FALSE)`);
+      conditions.push(`nr.id IS NULL`);
     }
   }
 
@@ -432,8 +432,7 @@ export async function getUnreadCount(tenantId: number, userId: number): Promise<
        AND n.archived = FALSE
        AND (n.assigned_to IS NULL OR n.assigned_to = $2)
        AND (n.expires_at IS NULL OR n.expires_at > CURRENT_TIMESTAMP)
-       AND nr.id IS NULL
-       AND n.read = FALSE`,
+       AND nr.id IS NULL`,
     [tenantId, userId]
   );
   return parseInt(result.rows[0]?.count || '0', 10);
@@ -461,7 +460,7 @@ export async function markAsRead(notifId: number, tenantId: number, userId: numb
   );
   if (notifResult.rows.length === 0) return null;
 
-  // Insert into notification_reads (per-user read tracking)
+  // Insert into notification_reads (per-user read tracking — single source of truth)
   await query(
     `INSERT INTO notification_reads (tenant_id, user_id, notification_id)
      VALUES ($1, $2, $3)
@@ -469,15 +468,7 @@ export async function markAsRead(notifId: number, tenantId: number, userId: numb
     [tenantId, userId, notifId]
   );
 
-  // Also update legacy read column for backward compat — RETURN full notification
-  const updateResult = await query(
-    `UPDATE notifications SET read = TRUE, read_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-     WHERE id = $1 AND tenant_id = $2 AND read = FALSE
-     RETURNING *`,
-    [notifId, tenantId]
-  );
-
-  return updateResult.rows[0] || notifResult.rows[0];
+  return notifResult.rows[0];
 }
 
 // ──────────────────────────────────────────────
@@ -501,8 +492,7 @@ export async function markAllAsRead(tenantId: number, userId: number): Promise<n
      WHERE n.tenant_id = $1
        AND n.archived = FALSE
        AND (n.assigned_to IS NULL OR n.assigned_to = $2)
-       AND nr.id IS NULL
-       AND n.read = FALSE`,
+       AND nr.id IS NULL`,
     [tenantId, userId]
   );
 
