@@ -29,6 +29,7 @@ import settingsRouter from './routes/settings';
 import tenantsRouter from './routes/tenants';
 import notificationsRouter from './routes/notifications';
 import pushRouter from './routes/push';
+import suppliersRouter from './routes/suppliers';
 
 dotenv.config();
 
@@ -102,6 +103,9 @@ app.use('/api/v1/settings', authMiddleware, tenantContextMiddleware, settingsRou
 app.use('/api/v1/notifications', authMiddleware, tenantContextMiddleware, notificationsRouter);
 // Push notification subscription routes
 app.use('/api/v1/push', authMiddleware, tenantContextMiddleware, pushRouter);
+
+// Supplier routes
+app.use('/api/v1/suppliers', authMiddleware, tenantContextMiddleware, suppliersRouter);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
