@@ -476,6 +476,58 @@ export async function initializeDatabase() {
     await query(DDL_SCHEMA);
     console.log('Database tables verified/created successfully.');
 
+    // Defensive migration: ensure suppliers table exists (handles partial DDL failures)
+    try {
+      await query(`
+        DO $$ BEGIN
+          CREATE TYPE supplier_status AS ENUM ('active', 'archived');
+        EXCEPTION WHEN duplicate_object THEN null;
+        END $$;
+      `);
+      await query(`
+        CREATE TABLE IF NOT EXISTS suppliers (
+          id SERIAL PRIMARY KEY,
+          tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+          name VARCHAR(255) NOT NULL,
+          company_name VARCHAR(255),
+          reference VARCHAR(100),
+          tax_number VARCHAR(100),
+          registration_number VARCHAR(100),
+          contact_person VARCHAR(255),
+          email VARCHAR(255),
+          phone VARCHAR(50),
+          mobile VARCHAR(50),
+          website TEXT,
+          address TEXT,
+          city VARCHAR(100),
+          postal_code VARCHAR(20),
+          country VARCHAR(100),
+          payment_terms VARCHAR(100),
+          payment_method VARCHAR(100),
+          currency VARCHAR(3) DEFAULT 'TND',
+          delivery_delay INT DEFAULT 0,
+          minimum_order_amount DECIMAL(12, 3) DEFAULT 0,
+          notes TEXT,
+          status supplier_status NOT NULL DEFAULT 'active',
+          preferred BOOLEAN NOT NULL DEFAULT FALSE,
+          rating INT DEFAULT 0 CHECK (rating >= 0 AND rating <= 5),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          archived_at TIMESTAMP WITH TIME ZONE
+        );
+      `);
+      await query(`CREATE INDEX IF NOT EXISTS idx_suppliers_tenant_id ON suppliers(tenant_id)`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_suppliers_status ON suppliers(status)`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_suppliers_name ON suppliers(name)`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_suppliers_email ON suppliers(email)`);
+      await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_suppliers_tenant_name ON suppliers(tenant_id, LOWER(name))`);
+      await query(`ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS preferred_supplier_id INT REFERENCES suppliers(id) ON DELETE SET NULL`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_ingredients_preferred_supplier ON ingredients(preferred_supplier_id)`);
+      console.log('Supplier schema verified/created.');
+    } catch (migrationErr: any) {
+      console.warn('Supplier migration warning:', migrationErr.message);
+    }
+
     // Detect and fix tables that were just upgraded from single-tenant (missing tenant_id data)
     const checkNullTenant = await query(`
       SELECT count(*) FROM users WHERE tenant_id IS NULL
