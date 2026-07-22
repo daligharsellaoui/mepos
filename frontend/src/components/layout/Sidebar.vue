@@ -50,9 +50,6 @@ const isActive = (path) => {
   return route.path === path || route.path.startsWith(path + '/')
 }
 
-const toggleOffline = () => {
-  app.isOffline = !app.isOffline
-}
 </script>
 
 <template>
@@ -65,29 +62,6 @@ const toggleOffline = () => {
         <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
           <img :src="logoSrc" alt="mePOS" style="height: 45px;">
           <span class="brand-badge">v2.0</span>
-        </div>
-        <div
-          style="cursor: pointer;"
-          title="Double-cliquer pour simuler hors-ligne"
-          @dblclick="toggleOffline"
-        >
-          <div
-            v-if="app.isOffline"
-            style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: #ef4444;"
-          >
-            <span
-              class="status-dot-pulse"
-              style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block;"
-            />
-            <span>Hors ligne (Local)</span>
-          </div>
-          <div
-            v-else
-            style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); color: #10b981;"
-          >
-            <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;" />
-            <span>En ligne {{ app.isSyncing ? '· Sync...' : '' }}</span>
-          </div>
         </div>
       </div>
 

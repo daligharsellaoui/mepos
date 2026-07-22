@@ -53,6 +53,10 @@ const getRoleText = (role) => {
   }
 }
 
+const toggleOffline = () => {
+  app.isOffline = !app.isOffline
+}
+
 function toggleDropdown() {
   showDropdown.value = !showDropdown.value
 }
@@ -117,18 +121,24 @@ function toggleDropdown() {
     <div class="desktop-topbar">
       <div class="topbar-left">
         <div
-          v-if="app.isOffline"
-          class="topbar-status topbar-status-offline"
+          style="cursor: pointer;"
+          title="Double-cliquer pour simuler hors-ligne"
+          @dblclick="toggleOffline"
         >
-          <span class="status-dot-pulse" style="width: 6px; height: 6px; border-radius: 50%; background: #ef4444; display: inline-block;" />
-          <span>Hors ligne</span>
-        </div>
-        <div
-          v-else
-          class="topbar-status topbar-status-online"
-        >
-          <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block;" />
-          <span>En ligne</span>
+          <div
+            v-if="app.isOffline"
+            class="topbar-status topbar-status-offline"
+          >
+            <span class="status-dot-pulse" style="width: 6px; height: 6px; border-radius: 50%; background: #ef4444; display: inline-block;" />
+            <span>Hors ligne</span>
+          </div>
+          <div
+            v-else
+            class="topbar-status topbar-status-online"
+          >
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block;" />
+            <span>En ligne</span>
+          </div>
         </div>
       </div>
       <div class="topbar-right">

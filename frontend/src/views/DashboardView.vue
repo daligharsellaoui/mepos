@@ -519,7 +519,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
         <button
           class="touch-btn touch-btn-secondary"
           style="padding: 0.4rem 1rem; min-height: 36px; font-size: 0.85rem;"
-          @click="router.push('/losses')"
+          @click="router.push('/app/losses')"
         >
           + Déclarer perte
         </button>
@@ -713,7 +713,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
           <button
             class="touch-btn touch-btn-secondary"
             style="padding: 0.3rem 0.8rem; min-height: 32px; font-size: 0.78rem;"
-            @click="router.push('/inventory')"
+            @click="router.push('/app/inventory')"
           >
             Voir l'inventaire
           </button>
@@ -760,7 +760,7 @@ watch([salesHistory, salesStats, app.losses], () => { nextTick(() => renderChart
           <button
             class="touch-btn touch-btn-secondary"
             style="padding: 0.3rem 0.8rem; min-height: 32px; font-size: 0.78rem;"
-            @click="router.push('/losses')"
+            @click="router.push('/app/losses')"
           >
             Voir tout
           </button>
