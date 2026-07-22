@@ -184,6 +184,11 @@ export async function validateCsv(
       rowErrors.push('Aucun ingrédient défini');
     }
 
+    const ingredientNames = ingredients.map(i => i.name.toLowerCase());
+    if (new Set(ingredientNames).size !== ingredientNames.length) {
+      rowErrors.push('Ingrédients en double détectés pour ce produit');
+    }
+
     const rowValid = rowErrors.length === 0;
 
     validatedRows.push({
@@ -376,12 +381,17 @@ export async function executeImport(
         stats.recipesCreated++;
         stats.productsCreated++;
 
-        // Create recipe ingredients
+        // Create recipe ingredients (deduplicate by aggregating quantities)
+        const ingredientQtyMap = new Map<number, number>();
         for (let i = 0; i < ingredientIds.length; i++) {
+          const qty = row.ingredients[i]?.quantity || 0;
+          ingredientQtyMap.set(ingredientIds[i], (ingredientQtyMap.get(ingredientIds[i]) || 0) + qty);
+        }
+        for (const [ingId, qty] of ingredientQtyMap) {
           await client.query(
             `INSERT INTO recipe_ingredients (tenant_id, recipe_id, ingredient_id, quantity_needed)
              VALUES ($1, $2, $3, $4)`,
-            [tenantId, recipeId, ingredientIds[i], row.ingredients[i]?.quantity || 0]
+            [tenantId, recipeId, ingId, qty]
           );
         }
 
