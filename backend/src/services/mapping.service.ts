@@ -533,6 +533,95 @@ export async function validateMappings(tenantId: number): Promise<{
 }
 
 /**
+ * Resolve external_product_id to mepos_product_id via product_mappings
+ * Returns null if no mapping found or mapping is unmapped/ignored
+ */
+export async function resolveExternalProductId(
+  tenantId: number,
+  connectorType: string,
+  externalProductId: string
+): Promise<{ mepos_product_id: number | null; mapping_status: string; mapping_id: number | null }> {
+  if (isDemoMode) {
+    const mapping = ((demoDb as any).product_mappings || []).find(
+      (m: any) =>
+        m.tenant_id === tenantId &&
+        m.connector_type === connectorType &&
+        m.external_product_id === externalProductId
+    );
+
+    if (!mapping) {
+      return { mepos_product_id: null, mapping_status: 'unmapped', mapping_id: null };
+    }
+
+    return {
+      mepos_product_id: mapping.mapping_status === 'mapped' ? mapping.mepos_product_id : null,
+      mapping_status: mapping.mapping_status,
+      mapping_id: mapping.id
+    };
+  }
+
+  const result = await query(
+    `SELECT id, mepos_product_id, mapping_status
+     FROM product_mappings
+     WHERE tenant_id = $1 AND connector_type = $2 AND external_product_id = $3`,
+    [tenantId, connectorType, externalProductId]
+  );
+
+  if (result.rows.length === 0) {
+    return { mepos_product_id: null, mapping_status: 'unmapped', mapping_id: null };
+  }
+
+  const mapping = result.rows[0];
+  return {
+    mepos_product_id: mapping.mapping_status === 'mapped' ? mapping.mepos_product_id : null,
+    mapping_status: mapping.mapping_status,
+    mapping_id: mapping.id
+  };
+}
+
+/**
+ * Bulk resolve external_product_ids to mepos_product_ids
+ */
+export async function resolveExternalProductIds(
+  tenantId: number,
+  connectorType: string,
+  externalProductIds: string[]
+): Promise<Map<string, { mepos_product_id: number | null; mapping_status: string; mapping_id: number | null }>> {
+  const results = new Map<string, { mepos_product_id: number | null; mapping_status: string; mapping_id: number | null }>();
+
+  if (isDemoMode) {
+    for (const extId of externalProductIds) {
+      const result = await resolveExternalProductId(tenantId, connectorType, extId);
+      results.set(extId, result);
+    }
+    return results;
+  }
+
+  const result = await query(
+    `SELECT external_product_id, id, mepos_product_id, mapping_status
+     FROM product_mappings
+     WHERE tenant_id = $1 AND connector_type = $2 AND external_product_id = ANY($3)`,
+    [tenantId, connectorType, externalProductIds]
+  );
+
+  // Initialize all as unmapped
+  for (const extId of externalProductIds) {
+    results.set(extId, { mepos_product_id: null, mapping_status: 'unmapped', mapping_id: null });
+  }
+
+  // Fill in found mappings
+  for (const row of result.rows) {
+    results.set(row.external_product_id, {
+      mepos_product_id: row.mapping_status === 'mapped' ? row.mepos_product_id : null,
+      mapping_status: row.mapping_status,
+      mapping_id: row.id
+    });
+  }
+
+  return results;
+}
+
+/**
  * Import external POS products
  */
 export async function importPosProducts(

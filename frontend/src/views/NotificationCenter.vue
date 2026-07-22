@@ -141,12 +141,13 @@ function formatDate(dateStr) {
   })
 }
 
-const currentPage = computed(() => Math.floor(notifStore.offset / notifStore.limit) + 1)
+const pageOffset = ref(0)
+const currentPage = computed(() => Math.floor(pageOffset.value / notifStore.limit) + 1)
 const totalPages = computed(() => Math.ceil(notifStore.total / notifStore.limit))
 
 function goToPage(page) {
-  const newOffset = (page - 1) * notifStore.limit
-  notifStore.fetchNotifications(true, newOffset)
+  pageOffset.value = (page - 1) * notifStore.limit
+  notifStore.fetchNotifications(true, pageOffset.value)
 }
 
 function goToPrevPage() {

@@ -9,19 +9,20 @@ router.use(authMiddleware);
 router.use(tenantContextMiddleware);
 
 router.post('/sync', async (req: Request, res: Response) => {
-  const { department_id, tickets } = req.body;
+  const { department_id, tickets, connector_type } = req.body;
 
   if (!department_id || !tickets || !Array.isArray(tickets)) {
     return res.status(400).json({ status: 'error', message: 'Missing department_id or tickets list' });
   }
 
   try {
-    const result = await syncTickets(department_id, tickets, req.tenantId);
+    const result = await syncTickets(department_id, tickets, req.tenantId, connector_type || 'pos');
     res.json({
       status: 'success',
       synced_tickets_count: result.syncedTicketsCount,
       deducted_stocks: result.deductedStocks,
-      warnings: result.warnings
+      warnings: result.warnings,
+      unmapped_products: result.unmappedProducts
     });
   } catch (error: any) {
     console.error('Error syncing sales ticket:', error);

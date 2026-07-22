@@ -1,6 +1,8 @@
 import { Decimal } from 'decimal.js';
 import { query, isDemoMode, demoDb, getClient } from '../database';
 import { getEffectiveDepartmentId, processSaleDeduction } from './stock.service';
+import { resolveExternalProductId, resolveExternalProductIds } from './mapping.service';
+import { eventBus, Events } from './event.service';
 
 /**
  * Resolve tenant ID for queries.
@@ -12,15 +14,62 @@ function resolveTenantFilter(tenantId?: number | null): number | undefined {
 }
 
 /**
+ * Resolve item's recipe_id from external_product_id if needed
+ * Supports both formats:
+ *   - { recipe_id: 5, ... }  (pre-resolved, for backward compat)
+ *   - { external_product_id: 'POS-123', ... } (needs mapping lookup)
+ */
+async function resolveItemProduct(
+  item: any,
+  connectorType: string,
+  tenantId: number,
+  unmappedProducts: string[],
+  mappingWarnings: string[]
+): Promise<{ recipe_id: number | null; resolved: boolean }> {
+  // If recipe_id is already provided, use it directly (backward compatibility)
+  if (item.recipe_id) {
+    return { recipe_id: item.recipe_id, resolved: true };
+  }
+
+  // If external_product_id is provided, resolve via mapping
+  if (item.external_product_id) {
+    const result = await resolveExternalProductId(tenantId, connectorType, item.external_product_id);
+
+    if (result.mapping_status === 'mapped' && result.mepos_product_id) {
+      return { recipe_id: result.mepos_product_id, resolved: true };
+    }
+
+    // Product is unmapped or ignored - block this item
+    if (result.mapping_status === 'unmapped') {
+      unmappedProducts.push(item.external_product_id);
+      mappingWarnings.push(`Produit non mappé: ${item.external_product_id}`);
+    } else if (result.mapping_status === 'ignored') {
+      mappingWarnings.push(`Produit ignoré: ${item.external_product_id}`);
+    }
+
+    return { recipe_id: null, resolved: false };
+  }
+
+  // No identifier provided
+  mappingWarnings.push('Élément sans product identifier (recipe_id ou external_product_id requis)');
+  return { recipe_id: null, resolved: false };
+}
+
+/**
  * Sync sales tickets: process stock deductions with idempotency checks.
+ * Supports two formats:
+ *   1. { recipe_id: 5, quantity: 2 } - pre-resolved (backward compat)
+ *   2. { external_product_id: 'POS-123', quantity: 2 } - needs mapping
  */
 export async function syncTickets(
   departmentId: number,
   tickets: any[],
-  tenantId?: number | null
-): Promise<{ syncedTicketsCount: number; deductedStocks: any[]; warnings: string[] }> {
+  tenantId?: number | null,
+  connectorType: string = 'pos'
+): Promise<{ syncedTicketsCount: number; deductedStocks: any[]; warnings: string[]; unmappedProducts: string[] }> {
   const deptId = typeof departmentId === 'string' ? parseInt(departmentId, 10) : departmentId;
   const tid = tenantId ?? 1;
+  const unmappedProducts: string[] = [];
 
   if (isDemoMode) {
     const department = demoDb.departments.find((d: any) => d.id === deptId);
@@ -49,20 +98,35 @@ export async function syncTickets(
         ticket_date: new Date(ticket_date), total_amount, tenant_id: tid,
       });
 
+      // Resolve items via mapping
+      const resolvedItems: any[] = [];
       for (const item of items) {
+        const { recipe_id, resolved } = await resolveItemProduct(item, connectorType, tid, unmappedProducts, warnings);
+        if (resolved && recipe_id) {
+          resolvedItems.push({ ...item, recipe_id });
+        }
+      }
+
+      // Skip ticket if no items could be resolved
+      if (resolvedItems.length === 0) {
+        warnings.push(`Ticket ${external_ticket_id} ignoré: aucun produit mappé`);
+        continue;
+      }
+
+      for (const item of resolvedItems) {
         demoDb.sales_ticket_items.push({
           id: demoDb.sales_ticket_items.length + 1, sales_ticket_id: ticketId,
           recipe_id: item.recipe_id, quantity: item.quantity, unit_price: item.unit_price
         });
       }
 
-      const result = await processSaleDeduction(null, stockDeptId, stockDeptId, department.name, items, ticketId, tid);
+      const result = await processSaleDeduction(null, stockDeptId, stockDeptId, department.name, resolvedItems, ticketId, tid);
       deductedStocks.push(...result.deductedStocks);
       warnings.push(...result.warnings);
       syncedTicketsCount++;
     }
 
-    return { syncedTicketsCount, deductedStocks, warnings };
+    return { syncedTicketsCount, deductedStocks, warnings, unmappedProducts };
   }
 
   // PostgreSQL mode
@@ -98,21 +162,36 @@ export async function syncTickets(
       );
       const ticketId = insertTicketRes.rows[0].id;
 
+      // Resolve items via mapping
+      const resolvedItems: any[] = [];
       for (const item of items) {
+        const { recipe_id, resolved } = await resolveItemProduct(item, connectorType, tid, unmappedProducts, warnings);
+        if (resolved && recipe_id) {
+          resolvedItems.push({ ...item, recipe_id });
+        }
+      }
+
+      // Skip ticket if no items could be resolved
+      if (resolvedItems.length === 0) {
+        warnings.push(`Ticket ${external_ticket_id} ignoré: aucun produit mappé`);
+        continue;
+      }
+
+      for (const item of resolvedItems) {
         await client.query(
           `INSERT INTO sales_ticket_items (sales_ticket_id, tenant_id, recipe_id, quantity, unit_price) VALUES ($1, $2, $3, $4, $5)`,
           [ticketId, tid, item.recipe_id, item.quantity, item.unit_price]
         );
       }
 
-      const result = await processSaleDeduction(client, deptId, stockDeptId, department.name, items, ticketId, tid);
+      const result = await processSaleDeduction(client, deptId, stockDeptId, department.name, resolvedItems, ticketId, tid);
       deductedStocks.push(...result.deductedStocks);
       warnings.push(...result.warnings);
       syncedTicketsCount++;
     }
 
     await client.query('COMMIT');
-    return { syncedTicketsCount, deductedStocks, warnings };
+    return { syncedTicketsCount, deductedStocks, warnings, unmappedProducts };
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
