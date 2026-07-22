@@ -544,3 +544,133 @@ export async function getSupplierStats(id: number, tenantId?: number | null): Pr
   if (result.rows.length === 0) return null;
   return result.rows[0];
 }
+
+export async function getSupplierScore(id: number, tenantId?: number | null): Promise<any> {
+  const filter = resolveTenantFilter(tenantId);
+  const tid = filter ?? 1;
+
+  if (isDemoMode) {
+    const supplier = demoDb.suppliers.find((s: any) => s.id === id && s.tenant_id === tid);
+    if (!supplier) return null;
+
+    const ingredients = demoDb.ingredients.filter(
+      (i: any) => i.preferred_supplier_id === id && i.tenant_id === tid
+    );
+    if (ingredients.length === 0) return null;
+
+    const ingredientIds = ingredients.map((i: any) => i.id);
+    const losses = demoDb.ingredient_losses.filter(
+      (l: any) => ingredientIds.includes(l.ingredient_id) && l.tenant_id === tid
+    );
+    const purchaseMovements = demoDb.stock_movements.filter(
+      (m: any) => m.type === 'purchase' && ingredientIds.includes(m.ingredient_id) && m.tenant_id === tid
+    );
+
+    const totalLossQty = losses.reduce((s: number, l: any) => s + l.quantity, 0);
+    const totalLossCost = losses.reduce((s: number, l: any) => s + l.cost_loss, 0);
+    const totalPurchasedQty = purchaseMovements.reduce((s: number, m: any) => s + m.quantity, 0);
+    const totalPurchasedCost = purchaseMovements.reduce((s: number, m: any) => {
+      const ing = ingredients.find((i: any) => i.id === m.ingredient_id);
+      return s + m.quantity * (ing?.purchase_price_per_unit ?? 0);
+    }, 0);
+
+    return calculateScore(ingredients.length, losses.length, totalLossQty, totalLossCost, totalPurchasedQty, totalPurchasedCost);
+  }
+
+  const result = await query(
+    `WITH supplier_ingredients AS (
+       SELECT id, purchase_price_per_unit FROM ingredients
+       WHERE preferred_supplier_id = $1 AND tenant_id = $2
+     ),
+     loss_stats AS (
+       SELECT
+         COALESCE(SUM(l.quantity), 0) as total_loss_qty,
+         COALESCE(SUM(l.cost_loss), 0) as total_loss_cost,
+         COUNT(l.id) as loss_incidents
+       FROM ingredient_losses l
+       JOIN supplier_ingredients si ON si.id = l.ingredient_id
+       WHERE l.tenant_id = $2
+     ),
+     purchase_stats AS (
+       SELECT
+         COALESCE(SUM(sm.quantity), 0) as total_purchased_qty,
+         COALESCE(SUM(sm.quantity * si.purchase_price_per_unit), 0) as total_purchased_cost
+       FROM stock_movements sm
+       JOIN supplier_ingredients si ON si.id = sm.ingredient_id
+       WHERE sm.type = 'purchase' AND sm.tenant_id = $2
+     )
+     SELECT
+       (SELECT COUNT(*) FROM supplier_ingredients) as ingredient_count,
+       ls.*,
+       ps.*
+     FROM loss_stats ls, purchase_stats ps`,
+    [id, tid]
+  );
+  if (result.rows.length === 0) return null;
+  const row = result.rows[0];
+  if (row.ingredient_count === 0) return null;
+
+  return calculateScore(
+    row.ingredient_count, row.loss_incidents,
+    parseFloat(row.total_loss_qty) || 0, parseFloat(row.total_loss_cost) || 0,
+    parseFloat(row.total_purchased_qty) || 0, parseFloat(row.total_purchased_cost) || 0
+  );
+}
+
+function calculateScore(
+  ingredientCount: number, lossIncidents: number,
+  totalLossQty: number, totalLossCost: number,
+  totalPurchasedQty: number, totalPurchasedCost: number
+): any {
+  let wasteRatioScore: number;
+  if (totalPurchasedQty > 0) {
+    const ratio = Math.min(totalLossQty / totalPurchasedQty, 1);
+    wasteRatioScore = Math.round((1 - ratio) * 100);
+  } else {
+    wasteRatioScore = totalLossQty > 0 ? 0 : 100;
+  }
+
+  let frequencyScore: number;
+  if (ingredientCount > 0) {
+    const perIngredient = lossIncidents / ingredientCount;
+    frequencyScore = Math.max(0, Math.round(100 - perIngredient * 25));
+  } else {
+    frequencyScore = 0;
+  }
+
+  let costImpactScore: number;
+  if (totalPurchasedCost > 0) {
+    const costRatio = Math.min(totalLossCost / totalPurchasedCost, 1);
+    costImpactScore = Math.round((1 - costRatio) * 100);
+  } else {
+    costImpactScore = totalLossCost > 0 ? 0 : 100;
+  }
+
+  const finalScore = Math.round(wasteRatioScore * 0.5 + frequencyScore * 0.3 + costImpactScore * 0.2);
+
+  return {
+    score: Math.min(finalScore, 100),
+    components: {
+      waste_ratio: wasteRatioScore,
+      frequency: frequencyScore,
+      cost_impact: costImpactScore,
+    },
+    details: {
+      ingredient_count: ingredientCount,
+      loss_incidents: lossIncidents,
+      total_loss_qty: parseFloat(totalLossQty.toFixed(2)),
+      total_loss_cost: parseFloat(totalLossCost.toFixed(2)),
+      total_purchased_qty: parseFloat(totalPurchasedQty.toFixed(2)),
+      total_purchased_cost: parseFloat(totalPurchasedCost.toFixed(2)),
+    },
+    label: scoreLabel(finalScore),
+  };
+}
+
+function scoreLabel(score: number): string {
+  if (score >= 90) return 'Excellent';
+  if (score >= 75) return 'Bon';
+  if (score >= 50) return 'Moyen';
+  if (score >= 25) return 'Passable';
+  return 'Médiocre';
+}

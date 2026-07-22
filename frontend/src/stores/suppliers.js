@@ -151,6 +151,18 @@ export const useSupplierStore = defineStore('suppliers', () => {
     throw new Error(res.message || 'Erreur lors de la suppression.')
   }
 
+  async function fetchSupplierScore(id) {
+    try {
+      const { data: res } = await api.getSupplierScore(id)
+      if (res.status === 'success') {
+        return res.data
+      }
+      return null
+    } catch {
+      return null
+    }
+  }
+
   async function fetchSupplierIngredients(id) {
     const { data: res } = await api.getSupplierIngredients(id)
     if (res.status === 'success') {
@@ -165,6 +177,6 @@ export const useSupplierStore = defineStore('suppliers', () => {
     sortBy, sortDir, page, perPage, total,
     filteredSuppliers, paginatedSuppliers, totalPages,
     fetchSuppliers, fetchSupplier, createSupplier, updateSupplier,
-    archiveSupplier, restoreSupplier, deleteSupplier, fetchSupplierIngredients,
+    archiveSupplier, restoreSupplier, deleteSupplier, fetchSupplierIngredients, fetchSupplierScore,
   }
 })

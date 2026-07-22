@@ -129,6 +129,7 @@ export const api = {
   restoreSupplier: (id) => client.post(`/suppliers/${id}/restore`),
   deleteSupplier: (id) => client.delete(`/suppliers/${id}`),
   getSupplierIngredients: (id) => client.get(`/suppliers/${id}/ingredients`),
+  getSupplierScore: (id) => client.get(`/suppliers/${id}/score`),
 
   getVapidPublicKey: () => client.get('/push/vapid-public-key'),
   pushSubscribe: (sub) => client.post('/push/subscribe', sub),

@@ -116,6 +116,22 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/:id/score', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ status: 'error', message: 'ID invalide.' });
+    }
+    const score = await supplierService.getSupplierScore(id, req.tenantId);
+    if (!score) {
+      return res.status(404).json({ status: 'error', message: 'Score non disponible pour ce fournisseur.' });
+    }
+    res.json({ status: 'success', data: score });
+  } catch (error: any) {
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+});
+
 router.get('/:id/ingredients', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);

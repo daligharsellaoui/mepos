@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSupplierStore } from '../stores/suppliers'
 import { useAuthStore } from '../stores/auth'
@@ -17,6 +17,7 @@ const auth = useAuthStore()
 
 const ingredients = ref([])
 const stats = ref({})
+const score = ref(null)
 const showForm = ref(false)
 const showDeleteDialog = ref(false)
 const deleteLoading = ref(false)
@@ -32,6 +33,7 @@ async function loadData() {
   await Promise.all([
     store.fetchSupplier(id),
     store.fetchSupplierIngredients(id).then(data => { ingredients.value = data }).catch(() => {}),
+    store.fetchSupplierScore(id).then(data => { score.value = data }).catch(() => {}),
   ])
   if (store.currentSupplier) {
     stats.value = {
@@ -52,6 +54,15 @@ watch(() => route.params.id, () => {
 function editSupplier() {
   showForm.value = true
 }
+
+const scoreClass = computed(() => {
+  if (!score.value) return ''
+  const s = score.value.score
+  if (s >= 75) return 'score-excellent'
+  if (s >= 50) return 'score-good'
+  if (s >= 25) return 'score-average'
+  return 'score-poor'
+})
 
 function closeForm() {
   showForm.value = false
@@ -164,7 +175,42 @@ async function handleDelete() {
         </div>
       </Card>
 
-      <Card title="Ingrédients fournis">
+      <Card title="Score fournisseur" v-if="score">
+        <div class="score-container">
+          <div class="score-circle" :class="scoreClass" :style="{ '--pct': score.score + '%' }">
+            <span class="score-value">{{ score.score }}</span>
+            <span class="score-label">{{ score.label }}</span>
+          </div>
+          <div class="score-bars">
+            <div class="score-bar-row">
+              <span class="score-bar-label">Pertes / Achats</span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill" :style="{ width: score.components.waste_ratio + '%' }"></div>
+              </div>
+              <span class="score-bar-value">{{ score.components.waste_ratio }}%</span>
+            </div>
+            <div class="score-bar-row">
+              <span class="score-bar-label">Fréquence pertes</span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill" :style="{ width: score.components.frequency + '%' }"></div>
+              </div>
+              <span class="score-bar-value">{{ score.components.frequency }}%</span>
+            </div>
+            <div class="score-bar-row">
+              <span class="score-bar-label">Impact coût</span>
+              <div class="score-bar-track">
+                <div class="score-bar-fill" :style="{ width: score.components.cost_impact + '%' }"></div>
+              </div>
+              <span class="score-bar-value">{{ score.components.cost_impact }}%</span>
+            </div>
+          </div>
+        </div>
+        <div class="score-meta">
+          <span>{{ score.details.ingredient_count }} ingrédient(s) · {{ score.details.loss_incidents }} perte(s) · {{ score.details.total_loss_qty }} {{ ingredients[0]?.unit || 'u' }} perdus</span>
+        </div>
+      </Card>
+
+      <Card title="Ingrédients fournis" v-if="!score || true">
         <table class="mepos-table" v-if="ingredients.length">
           <thead>
             <tr><th>Ingrédient</th><th>Unité</th><th>Statut</th></tr>
