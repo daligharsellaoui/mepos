@@ -2,6 +2,14 @@ import { Decimal } from 'decimal.js';
 import { query, isDemoMode, demoDb, getClient } from '../database';
 import { getEffectiveDepartmentId, processSaleDeduction } from './stock.service';
 import { resolveExternalProductId } from './mapping.service';
+import { eventBus, Events } from './event.service';
+
+interface SyncResult {
+  syncedTicketsCount: number;
+  deductedStocks: any[];
+  warnings: string[];
+  unmappedProducts: string[];
+}
 
 /**
  * Resolve tenant ID for queries.
@@ -65,7 +73,7 @@ export async function syncTickets(
   tickets: any[],
   tenantId?: number | null,
   connectorType: string = 'pos'
-): Promise<{ syncedTicketsCount: number; deductedStocks: any[]; warnings: string[]; unmappedProducts: string[] }> {
+): Promise<SyncResult> {
   const deptId = typeof departmentId === 'string' ? parseInt(departmentId, 10) : departmentId;
   const tid = tenantId ?? 1;
   const unmappedProducts: string[] = [];
@@ -109,6 +117,11 @@ export async function syncTickets(
       // Skip ticket if no items could be resolved
       if (resolvedItems.length === 0) {
         warnings.push(`Ticket ${external_ticket_id} ignoré: aucun produit mappé`);
+        eventBus.emit(Events.SYNC_BLOCKED_MISSING_MAPPING, {
+          tenantId: tid,
+          external_ticket_id,
+          unmappedProducts: [...unmappedProducts]
+        });
         continue;
       }
 
@@ -125,7 +138,7 @@ export async function syncTickets(
       syncedTicketsCount++;
     }
 
-    return { syncedTicketsCount, deductedStocks, warnings, unmappedProducts } as any;
+    return { syncedTicketsCount, deductedStocks, warnings, unmappedProducts };
   }
 
   // PostgreSQL mode
@@ -173,6 +186,11 @@ export async function syncTickets(
       // Skip ticket if no items could be resolved
       if (resolvedItems.length === 0) {
         warnings.push(`Ticket ${external_ticket_id} ignoré: aucun produit mappé`);
+        eventBus.emit(Events.SYNC_BLOCKED_MISSING_MAPPING, {
+          tenantId: tid,
+          external_ticket_id,
+          unmappedProducts: [...unmappedProducts]
+        });
         continue;
       }
 

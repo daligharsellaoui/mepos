@@ -86,7 +86,6 @@ function handleClick() {
     <div class="card-body">
       <div class="card-header-row">
         <span class="card-title">{{ notification.title }}</span>
-        <span class="card-time">{{ formatRelative(notification.created_at) }}</span>
       </div>
       <div v-if="notification.message" class="card-message">{{ notification.message }}</div>
       <div class="card-meta">
@@ -105,6 +104,7 @@ function handleClick() {
       </div>
     </div>
     <div class="card-actions" @click.stop>
+      <span class="card-time">{{ formatRelative(notification.created_at) }}</span>
       <button
         v-if="!notification.read"
         class="card-action-btn"
@@ -198,13 +198,6 @@ function handleClick() {
 .notification-card.unread .card-title {
   font-weight: 700;
 }
-.card-time {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-  flex-shrink: 0;
-  margin-top: 0.1rem;
-}
 .card-message {
   font-size: 0.78rem;
   color: var(--text-secondary);
@@ -238,11 +231,16 @@ function handleClick() {
 }
 .card-actions {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  gap: 0.15rem;
+  gap: 0.25rem;
   flex-shrink: 0;
-  margin-left: 0.25rem;
+}
+.card-time {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  line-height: 1;
 }
 .card-action-btn {
   background: transparent;
