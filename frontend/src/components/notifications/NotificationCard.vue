@@ -105,31 +105,33 @@ function handleClick() {
     </div>
     <div class="card-actions" @click.stop>
       <span class="card-time">{{ formatRelative(notification.created_at) }}</span>
-      <button
-        v-if="!notification.read"
-        class="card-action-btn"
-        title="Marquer comme lu"
-        aria-label="Marquer comme lu"
-        @click="emit('read', notification.id)"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      </button>
-      <button
-        class="card-action-btn"
-        title="Archiver"
-        aria-label="Archiver"
-        @click="emit('archive', notification.id)"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-      </button>
-      <button
-        class="card-action-btn danger"
-        title="Supprimer"
-        aria-label="Supprimer"
-        @click="emit('delete', notification.id)"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-      </button>
+      <div class="card-action-row">
+        <button
+          v-if="!notification.read"
+          class="card-action-btn"
+          title="Marquer comme lu"
+          aria-label="Marquer comme lu"
+          @click="emit('read', notification.id)"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </button>
+        <button
+          class="card-action-btn"
+          title="Archiver"
+          aria-label="Archiver"
+          @click="emit('archive', notification.id)"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+        </button>
+        <button
+          class="card-action-btn danger"
+          title="Supprimer"
+          aria-label="Supprimer"
+          @click="emit('delete', notification.id)"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -233,7 +235,7 @@ function handleClick() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.35rem;
   flex-shrink: 0;
 }
 .card-time {
@@ -241,6 +243,12 @@ function handleClick() {
   color: var(--text-muted);
   white-space: nowrap;
   line-height: 1;
+}
+.card-action-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.15rem;
 }
 .card-action-btn {
   background: transparent;
