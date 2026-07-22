@@ -8,7 +8,7 @@ export const useNotificationStore = defineStore('notifications', () => {
   const isLoading = ref(false)
   const hasMore = ref(true)
   const total = ref(0)
-  const limit = 5
+  const limit = 10
   const offset = ref(0)
   const filters = ref({
     types: [],

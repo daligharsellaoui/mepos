@@ -1,8 +1,7 @@
 import { Decimal } from 'decimal.js';
 import { query, isDemoMode, demoDb, getClient } from '../database';
 import { getEffectiveDepartmentId, processSaleDeduction } from './stock.service';
-import { resolveExternalProductId, resolveExternalProductIds } from './mapping.service';
-import { eventBus, Events } from './event.service';
+import { resolveExternalProductId } from './mapping.service';
 
 /**
  * Resolve tenant ID for queries.
@@ -126,7 +125,7 @@ export async function syncTickets(
       syncedTicketsCount++;
     }
 
-    return { syncedTicketsCount, deductedStocks, warnings, unmappedProducts };
+    return { syncedTicketsCount, deductedStocks, warnings, unmappedProducts } as any;
   }
 
   // PostgreSQL mode

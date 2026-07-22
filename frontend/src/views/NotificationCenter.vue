@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onUnmounted, ref, computed } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotificationStore } from '../stores/notifications'
 import NotificationCard from '../components/notifications/NotificationCard.vue'
@@ -9,7 +9,6 @@ const router = useRouter()
 const notifStore = useNotificationStore()
 const searchQuery = ref('')
 const activeFilter = ref('all')
-const containerRef = ref(null)
 const groupBy = ref('date')
 const detailNotif = ref(null)
 const showDetail = ref(false)
@@ -74,20 +73,7 @@ const activeCategory = ref(null)
 onMounted(() => {
   notifStore.fetchNotifications(true)
   notifStore.fetchUnreadCount()
-  window.addEventListener('scroll', handleScroll)
 })
-
-onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
-})
-
-function handleScroll() {
-  const el = containerRef.value
-  if (!el || notifStore.isLoading || !notifStore.hasMore) return
-  if (el.scrollHeight - el.scrollTop - el.clientHeight < 200) {
-    notifStore.fetchNotifications()
-  }
-}
 
 function handleFilterChange(value) {
   activeFilter.value = value
@@ -275,7 +261,7 @@ const groupedItems = computed(() => {
       </button>
     </div>
 
-    <div ref="containerRef" class="notifications-list">
+    <div class="notifications-list">
       <div v-if="notifStore.isLoading && notifStore.items.length === 0" class="center-state">
         <div class="spinner" />
         <p>Chargement des notifications...</p>
@@ -311,27 +297,27 @@ const groupedItems = computed(() => {
             @navigate="handleNavigate"
           />
         </div>
-
-        <div class="pagination-bar" v-if="notifStore.total > notifStore.limit">
-          <button class="page-btn" :disabled="currentPage <= 1" @click="goToPrevPage">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-            Prev
-          </button>
-          <div class="page-numbers">
-            <button
-              v-for="p in totalPages"
-              :key="p"
-              class="page-num"
-              :class="{ active: p === currentPage }"
-              @click="goToPage(p)"
-            >{{ p }}</button>
-          </div>
-          <button class="page-btn" :disabled="currentPage >= totalPages" @click="goToNextPage">
-            Next
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-        </div>
       </div>
+    </div>
+
+    <div class="pagination-bar" v-if="notifStore.total > notifStore.limit">
+      <button class="page-btn" :disabled="currentPage <= 1" @click="goToPrevPage">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Prev
+      </button>
+      <div class="page-numbers">
+        <button
+          v-for="p in totalPages"
+          :key="p"
+          class="page-num"
+          :class="{ active: p === currentPage }"
+          @click="goToPage(p)"
+        >{{ p }}</button>
+      </div>
+      <button class="page-btn" :disabled="currentPage >= totalPages" @click="goToNextPage">
+        Next
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
     </div>
     <Modal
       :is-open="showDetail"
@@ -567,8 +553,6 @@ const groupedItems = computed(() => {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  overflow-y: auto;
-  max-height: calc(100vh - 320px);
 }
 .group-bar {
   display: flex;
@@ -619,17 +603,6 @@ const groupedItems = computed(() => {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0.75rem 0.75rem 0.25rem;
-}
-.load-more {
-  display: flex;
-  justify-content: center;
-  padding: 1.5rem;
-}
-.end-message {
-  text-align: center;
-  padding: 1rem;
-  font-size: 0.8rem;
-  color: var(--text-muted);
 }
 .detail-content {
   display: flex;
@@ -716,8 +689,7 @@ const groupedItems = computed(() => {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 1rem;
-  border-top: 1px solid var(--border-color);
+  padding: 1rem 0;
   flex-wrap: wrap;
 }
 .page-btn {
@@ -802,9 +774,6 @@ const groupedItems = computed(() => {
   }
   .category-chip {
     white-space: nowrap;
-  }
-  .notifications-list {
-    max-height: none;
   }
   .detail-meta {
     grid-template-columns: 1fr;

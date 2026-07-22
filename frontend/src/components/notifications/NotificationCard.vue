@@ -238,21 +238,18 @@ function handleClick() {
 }
 .card-actions {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.15rem;
   flex-shrink: 0;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.notification-card:hover .card-actions {
-  opacity: 1;
+  margin-left: 0.25rem;
 }
 .card-action-btn {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 4px;
   display: flex;
   align-items: center;
