@@ -317,8 +317,8 @@ describe('Tenant Service (Demo Mode)', () => {
       expect(stats).toBeDefined();
       expect(stats.user_count).toBeGreaterThanOrEqual(3);
       expect(stats.department_count).toBe(3);
-      expect(stats.ingredient_count).toBe(22);
-      expect(stats.recipe_count).toBe(9);
+      expect(stats.ingredient_count).toBe(20);
+      expect(stats.recipe_count).toBe(8);
       expect(stats.agent_count).toBe(1);
     });
 

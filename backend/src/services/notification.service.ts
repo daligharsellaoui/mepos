@@ -406,8 +406,10 @@ export async function getNotifications(
 
   const countResult = await query(
     `SELECT COUNT(*) FROM notifications n
-     WHERE n.tenant_id = $1 AND (n.assigned_to IS NULL OR n.assigned_to = $2)`,
-    [tenantId, userId]
+     LEFT JOIN notification_reads nr
+       ON nr.notification_id = n.id AND nr.user_id = $2
+     WHERE n.tenant_id = $1${whereClause}`,
+    params.slice(0, paramIdx)
   );
 
   return { data: result.rows, total: parseInt(countResult.rows[0]?.count || '0', 10) };

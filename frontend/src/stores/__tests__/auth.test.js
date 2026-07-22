@@ -160,39 +160,39 @@ describe('Auth Store', () => {
     it('falls back to default admin credentials when offline', async () => {
       api.login.mockRejectedValue(new Error('Network Error'))
 
-      const result = await store.login('admin', 'admin123')
+      const result = await store.login('ahmed', 'admin123')
 
       expect(result).toBe(true)
       expect(store.user).toMatchObject({
-        username: 'admin',
+        username: 'ahmed',
         role: 'admin',
-        first_name: 'Med'
+        first_name: 'Ahmed'
       })
       expect(store.token).toBe('mepos_offline_token')
       expect(store.isLoggedIn).toBe(true)
     })
 
-    it('falls back to default gerant credentials when offline', async () => {
+    it('falls back to default manager credentials when offline', async () => {
       api.login.mockRejectedValue(new Error('Network Error'))
 
-      const result = await store.login('gerant', 'gerant123')
+      const result = await store.login('sami', 'manager123')
 
       expect(result).toBe(true)
       expect(store.user).toMatchObject({
-        username: 'gerant',
+        username: 'sami',
         role: 'manager'
       })
       expect(store.isManager).toBe(true)
     })
 
-    it('falls back to default cuisinier credentials when offline', async () => {
+    it('falls back to default cook credentials when offline', async () => {
       api.login.mockRejectedValue(new Error('Network Error'))
 
-      const result = await store.login('cuisinier', 'cuisinier123')
+      const result = await store.login('youssef', 'cook123')
 
       expect(result).toBe(true)
       expect(store.user).toMatchObject({
-        username: 'cuisinier',
+        username: 'youssef',
         role: 'cook'
       })
       expect(store.isCook).toBe(true)
