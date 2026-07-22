@@ -258,7 +258,7 @@ function handleRowAction(key, s) {
           </div>
           <table v-else-if="ingredientsModalList.length" class="mepos-table">
             <thead>
-              <tr><th>Ingrédient</th><th>Unité</th><th>Prix unitaire</th><th>Seuil alerte</th><th>Statut</th></tr>
+              <tr><th>Ingrédient</th><th>Unité</th><th>Prix unitaire</th><th>Seuil alerte</th></tr>
             </thead>
             <tbody>
               <tr v-for="ing in ingredientsModalList" :key="ing.id">
@@ -266,7 +266,6 @@ function handleRowAction(key, s) {
                 <td>{{ ing.unit }}</td>
                 <td>{{ parseFloat(ing.purchase_price_per_unit).toFixed(3) }} TND</td>
                 <td>{{ ing.alert_threshold }}</td>
-                <td><span :class="['badge', ing.status === 'archived' ? 'badge-warn' : 'badge-success']">{{ ing.status === 'active' ? 'Actif' : 'Archivé' }}</span></td>
               </tr>
             </tbody>
           </table>

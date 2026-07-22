@@ -514,13 +514,11 @@ export async function getSupplierIngredients(id: number, tenantId?: number | nul
         unit: i.unit,
         purchase_price_per_unit: i.purchase_price_per_unit,
         alert_threshold: i.alert_threshold,
-        status: i.status || 'active',
       }));
   }
 
   const result = await query(
-    `SELECT id, name, unit, purchase_price_per_unit, alert_threshold,
-            COALESCE(status, 'active') as status
+    `SELECT id, name, unit, purchase_price_per_unit, alert_threshold
      FROM ingredients WHERE preferred_supplier_id = $1 AND tenant_id = $2`,
     [id, tid]
   );
