@@ -2,12 +2,39 @@
 import { ref, computed, watch } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useAppStore } from '../stores/app'
+import InventoryHistoryModal from '../components/base/InventoryHistoryModal.vue'
+import StockAdjustModal from '../components/base/StockAdjustModal.vue'
+import StockTransferModal from '../components/base/StockTransferModal.vue'
 
 const auth = useAuthStore()
 const app = useAppStore()
 
 const isAdmin = computed(() => auth.isAdmin)
 const isCook = computed(() => auth.isCook)
+
+const showHistoryModal = ref(false)
+const showAdjustModal = ref(false)
+const showTransferModal = ref(false)
+const selectedStock = ref(null)
+
+function openHistory(stock) {
+  selectedStock.value = stock
+  showHistoryModal.value = true
+}
+
+function openAdjust(stock) {
+  selectedStock.value = stock
+  showAdjustModal.value = true
+}
+
+function openTransfer(stock) {
+  selectedStock.value = stock
+  showTransferModal.value = true
+}
+
+function onModalSaved() {
+  app.fetchData(auth.user)
+}
 
 function findKitchenDept() {
   return app.departments.find(d =>
@@ -60,12 +87,23 @@ watch([filteredStocks, selectedDept], () => { stockPage.value = 1 })
           Suivi des quantités d'ingrédients disponibles en temps réel.
         </p>
       </div>
-      <button
-        class="touch-btn touch-btn-secondary"
-        @click="app.fetchData(auth.user)"
-      >
-        Actualiser
-      </button>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <button
+          v-if="isAdmin"
+          class="touch-btn"
+          @click="showAdjustModal = true; selectedStock = null"
+        >
+          + Nouvel Ajustement
+        </button>
+        <button
+          class="touch-btn touch-btn-secondary"
+          style="padding: 0.5rem;"
+          title="Actualiser"
+          @click="app.fetchData(auth.user)"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+      </div>
     </div>
 
     <div
@@ -119,6 +157,7 @@ watch([filteredStocks, selectedDept], () => { stockPage.value = 1 })
             <th>Statut</th>
             <th>Prix d'Achat</th>
             <th>Valeur Estimée</th>
+            <th v-if="isAdmin">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -170,6 +209,19 @@ watch([filteredStocks, selectedDept], () => { stockPage.value = 1 })
             >
               {{ isAdmin ? `${(parseFloat(stock.quantity) * parseFloat(stock.purchase_price_per_unit)).toFixed(3)} TND` : '*** TND' }}
             </td>
+            <td v-if="isAdmin" data-label="Actions">
+              <div style="display: flex; gap: 0.35rem; flex-wrap: nowrap;">
+                <button class="touch-btn touch-btn-sm touch-btn-secondary" title="Historique" @click="openHistory(stock)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </button>
+                <button class="touch-btn touch-btn-sm touch-btn-secondary" title="Ajuster" @click="openAdjust(stock)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </button>
+                <button class="touch-btn touch-btn-sm touch-btn-secondary" title="Transférer" @click="openTransfer(stock)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                </button>
+              </div>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -197,4 +249,27 @@ watch([filteredStocks, selectedDept], () => { stockPage.value = 1 })
       </div>
     </div>
   </div>
+
+  <InventoryHistoryModal
+    :is-open="showHistoryModal"
+    :ingredient="selectedStock ? { id: selectedStock.ingredient_id, name: selectedStock.ingredient_name } : null"
+    @close="showHistoryModal = false"
+  />
+
+  <StockAdjustModal
+    :is-open="showAdjustModal"
+    :stock="selectedStock"
+    :departments="app.departments"
+    :ingredients="app.ingredients"
+    @close="showAdjustModal = false; selectedStock = null"
+    @saved="onModalSaved"
+  />
+
+  <StockTransferModal
+    :is-open="showTransferModal"
+    :stock="selectedStock"
+    :departments="app.departments"
+    @close="showTransferModal = false; selectedStock = null"
+    @saved="onModalSaved"
+  />
 </template>

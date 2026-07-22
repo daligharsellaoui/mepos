@@ -164,6 +164,7 @@ body {
 .touch-btn:hover { background: var(--indigo-light); }
 .touch-btn-secondary { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); color: var(--text-primary); }
 .touch-btn-secondary:hover { background: rgba(255, 255, 255, 0.06); border-color: var(--border-hover); }
+.touch-btn-sm { padding: 0.4rem 0.5rem; min-height: 32px; font-size: 0.8rem; }
 .touch-btn-danger { background: var(--coral); }
 .touch-btn-danger:hover { background: #f87171; }
 
