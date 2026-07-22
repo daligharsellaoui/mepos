@@ -102,7 +102,7 @@ export async function getStockQuantity(
     return new Decimal(stock ? stock.quantity : 0);
   }
 
-  const db = client || query;
+  const db = typeof client === 'function' ? client : (client ? client.query.bind(client) : query);
   const tid = tenantId || 1;
   const result = await db(
     'SELECT quantity FROM inventory_stocks WHERE department_id = $1 AND ingredient_id = $2 AND tenant_id = $3',
@@ -201,7 +201,7 @@ export async function getStockWarning(
 ): Promise<string | null> {
   let ingredientInfo: any = null;
   let newQty: Decimal;
-  const db = client || query;
+  const db = typeof client === 'function' ? client : (client ? client.query.bind(client) : query);
   const tid = tenantId || 1;
 
   if (isDemoMode) {
