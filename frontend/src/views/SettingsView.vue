@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useAppStore } from '../stores/app'
+import { useSupplierStore } from '../stores/suppliers'
 import { api } from '../api'
 import Modal from '../components/base/Modal.vue'
 import ConfirmDialog from '../components/base/ConfirmDialog.vue'
@@ -14,6 +15,7 @@ import RecipeUsageModal from '../components/base/RecipeUsageModal.vue'
 
 const auth = useAuthStore()
 const app = useAppStore()
+const supplierStore = useSupplierStore()
 
 const subTab = ref('ingredients')
 const isSaving = ref(false)
@@ -25,6 +27,7 @@ const ingPurchaseUnit = ref('paquet')
 const ingPurchaseUnitPrice = ref('')
 const ingConversionFactor = ref('')
 const ingAlertThreshold = ref('')
+const ingPreferredSupplierId = ref(null)
 const ingError = ref(null)
 const ingSuccess = ref(null)
 
@@ -37,6 +40,7 @@ const editPurchaseUnit = ref('paquet')
 const editPurchaseUnitPrice = ref('')
 const editConversionFactor = ref('')
 const editAlertThreshold = ref('')
+const editPreferredSupplierId = ref(null)
 const editError = ref(null)
 const editLoading = ref(false)
 
@@ -214,6 +218,10 @@ watch(subTab, (tab) => {
   else if (tab === 'users') fetchUsers()
 })
 
+onMounted(() => {
+  supplierStore.fetchSuppliers()
+})
+
 // ── Ingredient CRUD ──
 async function handleCreateIngredient(e) {
   e.preventDefault(); ingError.value = null; ingSuccess.value = null
@@ -224,15 +232,17 @@ async function handleCreateIngredient(e) {
   }
   isSaving.value = true
   try {
-    const { data: j } = await api.createIngredient({
-      name: ingName.value, unit: ingUnit.value, purchase_unit: ingPurchaseUnit.value,
-      purchase_unit_price: priceVal, conversion_factor: factorVal,
-      alert_threshold: parseFloat(ingAlertThreshold.value) || 0
-    })
-    if (j.status === 'success') {
-      ingSuccess.value = `Ingrédient '${ingName.value}' créé !`
-      ingName.value = ''; ingPurchaseUnitPrice.value = ''; ingConversionFactor.value = ''
-      app.fetchData(auth.user)
+      const { data: j } = await api.createIngredient({
+        name: ingName.value, unit: ingUnit.value, purchase_unit: ingPurchaseUnit.value,
+        purchase_unit_price: priceVal, conversion_factor: factorVal,
+        alert_threshold: parseFloat(ingAlertThreshold.value) || 0,
+        preferred_supplier_id: ingPreferredSupplierId.value || null,
+      })
+      if (j.status === 'success') {
+        ingSuccess.value = `Ingrédient '${ingName.value}' créé !`
+        ingName.value = ''; ingPurchaseUnitPrice.value = ''; ingConversionFactor.value = ''
+        ingPreferredSupplierId.value = null
+        app.fetchData(auth.user)
     } else ingError.value = j.message || 'Erreur.'
   } catch { ingError.value = "Impossible de contacter l'API." }
   finally { isSaving.value = false }
@@ -246,6 +256,7 @@ function openEditModal(ing) {
   editPurchaseUnitPrice.value = ing.purchase_unit_price?.toString() || ''
   editConversionFactor.value = ing.conversion_factor?.toString() || ''
   editAlertThreshold.value = ing.alert_threshold?.toString() || ''
+  editPreferredSupplierId.value = ing.preferred_supplier_id || null
   editError.value = null
   showEditModal.value = true
 }
@@ -267,7 +278,8 @@ async function handleEditIngredient() {
       name: editName.value, unit: editUnit.value,
       purchase_unit: editPurchaseUnit.value,
       purchase_unit_price: priceVal, conversion_factor: factorVal,
-      alert_threshold: parseFloat(editAlertThreshold.value) || 0
+      alert_threshold: parseFloat(editAlertThreshold.value) || 0,
+      preferred_supplier_id: editPreferredSupplierId.value || null,
     })
     if (j.status === 'success') {
       closeEditModal()
@@ -728,6 +740,15 @@ async function handleDeleteDeptConfirm() {
               placeholder="2000"
             >
           </div>
+          <div class="form-group">
+            <label class="form-label">Fournisseur préféré</label>
+            <select v-model="ingPreferredSupplierId" class="form-select">
+              <option :value="null">— Aucun —</option>
+              <option v-for="s in supplierStore.suppliers" :key="s.id" :value="s.id" :disabled="s.status === 'archived'">
+                {{ s.name }}{{ s.company_name ? ' — ' + s.company_name : '' }}{{ s.status === 'archived' ? ' (Archivé)' : '' }}
+              </option>
+            </select>
+          </div>
           <div style="padding: 1rem; background: rgba(255,255,255,0.01); border: 1px dashed var(--border-color); border-radius: 8px; margin-bottom: 1.5rem;">
             <span style="color: var(--text-secondary); font-size: 0.875rem;">Coût unitaire de base :</span>
             <div style="font-size: 1.2rem; font-weight: 800; color: var(--indigo-light); margin-top: 0.25rem;">
@@ -836,6 +857,7 @@ async function handleDeleteDeptConfirm() {
                   Prix Colis{{ sortIcon('purchase_unit_price') }}
                 </th>
                 <th>Coût Cuisine</th>
+                <th>Fournisseur</th>
                 <th class="actions-th">Actions</th>
               </tr>
             </thead>
@@ -858,6 +880,7 @@ async function handleDeleteDeptConfirm() {
                 <td class="cell-cost" data-label="Coût Cuisine">
                   {{ parseFloat(ing.purchase_price_per_unit).toFixed(3) }} TND/{{ ing.unit }}
                 </td>
+                <td data-label="Fournisseur">{{ ing.preferred_supplier_name || '—' }}</td>
                 <td class="cell-actions" data-label="Actions" @click.stop>
                   <RowActionMenu
                     class="row-action-menu-wrap"
@@ -1641,6 +1664,15 @@ async function handleDeleteDeptConfirm() {
           class="form-input"
           placeholder="2000"
         >
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fournisseur préféré</label>
+        <select v-model="editPreferredSupplierId" class="form-select">
+          <option :value="null">— Aucun —</option>
+          <option v-for="s in supplierStore.suppliers" :key="s.id" :value="s.id" :disabled="s.status === 'archived'">
+            {{ s.name }}{{ s.company_name ? ' — ' + s.company_name : '' }}{{ s.status === 'archived' ? ' (Archivé)' : '' }}
+          </option>
+        </select>
       </div>
       <div style="padding: 1rem; background: rgba(255,255,255,0.01); border: 1px dashed var(--border-color); border-radius: 8px; margin-bottom: 1.5rem;">
         <span style="color: var(--text-secondary); font-size: 0.875rem;">Coût unitaire de base :</span>
