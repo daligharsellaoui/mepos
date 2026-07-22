@@ -50,7 +50,11 @@ interface TenantDef {
     alert_threshold: number; purchase_unit: string; purchase_unit_price: number; conversion_factor: number
   }>;
   recipes: Array<{ id: number; name: string; sale_price: number; ingredient_ids: number[]; quantities: number[] }>;
-  suppliers: Array<{ name: string; contact: string; phone: string }>;
+  suppliers: Array<{
+    name: string; company_name?: string; tax_number?: string; city?: string; country?: string;
+    email?: string; phone?: string; contact_person?: string; preferred?: boolean;
+    payment_terms?: string; contact?: string; registration_number?: string;
+  }>;
   agents: Array<{
     id: number; name: string; connector_type: string; machine_name: string;
     config: any; version: string
@@ -109,12 +113,16 @@ const burgerHouse: TenantDef = {
     { id: 8, name: 'Eau Minérale', sale_price: 1.50, ingredient_ids: [18], quantities: [1] },
   ],
   suppliers: [
-    { name: 'Fresh Meat Tunisia', contact: 'Hédi Ben Amor', phone: '+216 98 111 222' },
-    { name: 'Mediterranean Vegetables', contact: 'Ali Mejri', phone: '+216 99 333 444' },
-    { name: 'Cheese Factory', contact: 'Monia Kacem', phone: '+216 97 555 666' },
-    { name: 'Sotub', contact: 'Service Commercial', phone: '+216 71 777 888' },
-    { name: 'Local Bakery', contact: 'Mahmoud Ayari', phone: '+216 20 999 000' },
-    { name: 'Fresh Market', contact: 'Karim Jebali', phone: '+216 22 111 222' },
+    { name: 'Fresh Meat Tunisia', company_name: 'Fresh Meat Tunisia SARL', tax_number: '1234567X/A/M/000', city: 'Tunis', country: 'Tunisie', email: 'contact@freshmeat.tn', phone: '+216 71 123 456', contact_person: 'Mohamed Ali Ben Salem', preferred: true, payment_terms: '30 jours' },
+    { name: 'SOTUB', company_name: 'Société Tunisienne des Boissons', tax_number: '2345678Y/B/M/001', city: 'Ben Arous', country: 'Tunisie', email: 'commandes@sotub.tn', phone: '+216 71 234 567', contact_person: 'Leila Trabelsi', preferred: true },
+    { name: 'Délice Danone', company_name: 'Délice Danone Tunisie', tax_number: '3456789Z/C/M/002', city: 'Mégrine', country: 'Tunisie', email: 'pro@delice.tn', phone: '+216 70 123 456', contact_person: 'Karim Mansour' },
+    { name: 'Société des Fromages', company_name: 'Société Tunisienne des Fromages', tax_number: '4567890A/D/M/003', city: 'Sfax', country: 'Tunisie', email: 'info@fromages.tn', phone: '+216 74 123 456', contact_person: 'Sami Ben Ahmed' },
+    { name: 'Les Grands Moulins', company_name: 'Les Grands Moulins de Tunis', tax_number: '5678901B/E/M/004', city: 'Tunis', country: 'Tunisie', email: 'commercial@grands-moulins.tn', phone: '+216 71 345 678', contact_person: 'Fatma Belhaj', preferred: true },
+    { name: 'Marché Central', company_name: 'Marché Central des Produits Frais', tax_number: '6789012C/F/M/005', city: 'Tunis', country: 'Tunisie', email: 'contact@marchecentral.tn', phone: '+216 71 456 789', contact_person: 'Hichem Garbouj' },
+    { name: 'Tunisie Légumes', company_name: 'Tunisie Légumes SARL', tax_number: '7890123D/G/M/006', city: 'Nabeul', country: 'Tunisie', email: 'ventes@tunisie-legumes.tn', phone: '+216 72 123 456', contact_person: 'Nadia Mejri' },
+    { name: 'Fresh Seafood Tunisia', company_name: 'Fresh Seafood Tunisia SARL', tax_number: '8901234E/H/M/007', city: 'La Goulette', country: 'Tunisie', email: 'order@freshseafood.tn', phone: '+216 71 567 890', contact_person: 'Amine Khelil' },
+    { name: 'Coffee Solutions', company_name: 'Coffee Solutions Tunisie', tax_number: '9012345F/I/M/008', city: 'Tunis', country: 'Tunisie', email: 'pro@coffee-solutions.tn', phone: '+216 70 234 567', contact_person: 'Selma Ben Ali' },
+    { name: 'Mediterranean Foods', company_name: 'Mediterranean Foods Group', tax_number: '0123456G/J/M/009', city: 'Sousse', country: 'Tunisie', email: 'info@med-foods.tn', phone: '+216 73 123 456', contact_person: 'Mehdi Youssef' },
   ],
   agents: [
     {
@@ -814,8 +822,57 @@ export function generateSeedData(): SeedData {
     data.purchases.push(...purchases);
 
     // Suppliers
-    for (const s of tdef.suppliers) {
-      data.suppliers.push({ ...s, tenant_id: tdef.id });
+    for (let si = 0; si < tdef.suppliers.length; si++) {
+      const s = tdef.suppliers[si];
+      data.suppliers.push({
+        id: si + 1,
+        tenant_id: tdef.id,
+        name: s.name,
+        company_name: s.company_name || null,
+        reference: null,
+        tax_number: s.tax_number || null,
+        registration_number: s.registration_number || null,
+        contact_person: s.contact_person || s.contact || null,
+        email: s.email || null,
+        phone: s.phone || null,
+        mobile: null,
+        website: null,
+        address: null,
+        city: s.city || null,
+        postal_code: null,
+        country: s.country || 'Tunisie',
+        payment_terms: s.payment_terms || null,
+        payment_method: null,
+        currency: 'TND',
+        delivery_delay: 0,
+        minimum_order_amount: 0,
+        notes: null,
+        status: 'active',
+        preferred: s.preferred || false,
+        rating: 0,
+        created_at: daysAgo(60),
+        updated_at: now,
+        archived_at: null,
+      });
+    }
+
+    // Link suppliers to ingredients
+    const supplierMap: Record<string, number> = {};
+    data.suppliers.forEach((s: any) => { supplierMap[s.name.toLowerCase()] = s.id; });
+    for (const ing of data.ingredients) {
+      if (ing.name.toLowerCase().includes('viande') || ing.name.includes('Bœuf') || ing.name.includes('Poulet')) {
+        ing.preferred_supplier_id = supplierMap['fresh meat tunisia'];
+      } else if (ing.name.includes('Fromage')) {
+        ing.preferred_supplier_id = supplierMap['société des fromages'];
+      } else if (ing.name.includes('Pain') || ing.name.includes('Farine')) {
+        ing.preferred_supplier_id = supplierMap['les grands moulins'];
+      } else if (ing.name.includes('Boissons') || ing.name.includes('Eau')) {
+        ing.preferred_supplier_id = supplierMap['sotub'];
+      } else if (ing.name.includes('Tomates') || ing.name.includes('Salade') || ing.name.includes('Oignons') || ing.name.includes('Pommes')) {
+        ing.preferred_supplier_id = supplierMap['tunisie légumes'];
+      } else if (ing.name.includes('Frites') || ing.name.includes('Huile')) {
+        ing.preferred_supplier_id = supplierMap['marché central'];
+      }
     }
   }
 

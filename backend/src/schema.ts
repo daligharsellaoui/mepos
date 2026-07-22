@@ -593,13 +593,29 @@ export async function initializeDatabase() {
           );
         }
 
+        // Seed suppliers (before ingredients due to FK)
+        for (const s of seedData.suppliers) {
+          await client.query(
+            `INSERT INTO suppliers (id, tenant_id, name, company_name, reference, tax_number, registration_number,
+             contact_person, email, phone, mobile, website, address, city, postal_code, country,
+             payment_terms, payment_method, currency, delivery_delay, minimum_order_amount, notes,
+             status, preferred, rating, created_at, updated_at, archived_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
+             ON CONFLICT (id) DO NOTHING`,
+            [s.id, s.tenant_id, s.name, s.company_name, s.reference, s.tax_number, s.registration_number,
+             s.contact_person, s.email, s.phone, s.mobile, s.website, s.address, s.city, s.postal_code, s.country,
+             s.payment_terms, s.payment_method, s.currency, s.delivery_delay, s.minimum_order_amount, s.notes,
+             s.status, s.preferred, s.rating, s.created_at || new Date(), s.updated_at || new Date(), s.archived_at]
+          );
+        }
+
         // Seed ingredients
         for (const i of seedData.ingredients) {
           await client.query(
-            `INSERT INTO ingredients (id, tenant_id, name, unit, purchase_price_per_unit, alert_threshold, purchase_unit, purchase_unit_price, conversion_factor, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            `INSERT INTO ingredients (id, tenant_id, name, unit, purchase_price_per_unit, alert_threshold, purchase_unit, purchase_unit_price, conversion_factor, preferred_supplier_id, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
              ON CONFLICT (id) DO NOTHING`,
-            [i.id, i.tenant_id, i.name, i.unit, i.purchase_price_per_unit, i.alert_threshold, i.purchase_unit, i.purchase_unit_price, i.conversion_factor, i.created_at || new Date()]
+            [i.id, i.tenant_id, i.name, i.unit, i.purchase_price_per_unit, i.alert_threshold, i.purchase_unit, i.purchase_unit_price, i.conversion_factor, i.preferred_supplier_id || null, i.created_at || new Date()]
           );
         }
 
