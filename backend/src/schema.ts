@@ -823,8 +823,18 @@ export async function initializeDatabase() {
           );
         }
 
+        // Seed product mappings
+        for (const pm of seedData.product_mappings) {
+          await client.query(
+            `INSERT INTO product_mappings (id, tenant_id, connector_type, external_product_id, external_product_code, external_product_name, mepos_product_id, mapping_status, confidence, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+             ON CONFLICT (id) DO NOTHING`,
+            [pm.id, pm.tenant_id, pm.connector_type, pm.external_product_id, pm.external_product_code, pm.external_product_name, pm.mepos_product_id, pm.mapping_status, pm.confidence, pm.created_at || new Date(), pm.updated_at || new Date()]
+          );
+        }
+
         // Reset all sequences
-        const tables = ['users', 'departments', 'suppliers', 'ingredients', 'recipes', 'sales_tickets', 'sales_ticket_items', 'stock_movements', 'ingredient_losses', 'transfer_requests', 'agents', 'agent_heartbeats', 'tenant_settings', 'audit_logs', 'tenants', 'platform_users'];
+        const tables = ['users', 'departments', 'suppliers', 'ingredients', 'recipes', 'sales_tickets', 'sales_ticket_items', 'stock_movements', 'ingredient_losses', 'transfer_requests', 'agents', 'agent_heartbeats', 'tenant_settings', 'audit_logs', 'tenants', 'platform_users', 'product_mappings'];
         for (const table of tables) {
           await client.query(`SELECT setval('${table}_id_seq', (SELECT COALESCE(MAX(id), 1) FROM ${table}))`);
         }

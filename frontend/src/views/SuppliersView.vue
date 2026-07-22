@@ -20,6 +20,10 @@ const editingSupplier = ref(null)
 const supplierToDelete = ref(null)
 const showDeleteDialog = ref(false)
 const deleteLoading = ref(false)
+const showIngredientsModal = ref(false)
+const ingredientsModalSupplier = ref(null)
+const ingredientsModalList = ref([])
+const ingredientsModalLoading = ref(false)
 
 const addToast = (msg, type) => {
   const event = new CustomEvent('toast', { detail: { message: msg, type: type || 'success' } })
@@ -63,8 +67,24 @@ function viewDetails(id) {
   router.push(`/app/suppliers/${id}`)
 }
 
-function viewIngredients(s) {
-  router.push(`/app/suppliers/${s.id}`)
+async function viewIngredients(s) {
+  ingredientsModalSupplier.value = s
+  showIngredientsModal.value = true
+  ingredientsModalLoading.value = true
+  try {
+    const data = await store.fetchSupplierIngredients(s.id)
+    ingredientsModalList.value = data || []
+  } catch {
+    ingredientsModalList.value = []
+  } finally {
+    ingredientsModalLoading.value = false
+  }
+}
+
+function closeIngredientsModal() {
+  showIngredientsModal.value = false
+  ingredientsModalSupplier.value = null
+  ingredientsModalList.value = []
 }
 
 async function archiveSupplier(s) {
@@ -224,4 +244,35 @@ function handleRowAction(key, s) {
     @cancel="showDeleteDialog = false; supplierToDelete = null"
     @close="showDeleteDialog = false; supplierToDelete = null"
   />
+
+  <Teleport to="body">
+    <div v-if="showIngredientsModal" class="ingredients-modal-overlay" @click.self="closeIngredientsModal">
+      <div class="ingredients-modal">
+        <div class="ingredients-modal-header">
+          <h3>Ingrédients — {{ ingredientsModalSupplier?.name }}</h3>
+          <button class="modal-close-btn" @click="closeIngredientsModal">&times;</button>
+        </div>
+        <div class="ingredients-modal-body">
+          <div v-if="ingredientsModalLoading" style="display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem;">
+            <div v-for="n in 4" :key="n" class="skeleton" style="height: 36px; border-radius: var(--radius-sm);" />
+          </div>
+          <table v-else-if="ingredientsModalList.length" class="mepos-table">
+            <thead>
+              <tr><th>Ingrédient</th><th>Unité</th><th>Prix unitaire</th><th>Seuil alerte</th><th>Statut</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="ing in ingredientsModalList" :key="ing.id">
+                <td><strong style="color: var(--text-primary);">{{ ing.name }}</strong></td>
+                <td>{{ ing.unit }}</td>
+                <td>{{ parseFloat(ing.purchase_price_per_unit).toFixed(3) }} TND</td>
+                <td>{{ ing.alert_threshold }}</td>
+                <td><span :class="['badge', ing.status === 'archived' ? 'badge-warn' : 'badge-success']">{{ ing.status === 'active' ? 'Actif' : 'Archivé' }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-else style="color: var(--text-muted); padding: 1rem; text-align: center;">Aucun ingrédient lié à ce fournisseur.</p>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>

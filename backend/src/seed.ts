@@ -157,6 +157,7 @@ export interface SeedData {
   audit_logs: any[];
   suppliers: any[];
   purchases: any[];
+  product_mappings: any[];
 }
 
 function generateSales(tdef: TenantDef): { sales_tickets: any[]; sales_ticket_items: any[] } {
@@ -667,6 +668,7 @@ export function generateSeedData(): SeedData {
     audit_logs: [],
     suppliers: [],
     purchases: [],
+    product_mappings: [],
   };
 
   const tenants = [burgerHouse];
@@ -850,6 +852,67 @@ export function generateSeedData(): SeedData {
         created_at: daysAgo(60),
         updated_at: now,
         archived_at: null,
+      });
+    }
+
+    // ─── Product Mappings (External POS → mePOS Recipes) ───
+    // The POS system has its own product names/codes; we map them to our 8 recipes
+    const connectorType = tdef.connectorType;
+    let pmId = data.product_mappings.length;
+
+    // Mapped: External POS products that map to our 8 recipes
+    const mappedProducts = [
+      { extId: 'POS-BURG-001', code: 'BURG-001', name: 'Classic Burger', recipeId: 1, confidence: 100 },
+      { extId: 'POS-BURG-002', code: 'BURG-002', name: 'Double Burger', recipeId: 2, confidence: 100 },
+      { extId: 'POS-BURG-003', code: 'BURG-003', name: 'Cheese Burger', recipeId: 3, confidence: 95 },
+      { extId: 'POS-CHK-001', code: 'CHK-001', name: 'Chicken Burger', recipeId: 4, confidence: 100 },
+      { extId: 'POS-FRY-001', code: 'FRY-001', name: 'French Fries', recipeId: 5, confidence: 100 },
+      { extId: 'POS-NUG-001', code: 'NUG-001', name: 'Nuggets 6pcs', recipeId: 6, confidence: 82 },
+      { extId: 'POS-DRK-001', code: 'DRK-001', name: 'Soda', recipeId: 7, confidence: 100 },
+      { extId: 'POS-DRK-002', code: 'DRK-002', name: 'Eau Minerale', recipeId: 8, confidence: 100 },
+    ];
+    for (const p of mappedProducts) {
+      pmId++;
+      data.product_mappings.push({
+        id: pmId, tenant_id: tdef.id, connector_type: connectorType,
+        external_product_id: p.extId, external_product_code: p.code,
+        external_product_name: p.name, mepos_product_id: p.recipeId,
+        mapping_status: 'mapped', confidence: p.confidence,
+        created_at: daysAgo(30), updated_at: daysAgo(1),
+      });
+    }
+
+    // Unmapped: External POS products with no matching recipe yet
+    const unmappedProducts = [
+      { extId: 'POS-SAL-001', code: 'SAL-001', name: 'Salade Caesar' },
+      { extId: 'POS-SAL-002', code: 'SAL-002', name: 'Salade Chef' },
+      { extId: 'POS-ICE-001', code: 'ICE-001', name: 'Glace Vanille' },
+      { extId: 'POS-COF-001', code: 'COF-001', name: 'Cafe Express' },
+    ];
+    for (const p of unmappedProducts) {
+      pmId++;
+      data.product_mappings.push({
+        id: pmId, tenant_id: tdef.id, connector_type: connectorType,
+        external_product_id: p.extId, external_product_code: p.code,
+        external_product_name: p.name, mepos_product_id: null,
+        mapping_status: 'unmapped', confidence: 0,
+        created_at: daysAgo(30), updated_at: daysAgo(30),
+      });
+    }
+
+    // Ignored: Discontinued or irrelevant POS products
+    const ignoredProducts = [
+      { extId: 'POS-SHD-001', code: 'SHD-001', name: 'Smoothie Fraise (retire)' },
+      { extId: 'POS-SPC-999', code: 'SPC-999', name: 'Menu Enfant (temporaire)' },
+    ];
+    for (const p of ignoredProducts) {
+      pmId++;
+      data.product_mappings.push({
+        id: pmId, tenant_id: tdef.id, connector_type: connectorType,
+        external_product_id: p.extId, external_product_code: p.code,
+        external_product_name: p.name, mepos_product_id: null,
+        mapping_status: 'ignored', confidence: 0,
+        created_at: daysAgo(30), updated_at: daysAgo(15),
       });
     }
 
