@@ -384,15 +384,36 @@ export async function deleteDepartment(
 export async function getAllIngredients(tenantId?: number | null): Promise<any[]> {
   const filter = resolveTenantFilter(tenantId);
   if (isDemoMode) {
-    return filter
+    let ingredients = filter
       ? demoDb.ingredients.filter((i: any) => i.tenant_id === filter)
       : demoDb.ingredients;
+    return ingredients.map((i: any) => {
+      const supplier = i.preferred_supplier_id
+        ? demoDb.suppliers.find((s: any) => s.id === i.preferred_supplier_id)
+        : null;
+      return {
+        ...i,
+        preferred_supplier_name: supplier ? supplier.name : null,
+        preferred_supplier_company: supplier ? supplier.company_name : null,
+      };
+    });
   }
   if (filter) {
-    const result = await query('SELECT * FROM ingredients WHERE tenant_id = $1 ORDER BY id', [filter]);
+    const result = await query(
+      `SELECT i.*, s.name as preferred_supplier_name, s.company_name as preferred_supplier_company
+       FROM ingredients i
+       LEFT JOIN suppliers s ON i.preferred_supplier_id = s.id
+       WHERE i.tenant_id = $1 ORDER BY i.id`,
+      [filter]
+    );
     return result.rows;
   }
-  const result = await query('SELECT * FROM ingredients ORDER BY id');
+  const result = await query(
+    `SELECT i.*, s.name as preferred_supplier_name, s.company_name as preferred_supplier_company
+     FROM ingredients i
+     LEFT JOIN suppliers s ON i.preferred_supplier_id = s.id
+     ORDER BY i.id`
+  );
   return result.rows;
 }
 
@@ -403,9 +424,11 @@ export async function createIngredient(data: {
   purchase_unit_price: number;
   conversion_factor: number;
   alert_threshold?: number;
+  preferred_supplier_id?: number | null;
 }, tenantId?: number | null): Promise<any> {
   const {
     name, unit, purchase_unit, purchase_unit_price, conversion_factor, alert_threshold,
+    preferred_supplier_id,
   } = data;
   const tid = tenantId ?? 1;
 
@@ -419,6 +442,7 @@ export async function createIngredient(data: {
       alert_threshold: alert_threshold || 0.0,
       purchase_unit: purchase_unit || 'paquet',
       purchase_unit_price, conversion_factor,
+      preferred_supplier_id: preferred_supplier_id || null,
       tenant_id: tid,
     };
     demoDb.ingredients.push(newIng);
@@ -443,9 +467,9 @@ export async function createIngredient(data: {
   }
 
   const result = await query(
-    `INSERT INTO ingredients (name, unit, purchase_price_per_unit, alert_threshold, purchase_unit, purchase_unit_price, conversion_factor, tenant_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-    [name, unit, basePrice, alert_threshold || 0, purchase_unit || 'paquet', purchase_unit_price, conversion_factor, tid]
+    `INSERT INTO ingredients (name, unit, purchase_price_per_unit, alert_threshold, purchase_unit, purchase_unit_price, conversion_factor, preferred_supplier_id, tenant_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+    [name, unit, basePrice, alert_threshold || 0, purchase_unit || 'paquet', purchase_unit_price, conversion_factor, preferred_supplier_id || null, tid]
   );
 
   const newIngId = result.rows[0].id;
@@ -466,16 +490,19 @@ export async function updateIngredient(
   data: {
     name?: string; unit?: string; purchase_unit?: string;
     purchase_unit_price?: number; conversion_factor?: number; alert_threshold?: number;
+    preferred_supplier_id?: number | null;
   },
   tenantId?: number | null
 ): Promise<any> {
-  const { name, unit, purchase_unit, purchase_unit_price, conversion_factor, alert_threshold } = data;
+  const { name, unit, purchase_unit, purchase_unit_price, conversion_factor, alert_threshold, preferred_supplier_id } = data;
   const tid = tenantId ?? 1;
   const basePrice = purchase_unit_price ? purchase_unit_price / (conversion_factor || 1) : 0;
 
   if (isDemoMode) {
     const idx = demoDb.ingredients.findIndex((i: any) => i.id === id && i.tenant_id === tid);
     if (idx === -1) throw new Error('Ingredient not found');
+
+    const oldSupplierId = demoDb.ingredients[idx].preferred_supplier_id;
     demoDb.ingredients[idx] = {
       ...demoDb.ingredients[idx],
       name: name || demoDb.ingredients[idx].name,
@@ -485,7 +512,17 @@ export async function updateIngredient(
       purchase_unit: purchase_unit || demoDb.ingredients[idx].purchase_unit,
       purchase_unit_price: purchase_unit_price !== undefined ? purchase_unit_price : demoDb.ingredients[idx].purchase_unit_price,
       conversion_factor: conversion_factor || demoDb.ingredients[idx].conversion_factor,
+      preferred_supplier_id: preferred_supplier_id !== undefined ? preferred_supplier_id : demoDb.ingredients[idx].preferred_supplier_id,
     };
+
+    if (preferred_supplier_id !== undefined && preferred_supplier_id !== oldSupplierId && preferred_supplier_id) {
+      const supplier = demoDb.suppliers.find((s: any) => s.id === preferred_supplier_id);
+      if (supplier) {
+        eventBus.emit(Events.PREFERRED_SUPPLIER_CHANGED, {
+          tenantId: tid, id: preferred_supplier_id, name: supplier.name,
+        });
+      }
+    }
 
     eventBus.emit(Events.INGREDIENT_UPDATED, {
       tenantId: tid, id, name: demoDb.ingredients[idx].name,
@@ -494,15 +531,44 @@ export async function updateIngredient(
     return demoDb.ingredients[idx];
   }
 
-  const result = await query(
-    `UPDATE ingredients
-     SET name = $1, unit = $2, purchase_price_per_unit = $3, alert_threshold = $4,
-         purchase_unit = $5, purchase_unit_price = $6, conversion_factor = $7, updated_at = CURRENT_TIMESTAMP
-     WHERE id = $8 AND tenant_id = $9 RETURNING *`,
-    [name, unit, basePrice, alert_threshold, purchase_unit, purchase_unit_price, conversion_factor, id, tid]
-  );
+  const updates: string[] = [];
+  const params: any[] = [];
+  let pIdx = 1;
 
+  if (name !== undefined) { updates.push(`name = $${pIdx++}`); params.push(name); }
+  if (unit !== undefined) { updates.push(`unit = $${pIdx++}`); params.push(unit); }
+  if (basePrice) { updates.push(`purchase_price_per_unit = $${pIdx++}`); params.push(basePrice); }
+  if (alert_threshold !== undefined) { updates.push(`alert_threshold = $${pIdx++}`); params.push(alert_threshold); }
+  if (purchase_unit !== undefined) { updates.push(`purchase_unit = $${pIdx++}`); params.push(purchase_unit); }
+  if (purchase_unit_price !== undefined) { updates.push(`purchase_unit_price = $${pIdx++}`); params.push(purchase_unit_price); }
+  if (conversion_factor !== undefined) { updates.push(`conversion_factor = $${pIdx++}`); params.push(conversion_factor); }
+  if (preferred_supplier_id !== undefined) { updates.push(`preferred_supplier_id = $${pIdx++}`); params.push(preferred_supplier_id || null); }
+
+  if (updates.length === 0) {
+    const result = await query('SELECT * FROM ingredients WHERE id = $1 AND tenant_id = $2', [id, tid]);
+    if (result.rows.length === 0) throw new Error('Ingredient not found');
+    return result.rows[0];
+  }
+
+  updates.push(`updated_at = CURRENT_TIMESTAMP`);
+  params.push(id, tid);
+  const sql = `UPDATE ingredients SET ${updates.join(', ')} WHERE id = $${pIdx++} AND tenant_id = $${pIdx++} RETURNING *`;
+
+  const result = await query(sql, params);
   if (result.rows.length === 0) throw new Error('Ingredient not found');
+
+  if (preferred_supplier_id !== undefined && preferred_supplier_id) {
+    const oldResult = await query('SELECT preferred_supplier_id FROM ingredients WHERE id = $1 AND tenant_id = $2', [id, tid]);
+    if (oldResult.rows.length > 0 && oldResult.rows[0].preferred_supplier_id !== preferred_supplier_id) {
+      const supplierRes = await query('SELECT name FROM suppliers WHERE id = $1', [preferred_supplier_id]);
+      if (supplierRes.rows.length > 0) {
+        eventBus.emit(Events.PREFERRED_SUPPLIER_CHANGED, {
+          tenantId: tid, id: preferred_supplier_id, name: supplierRes.rows[0].name,
+        });
+      }
+    }
+  }
+
   return result.rows[0];
 }
 
