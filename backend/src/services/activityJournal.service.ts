@@ -1284,6 +1284,29 @@ export function setupActivityJournal() {
     });
   });
 
+  // ── Agent Connection Events ──
+  eventBus.on(Events.AGENT_CONNECTED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'agent.connected',
+      correlationId: data.correlationId,
+      entityType: 'agent',
+      entityId: String(data.agentId),
+      performedBySource: 'legacy_pos_agent',
+      severity: 'notice',
+      title: 'Agent connecté',
+      description: `Agent "${data.agentName}" (${data.connectorType}) s'est connecté.`,
+      metadata: {
+        agentName: data.agentName,
+        agentId: data.agentId,
+        connectorType: data.connectorType,
+        version: data.version,
+        machineName: data.machineName,
+      },
+      connectorId: data.agentId,
+    });
+  });
+
   eventBus.on(Events.AGENT_DISCONNECTED, async (data: any) => {
     await writeJournalEntry({
       tenantId: data.tenantId,

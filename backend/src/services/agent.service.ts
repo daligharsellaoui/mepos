@@ -381,6 +381,16 @@ export async function authenticateAgent(
     agent.status = 'online';
   }
 
+  // Emit AGENT_CONNECTED for activity journal
+  eventBus.emit(Events.AGENT_CONNECTED, {
+    tenantId: agent.tenant_id,
+    agentId: agent.id,
+    agentName: agent.name,
+    connectorType: agent.connector_type,
+    version: agent.version,
+    machineName: agent.machine_name,
+  });
+
   // Get decrypted config
   const config = getDecryptedConfig(agent.config);
 
