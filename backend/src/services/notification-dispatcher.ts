@@ -480,6 +480,82 @@ export function setupNotificationDispatcher() {
     });
   });
 
+  eventBus.on(Events.SUPPLIER_CREATED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'success',
+      category: CATEGORIES.inventory,
+      priority: PRIORITIES.low,
+      title: 'Nouveau fournisseur créé',
+      message: `${data.name} a été ajouté aux fournisseurs.`,
+      entityType: 'supplier',
+      entityId: data.id,
+      icon: 'truck',
+      color: '#06b6d4',
+    });
+  });
+
+  eventBus.on(Events.SUPPLIER_UPDATED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'information',
+      category: CATEGORIES.inventory,
+      priority: PRIORITIES.low,
+      title: 'Fournisseur mis à jour',
+      message: `${data.name} a été modifié.`,
+      entityType: 'supplier',
+      entityId: data.id,
+      icon: 'truck',
+      color: '#06b6d4',
+    });
+  });
+
+  eventBus.on(Events.SUPPLIER_ARCHIVED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'warning',
+      category: CATEGORIES.inventory,
+      priority: PRIORITIES.medium,
+      title: 'Fournisseur archivé',
+      message: `${data.name} a été archivé.`,
+      entityType: 'supplier',
+      entityId: data.id,
+      icon: 'truck',
+      color: '#06b6d4',
+      minRole: 'manager',
+    });
+  });
+
+  eventBus.on(Events.SUPPLIER_RESTORED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'success',
+      category: CATEGORIES.inventory,
+      priority: PRIORITIES.low,
+      title: 'Fournisseur restauré',
+      message: `${data.name} a été restauré.`,
+      entityType: 'supplier',
+      entityId: data.id,
+      icon: 'truck',
+      color: '#06b6d4',
+    });
+  });
+
+  eventBus.on(Events.PREFERRED_SUPPLIER_CHANGED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'information',
+      category: CATEGORIES.inventory,
+      priority: PRIORITIES.medium,
+      title: 'Fournisseur préféré changé',
+      message: `${data.name} est désormais le fournisseur préféré.`,
+      entityType: 'supplier',
+      entityId: data.id,
+      icon: 'truck',
+      color: '#06b6d4',
+    });
+  });
+
   eventBus.on(Events.PURCHASE_CREATED, async (data: any) => {
     await createNotification({
       tenantId: data.tenantId,
