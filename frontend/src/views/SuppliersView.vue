@@ -60,6 +60,7 @@ function closeForm() {
 
 function onSaved() {
   closeForm()
+  store.fetchSuppliers()
   addToast(editingSupplier.value ? 'Fournisseur mis à jour.' : 'Fournisseur créé.')
 }
 
