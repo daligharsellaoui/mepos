@@ -104,7 +104,7 @@ export async function createDepartment(data: {
     await client.query(
       `INSERT INTO inventory_stocks (department_id, ingredient_id, quantity, tenant_id)
        SELECT $1, id, 0.0000, $2 FROM ingredients WHERE tenant_id = $2
-       ON CONFLICT (department_id, ingredient_id) DO NOTHING`,
+       ON CONFLICT (tenant_id, department_id, ingredient_id) DO NOTHING`,
       [newDept.id, tid]
     );
 
@@ -328,7 +328,7 @@ export async function deleteDepartment(
         await client.query(
           `INSERT INTO inventory_stocks (department_id, ingredient_id, quantity, tenant_id)
            VALUES ($1, $2, 0.0000, $3)
-           ON CONFLICT (department_id, ingredient_id) DO NOTHING`,
+           ON CONFLICT (tenant_id, department_id, ingredient_id) DO NOTHING`,
           [transferToId, ingId, tid]
         );
 

@@ -230,11 +230,11 @@ function toggleDropdown() {
     justify-content: space-between;
     position: fixed;
     top: 0;
-    left: 280px;
+    left: 260px;
     right: 0;
     height: 56px;
     padding: 0 1.5rem;
-    background: var(--bg-elevated);
+    background: var(--bg-sidebar);
     border-bottom: 1px solid var(--border-color);
     z-index: 5;
   }

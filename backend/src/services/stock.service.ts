@@ -79,7 +79,7 @@ export async function ensureStockRow(
   await clientOrDb.query(
     `INSERT INTO inventory_stocks (department_id, ingredient_id, quantity, tenant_id)
      VALUES ($1, $2, 0.0000, $3)
-     ON CONFLICT (department_id, ingredient_id) DO NOTHING`,
+     ON CONFLICT (tenant_id, department_id, ingredient_id) DO NOTHING`,
     [departmentId, ingredientId, tid]
   );
 }
