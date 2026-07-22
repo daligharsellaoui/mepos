@@ -120,7 +120,8 @@ export async function updateStockQuantity(
   departmentId: number,
   ingredientId: number,
   delta: Decimal,
-  tenantId?: number
+  tenantId?: number,
+  correlationId?: string
 ): Promise<Decimal> {
   const tid = tenantId || 1;
 
@@ -132,10 +133,10 @@ export async function updateStockQuantity(
       const newQty = new Decimal(stock.quantity).plus(delta);
       stock.quantity = Math.max(0, newQty.toNumber());
       const finalQty = new Decimal(stock.quantity);
-      await getStockWarning(departmentId, ingredientId, undefined, null, tid);
+      await getStockWarning(departmentId, ingredientId, undefined, null, tid, correlationId);
       return finalQty;
     }
-    await getStockWarning(departmentId, ingredientId, undefined, null, tid);
+    await getStockWarning(departmentId, ingredientId, undefined, null, tid, correlationId);
     return new Decimal(0);
   }
 
@@ -149,7 +150,7 @@ export async function updateStockQuantity(
     [departmentId, ingredientId, tid]
   );
   const finalQty = new Decimal(result.rows[0]?.quantity || 0);
-  await getStockWarning(departmentId, ingredientId, undefined, clientOrDb, tid);
+  await getStockWarning(departmentId, ingredientId, undefined, clientOrDb, tid, correlationId);
   return finalQty;
 }
 
@@ -197,7 +198,8 @@ export async function getStockWarning(
   ingredientId: number,
   departmentName?: string,
   client?: any,
-  tenantId?: number
+  tenantId?: number,
+  correlationId?: string
 ): Promise<string | null> {
   let ingredientInfo: any = null;
   let newQty: Decimal;
@@ -245,23 +247,24 @@ export async function getStockWarning(
   } else {
     const settingVal = await getTenantSetting(tid, 'notifications', 'stock_alert_threshold');
     effectiveThreshold = new Decimal(settingVal ? parseFloat(settingVal) : 10);
-  }
-
-  if (newQty.lessThanOrEqualTo(effectiveThreshold)) {
+  }    if (newQty.lessThanOrEqualTo(effectiveThreshold)) {
     if (newQty.lessThanOrEqualTo(0)) {
       eventBus.emit(Events.STOCK_OUT, {
         tenantId: tid, ingredientId, ingredientName: ingredientInfo.name,
         remainingQty: newQty.toString(), departmentName, departmentId,
+        correlationId,
       });
     } else if (newQty.lessThanOrEqualTo(effectiveThreshold.dividedBy(2))) {
       eventBus.emit(Events.STOCK_CRITICAL, {
         tenantId: tid, ingredientId, ingredientName: ingredientInfo.name,
         remainingQty: newQty.toString(), departmentName, departmentId,
+        correlationId,
       });
     } else {
       eventBus.emit(Events.STOCK_LOW, {
         tenantId: tid, ingredientId, ingredientName: ingredientInfo.name,
         remainingQty: newQty.toString(), unit: ingredientInfo.unit || '', departmentName, departmentId,
+        correlationId,
       });
     }
 
@@ -273,6 +276,7 @@ export async function getStockWarning(
     eventBus.emit(Events.STOCK_RECOVERED, {
       tenantId: tid, ingredientId, ingredientName: ingredientInfo.name,
       remainingQty: newQty.toString(), unit: ingredientInfo.unit || '', departmentName, departmentId,
+      correlationId,
     });
   }
 
@@ -290,7 +294,8 @@ export async function processSaleDeduction(
   departmentName: string,
   items: any[],
   ticketId: number | string,
-  tenantId?: number
+  tenantId?: number,
+  correlationId?: string
 ): Promise<{ deductedStocks: any[]; warnings: string[] }> {
   if (!tenantId) tenantId = 1;
   const deductedStocks: any[] = [];
@@ -363,7 +368,7 @@ export async function processSaleDeduction(
 
       // Standard deduction
       await ensureStockRow(clientOrDb, stockDeptId, ingredientId, tid);
-      await updateStockQuantity(clientOrDb, stockDeptId, ingredientId, finalSaleDeduction.times(-1), tid);
+      await updateStockQuantity(clientOrDb, stockDeptId, ingredientId, finalSaleDeduction.times(-1), tid, correlationId);
       await logMovement(clientOrDb, stockDeptId, ingredientId, finalSaleDeduction.times(-1), 'sale_deduction', `ticket-${ticketId}`, tid);
 
       // Get ingredient info for response
@@ -396,6 +401,18 @@ export async function processSaleDeduction(
         });
       }
     }
+  }
+
+  // Emit SALE_INVENTORY_DEDUCTED to link sale deduction to the activity journal chain
+  if (correlationId) {
+    eventBus.emit(Events.SALE_INVENTORY_DEDUCTED, {
+      tenantId: tid,
+      ticketId,
+      departmentId,
+      correlationId,
+      itemsCount: items.length,
+      deductedStocks: deductedStocks.length,
+    });
   }
 
   return { deductedStocks, warnings };

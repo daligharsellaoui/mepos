@@ -68,6 +68,7 @@ export function setupNotificationDispatcher() {
       color: '#f59e0b',
       minRole: 'manager',
       dedupKey,
+      metadata: data.correlationId ? { correlationId: data.correlationId } : undefined,
     });
   });
 
@@ -88,6 +89,7 @@ export function setupNotificationDispatcher() {
       color: '#dc2626',
       minRole: 'admin',
       dedupKey,
+      metadata: data.correlationId ? { correlationId: data.correlationId } : undefined,
     });
   });
 
@@ -108,6 +110,7 @@ export function setupNotificationDispatcher() {
       color: '#dc2626',
       minRole: 'admin',
       dedupKey,
+      metadata: data.correlationId ? { correlationId: data.correlationId } : undefined,
     });
   });
 

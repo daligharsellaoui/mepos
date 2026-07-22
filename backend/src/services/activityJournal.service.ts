@@ -1481,6 +1481,27 @@ export function setupActivityJournal() {
     });
   });
 
+  // ── Sale Inventory Deducted (from processSaleDeduction) ──
+  eventBus.on(Events.SALE_INVENTORY_DEDUCTED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'sale.inventory_deducted',
+      correlationId: data.correlationId,
+      entityType: 'sale',
+      entityId: String(data.ticketId),
+      performedBySource: 'synchronization_service',
+      severity: 'info',
+      title: 'Stock déduit pour vente',
+      description: `${data.itemsCount} articles déduits du stock (${data.deductedStocks} ingrédients mis à jour).`,
+      metadata: {
+        ticketId: data.ticketId,
+        departmentId: data.departmentId,
+        itemsCount: data.itemsCount,
+        deductedStocks: data.deductedStocks,
+      },
+    });
+  });
+
   // ── Sale Import (from sync) ──
   eventBus.on(Events.SALE_IMPORTED, async (data: any) => {
     await writeJournalEntry({
@@ -1528,9 +1549,18 @@ export function setupActivityJournal() {
   eventBus.on('notification:created', async ({ notification }: { notification: any }) => {
     if (!notification || !notification.tenant_id) return;
 
+    // Extract correlationId from notification metadata if available (from stock event chain)
+    const notifMetadata = notification.metadata || {};
+    const correlationId = notifMetadata.correlationId || undefined;
+
+    // Strip correlationId from notification metadata to avoid duplication
+    const cleanMetadata = { ...notifMetadata };
+    delete cleanMetadata.correlationId;
+
     await writeJournalEntry({
       tenantId: notification.tenant_id,
       eventType: 'notification.generated',
+      correlationId,
       entityType: 'notification',
       entityId: String(notification.id),
       performedByUserId: notification.created_by,
@@ -1546,6 +1576,7 @@ export function setupActivityJournal() {
         priority: notification.priority,
         entityType: notification.entity_type,
         entityId: notification.entity_id,
+        ...cleanMetadata,
       },
     });
   });

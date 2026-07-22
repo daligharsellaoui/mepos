@@ -145,7 +145,7 @@ export async function syncTickets(
         correlationId: `sale-${external_ticket_id}-${tid}`,
       });
 
-      const result = await processSaleDeduction(null, stockDeptId, stockDeptId, department.name, resolvedItems, ticketId, tid);
+      const result = await processSaleDeduction(null, stockDeptId, stockDeptId, department.name, resolvedItems, ticketId, tid, `sale-${external_ticket_id}-${tid}`);
       deductedStocks.push(...result.deductedStocks);
       warnings.push(...result.warnings);
       syncedTicketsCount++;
@@ -227,7 +227,7 @@ export async function syncTickets(
         correlationId: `sale-${external_ticket_id}-${tid}`,
       });
 
-      const result = await processSaleDeduction(client, deptId, stockDeptId, department.name, resolvedItems, ticketId, tid);
+      const result = await processSaleDeduction(client, deptId, stockDeptId, department.name, resolvedItems, ticketId, tid, `sale-${external_ticket_id}-${tid}`);
       deductedStocks.push(...result.deductedStocks);
       warnings.push(...result.warnings);
       syncedTicketsCount++;
