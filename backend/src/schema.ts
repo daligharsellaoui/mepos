@@ -32,6 +32,12 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
+DO $$ BEGIN
+    CREATE TYPE supplier_status AS ENUM ('active', 'archived');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 -- ============================================================
 -- NEW TABLES: Multi-Tenant Infrastructure
 -- ============================================================
@@ -171,7 +177,39 @@ CREATE TABLE IF NOT EXISTS departments (
     UNIQUE(tenant_id, name) -- Name unique per tenant
 );
 
--- 3. Ingredients (Tenant-scoped)
+-- 3. Suppliers (Tenant-scoped)
+CREATE TABLE IF NOT EXISTS suppliers (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    company_name VARCHAR(255),
+    reference VARCHAR(100),
+    tax_number VARCHAR(100),
+    registration_number VARCHAR(100),
+    contact_person VARCHAR(255),
+    email VARCHAR(255),
+    phone VARCHAR(50),
+    mobile VARCHAR(50),
+    website TEXT,
+    address TEXT,
+    city VARCHAR(100),
+    postal_code VARCHAR(20),
+    country VARCHAR(100),
+    payment_terms VARCHAR(100),
+    payment_method VARCHAR(100),
+    currency VARCHAR(3) DEFAULT 'TND',
+    delivery_delay INT DEFAULT 0,
+    minimum_order_amount DECIMAL(12, 3) DEFAULT 0,
+    notes TEXT,
+    status supplier_status NOT NULL DEFAULT 'active',
+    preferred BOOLEAN NOT NULL DEFAULT FALSE,
+    rating INT DEFAULT 0 CHECK (rating >= 0 AND rating <= 5),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    archived_at TIMESTAMP WITH TIME ZONE
+);
+
+-- 4. Ingredients (Tenant-scoped)
 CREATE TABLE IF NOT EXISTS ingredients (
     id SERIAL PRIMARY KEY,
     tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
@@ -182,6 +220,7 @@ CREATE TABLE IF NOT EXISTS ingredients (
     purchase_unit VARCHAR(50) DEFAULT 'paquet',
     purchase_unit_price DECIMAL(10, 2) DEFAULT 0.00,
     conversion_factor DECIMAL(12, 4) DEFAULT 1.0000,
+    preferred_supplier_id INT REFERENCES suppliers(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(tenant_id, name) -- Name unique per tenant
@@ -405,6 +444,14 @@ CREATE INDEX IF NOT EXISTS idx_notifications_category ON notifications(tenant_id
 CREATE INDEX IF NOT EXISTS idx_notifications_priority ON notifications(tenant_id, priority, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_entity ON notifications(tenant_id, entity_type, entity_id);
+
+-- Supplier indexes
+CREATE INDEX IF NOT EXISTS idx_suppliers_tenant_id ON suppliers(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_suppliers_status ON suppliers(status);
+CREATE INDEX IF NOT EXISTS idx_suppliers_name ON suppliers(name);
+CREATE INDEX IF NOT EXISTS idx_suppliers_email ON suppliers(email);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_suppliers_tenant_name ON suppliers(tenant_id, LOWER(name));
+CREATE INDEX IF NOT EXISTS idx_ingredients_preferred_supplier ON ingredients(preferred_supplier_id);
 CREATE INDEX IF NOT EXISTS idx_notification_prefs_user ON notification_preferences(tenant_id, user_id);
 
 CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -684,7 +731,7 @@ export async function initializeDatabase() {
         }
 
         // Reset all sequences
-        const tables = ['users', 'departments', 'ingredients', 'recipes', 'sales_tickets', 'sales_ticket_items', 'stock_movements', 'ingredient_losses', 'transfer_requests', 'agents', 'agent_heartbeats', 'tenant_settings', 'audit_logs', 'tenants', 'platform_users'];
+        const tables = ['users', 'departments', 'suppliers', 'ingredients', 'recipes', 'sales_tickets', 'sales_ticket_items', 'stock_movements', 'ingredient_losses', 'transfer_requests', 'agents', 'agent_heartbeats', 'tenant_settings', 'audit_logs', 'tenants', 'platform_users'];
         for (const table of tables) {
           await client.query(`SELECT setval('${table}_id_seq', (SELECT COALESCE(MAX(id), 1) FROM ${table}))`);
         }

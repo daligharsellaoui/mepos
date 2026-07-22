@@ -1,6 +1,6 @@
 {
   "name": "mepos-stock-backend",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Inventory & Recipe Engine API for mePOS STOCK",
   "main": "dist/index.js",
   "scripts": {
