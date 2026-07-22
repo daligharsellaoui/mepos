@@ -36,7 +36,7 @@ async function loadData() {
   if (store.currentSupplier) {
     stats.value = {
       ingredients_count: store.currentSupplier.ingredients_count || 0,
-      active_ingredients: ingredients.value.filter((i: any) => i.status !== 'archived').length,
+      active_ingredients: ingredients.value.filter(i => i.status !== 'archived').length,
       preferred: store.currentSupplier.preferred,
       rating: store.currentSupplier.rating,
     }

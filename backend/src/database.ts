@@ -38,6 +38,8 @@ export const demoDb: {
   tenant_settings: any[];
   notifications: any[];
   notification_preferences: any[];
+  suppliers: any[];
+  purchases: any[];
 } = {
   tenants: seedData.tenants,
   users: seedData.users,
@@ -56,6 +58,8 @@ export const demoDb: {
   tenant_settings: seedData.tenant_settings,
   notifications: [],
   notification_preferences: [],
+  suppliers: seedData.suppliers,
+  purchases: seedData.purchases,
 };
 
 // Check DB Connection
