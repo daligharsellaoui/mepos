@@ -1545,6 +1545,52 @@ export function setupActivityJournal() {
     });
   });
 
+  // ── Forecast Alert Events ──
+  eventBus.on(Events.FORECAST_ALERT, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'forecast.alert',
+      correlationId: data.correlationId,
+      entityType: 'ingredient',
+      entityId: String(data.ingredientId),
+      performedBySource: 'forecast_engine',
+      severity: 'warning',
+      title: 'Alerte prévisions',
+      description: `Ingrédient "${data.ingredientName}" en situation critique: stock actuel ${data.currentStock} ${data.unit}, consommation moyenne ${data.avgDailyUsage}/jour. Épuisement prévu dans ${data.daysUntilDepletion} jours.`,
+      metadata: {
+        ingredientName: data.ingredientName,
+        ingredientId: data.ingredientId,
+        departmentId: data.departmentId,
+        currentStock: data.currentStock,
+        avgDailyUsage: data.avgDailyUsage,
+        daysUntilDepletion: data.daysUntilDepletion,
+        reorderQuantity: data.reorderQuantity,
+        isCritical: data.isCritical,
+      },
+    });
+  });
+
+  // ── Forecast Resolved Events ──
+  eventBus.on(Events.FORECAST_RESOLVED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'forecast.resolved',
+      correlationId: data.correlationId,
+      entityType: 'ingredient',
+      entityId: String(data.ingredientId),
+      performedBySource: 'system',
+      severity: 'notice',
+      title: 'Alerte prévisions résolue',
+      description: `Le stock de "${data.ingredientName}" est revenu à un niveau normal (${data.currentStock} ${data.unit}).`,
+      metadata: {
+        ingredientName: data.ingredientName,
+        ingredientId: data.ingredientId,
+        departmentId: data.departmentId,
+        currentStock: data.currentStock,
+      },
+    });
+  });
+
   // ── Notification Events (from notification:created bridge) ──
   eventBus.on('notification:created', async ({ notification }: { notification: any }) => {
     if (!notification || !notification.tenant_id) return;

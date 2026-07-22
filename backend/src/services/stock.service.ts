@@ -278,6 +278,17 @@ export async function getStockWarning(
       remainingQty: newQty.toString(), unit: ingredientInfo.unit || '', departmentName, departmentId,
       correlationId,
     });
+
+    // Also emit FORECAST_RESOLVED when stock recovers above threshold
+    // (indicates a previously critical forecast alert is now resolved)
+    eventBus.emit(Events.FORECAST_RESOLVED, {
+      tenantId: tid,
+      ingredientId,
+      ingredientName: ingredientInfo.name,
+      departmentId,
+      currentStock: newQty.toNumber(),
+      unit: ingredientInfo.unit || '',
+    });
   }
 
   return null;

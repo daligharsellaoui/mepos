@@ -238,15 +238,33 @@ export async function getForecast(tenantId?: number | null): Promise<ForecastRes
 
   const estimatedDailyRevenue = recipes.reduce((sum, r) => sum + r.avg_daily_revenue, 0);
 
+  const forecastTenantId = tenantId === null ? undefined : (tenantId || filter || 1);
+
   // Emit forecast generated event for activity journal
-  // Use the resolved filter value if tenantId is not provided (null = platform admin)
   eventBus.emit(Events.FORECAST_GENERATED, {
-    tenantId: tenantId === null ? undefined : (tenantId || filter || 1),
+    tenantId: forecastTenantId,
     recipesCount: recipes.length,
     ingredientsCount: ingredients.length,
     daysAnalyzed,
     generatedAt,
   });
+
+  // Emit FORECAST_ALERT for each critical ingredient
+  for (const ing of criticalIngredients) {
+    eventBus.emit(Events.FORECAST_ALERT, {
+      tenantId: forecastTenantId,
+      ingredientId: ing.ingredient_id,
+      ingredientName: ing.ingredient_name,
+      departmentId: ing.department_id,
+      departmentName: ing.department_name,
+      currentStock: ing.current_stock,
+      unit: ing.unit,
+      avgDailyUsage: ing.avg_daily_usage,
+      daysUntilDepletion: ing.days_until_depletion,
+      reorderQuantity: ing.reorder_quantity,
+      isCritical: ing.is_critical,
+    });
+  }
 
   return {
     generated_at: generatedAt, days_analyzed: daysAnalyzed, recipes, ingredients,
