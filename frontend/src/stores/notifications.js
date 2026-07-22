@@ -270,6 +270,7 @@ export const useNotificationStore = defineStore('notifications', () => {
 
   return {
     items, unreadCount, isLoading, hasMore, total,
+    limit, offset,
     filters, unreadNotifications, sortedByPriority,
     fetchNotifications, fetchUnreadCount, markAsRead,
     markAllAsRead, archiveNotification, deleteNotification,

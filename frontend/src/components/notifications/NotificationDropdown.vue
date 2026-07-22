@@ -201,4 +201,18 @@ function handleNavigate(url) {
   color: var(--text-primary);
 }
 
+@media (max-width: 600px) {
+  .notification-dropdown {
+    top: 56px;
+    right: 0;
+    left: 0;
+    width: 100%;
+    max-width: 100vw;
+    max-height: calc(100vh - 56px);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+}
+
 </style>

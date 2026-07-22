@@ -141,6 +141,23 @@ function formatDate(dateStr) {
   })
 }
 
+const currentPage = computed(() => Math.floor(notifStore.offset / notifStore.limit) + 1)
+const totalPages = computed(() => Math.ceil(notifStore.total / notifStore.limit))
+
+function goToPage(page) {
+  const newOffset = (page - 1) * notifStore.limit
+  notifStore.offset = newOffset
+  notifStore.fetchNotifications(true)
+}
+
+function goToPrevPage() {
+  if (currentPage.value > 1) goToPage(currentPage.value - 1)
+}
+
+function goToNextPage() {
+  if (currentPage.value < totalPages.value) goToPage(currentPage.value + 1)
+}
+
 const groupedItems = computed(() => {
   if (groupBy.value === 'category') {
     const groups = {}
@@ -295,12 +312,24 @@ const groupedItems = computed(() => {
           />
         </div>
 
-        <div v-if="notifStore.isLoading" class="load-more">
-          <div class="spinner" />
-        </div>
-
-        <div v-if="!notifStore.hasMore && notifStore.items.length > 0" class="end-message">
-          Toutes les notifications sont chargées.
+        <div class="pagination-bar" v-if="notifStore.total > notifStore.limit">
+          <button class="page-btn" :disabled="currentPage <= 1" @click="goToPrevPage">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Prev
+          </button>
+          <div class="page-numbers">
+            <button
+              v-for="p in totalPages"
+              :key="p"
+              class="page-num"
+              :class="{ active: p === currentPage }"
+              @click="goToPage(p)"
+            >{{ p }}</button>
+          </div>
+          <button class="page-btn" :disabled="currentPage >= totalPages" @click="goToNextPage">
+            Next
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
         </div>
       </div>
     </div>
@@ -680,6 +709,66 @@ const groupedItems = computed(() => {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-top: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+.page-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.page-btn:hover:not(:disabled) {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-primary);
+}
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.page-numbers {
+  display: flex;
+  gap: 0.25rem;
+}
+.page-num {
+  min-width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.page-num:hover {
+  background: rgba(255,255,255,0.04);
+  color: var(--text-primary);
+}
+.page-num.active {
+  background: var(--indigo);
+  border-color: transparent;
+  color: white;
 }
 
 @media (max-width: 600px) {
