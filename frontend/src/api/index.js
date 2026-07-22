@@ -32,6 +32,7 @@ client.interceptors.response.use(
 export const api = {
   // Auth
   login: (username, password) => client.post('/auth/login', { username, password }),
+  logout: () => client.post('/auth/logout'),
   getUsers: () => client.get('/auth/users'),
   createUser: (data) => client.post('/auth/users', data),
   updateUser: (id, data) => client.put(`/auth/users/${id}`, data),

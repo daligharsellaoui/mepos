@@ -113,7 +113,14 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  function logout() {
+  async function logout() {
+    try {
+      // Call the logout endpoint to record the event in the activity journal
+      await api.logout()
+    } catch {
+      // If the server is unreachable, still log out locally
+      console.warn('[Auth] Logout API call failed, logging out locally')
+    }
     user.value = null
     token.value = null
     localStorage.removeItem('mepos_user')
