@@ -65,28 +65,28 @@ const accessLogStream = fs.createWriteStream(path.join(logDir, 'access.log'), { 
 app.use(morgan('combined', { stream: accessLogStream }));
 app.use(morgan('dev'));
 
-// Rate limiting: global
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // 500 requests per window per IP
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { status: 'error', message: 'Trop de requêtes. Veuillez réessayer plus tard.' }
-});
-app.use(globalLimiter);
+// Rate limiting disabled for now
+// const globalLimiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: 500, // 500 requests per window per IP
+//   standardHeaders: true,
+//   legacyHeaders: false,
+//   message: { status: 'error', message: 'Trop de requêtes. Veuillez réessayer plus tard.' }
+// });
+// app.use(globalLimiter);
 
 // Stricter rate limit for auth routes
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20, // 20 login attempts per 15 minutes
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { status: 'error', message: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.' }
-});
+// const authLimiter = rateLimit({
+//   windowMs: 15 * 60 * 1000,
+//   max: 20, // 20 login attempts per 15 minutes
+//   standardHeaders: true,
+//   legacyHeaders: false,
+//   message: { status: 'error', message: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.' }
+// });
 
 // Mount API routes
 // Auth routes: login is public, protected routes use tenantContextMiddleware
-app.use('/api/v1/auth', authLimiter, authRouter);
+app.use('/api/v1/auth', authRouter);
 // All other routes: auth + tenant context middleware
 // authMiddleware extracts user from JWT/API key
 // tenantContextMiddleware extracts tenant_id and injects into req.tenantId
