@@ -9,7 +9,6 @@ const app = useAppStore()
 const auth = useAuthStore()
 
 const isAdmin = computed(() => auth.isAdmin)
-const isManager = computed(() => auth.isManager || auth.isAdmin)
 const activeTab = ref('overview')
 const searchQuery = ref('')
 const selectedConnector = ref('pos')
@@ -38,10 +37,6 @@ const filteredMappings = computed(() => {
 
 const unmappedMappings = computed(() =>
   mappings.value.filter(m => m.mapping_status === 'unmapped')
-)
-
-const mappedMappings = computed(() =>
-  mappings.value.filter(m => m.mapping_status === 'mapped')
 )
 
 onMounted(async () => {

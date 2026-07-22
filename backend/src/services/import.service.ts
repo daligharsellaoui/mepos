@@ -95,6 +95,21 @@ export async function validateCsv(
   const warnings: any[] = [];
   const validatedRows: any[] = [];
 
+  // Validate CSV structure - check required columns exist
+  if (rows.length > 0) {
+    const firstRow = rows[0];
+    const requiredColumns = ['Product Name', 'Selling Price'];
+    const missingColumns = requiredColumns.filter(col => !(col in firstRow));
+    if (missingColumns.length > 0) {
+      return {
+        valid: false,
+        rows: [],
+        errors: [{ rowNum: 0, errors: [`Colonnes manquantes: ${missingColumns.join(', ')}`] }],
+        warnings: []
+      };
+    }
+  }
+
   // Get existing recipes and ingredients for duplicate check
   let existingRecipes: string[] = [];
   let existingIngredients: string[] = [];

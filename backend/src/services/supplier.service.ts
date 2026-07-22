@@ -70,7 +70,12 @@ export async function getAllSuppliers(
     });
 
     const total = suppliers.length;
-    const paginated = suppliers.slice(offset, offset + itemsPerPage);
+    const paginated = suppliers.slice(offset, offset + itemsPerPage).map((s: any) => {
+      const count = demoDb.ingredients.filter(
+        (i: any) => i.preferred_supplier_id === s.id && (filter ? i.tenant_id === filter : true)
+      ).length;
+      return { ...s, ingredients_count: count };
+    });
     return {
       suppliers: paginated,
       total,
@@ -80,32 +85,32 @@ export async function getAllSuppliers(
     };
   }
 
-  let sql = 'SELECT * FROM suppliers WHERE tenant_id = $1';
+  let sql = 'SELECT s.*, (SELECT COUNT(*) FROM ingredients WHERE preferred_supplier_id = s.id AND tenant_id = $1) as ingredients_count FROM suppliers s WHERE s.tenant_id = $1';
   const params: any[] = [filter ?? 1];
   let paramIndex = 2;
 
   if (search) {
-    sql += ` AND (LOWER(name) LIKE $${paramIndex} OR LOWER(company_name) LIKE $${paramIndex} OR LOWER(email) LIKE $${paramIndex} OR LOWER(phone) LIKE $${paramIndex} OR LOWER(city) LIKE $${paramIndex} OR LOWER(tax_number) LIKE $${paramIndex} OR LOWER(contact_person) LIKE $${paramIndex})`;
+    sql += ` AND (LOWER(s.name) LIKE $${paramIndex} OR LOWER(s.company_name) LIKE $${paramIndex} OR LOWER(s.email) LIKE $${paramIndex} OR LOWER(s.phone) LIKE $${paramIndex} OR LOWER(s.city) LIKE $${paramIndex} OR LOWER(s.tax_number) LIKE $${paramIndex} OR LOWER(s.contact_person) LIKE $${paramIndex})`;
     params.push(`%${search.toLowerCase()}%`);
     paramIndex++;
   }
   if (status) {
-    sql += ` AND status = $${paramIndex}`;
+    sql += ` AND s.status = $${paramIndex}`;
     params.push(status);
     paramIndex++;
   }
   if (preferred !== null && preferred !== undefined && preferred !== '') {
-    sql += ` AND preferred = $${paramIndex}`;
+    sql += ` AND s.preferred = $${paramIndex}`;
     params.push(preferred === 'true');
     paramIndex++;
   }
   if (country) {
-    sql += ` AND country = $${paramIndex}`;
+    sql += ` AND s.country = $${paramIndex}`;
     params.push(country);
     paramIndex++;
   }
 
-  const countResult = await query(sql.replace('SELECT *', 'SELECT COUNT(*)'), params);
+  const countResult = await query(sql.replace(/SELECT s\.\*.*?FROM/, 'SELECT COUNT(*) FROM'), params);
   const total = parseInt(countResult.rows[0].count, 10);
 
   const validSortFields = ['name', 'company_name', 'city', 'email', 'created_at', 'rating', 'status'];
