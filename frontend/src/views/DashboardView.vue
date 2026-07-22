@@ -17,7 +17,7 @@ const app = useAppStore()
 const isAdmin = computed(() => auth.isAdmin)
 const isManager = computed(() => auth.isManager)
 const isCook = computed(() => auth.isCook)
-const canViewFinance = computed(() => isAdmin.value || isManager.value)
+const canViewFinance = computed(() => isAdmin.value)
 
 // Chart refs
 const salesHistoryChartRef = ref(null)
