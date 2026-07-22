@@ -118,11 +118,8 @@ const burgerHouse: TenantDef = {
     { name: 'Délice Danone', company_name: 'Délice Danone Tunisie', tax_number: '3456789Z/C/M/002', city: 'Mégrine', country: 'Tunisie', email: 'pro@delice.tn', phone: '+216 70 123 456', contact_person: 'Karim Mansour' },
     { name: 'Société des Fromages', company_name: 'Société Tunisienne des Fromages', tax_number: '4567890A/D/M/003', city: 'Sfax', country: 'Tunisie', email: 'info@fromages.tn', phone: '+216 74 123 456', contact_person: 'Sami Ben Ahmed' },
     { name: 'Les Grands Moulins', company_name: 'Les Grands Moulins de Tunis', tax_number: '5678901B/E/M/004', city: 'Tunis', country: 'Tunisie', email: 'commercial@grands-moulins.tn', phone: '+216 71 345 678', contact_person: 'Fatma Belhaj', preferred: true },
-    { name: 'Marché Central', company_name: 'Marché Central des Produits Frais', tax_number: '6789012C/F/M/005', city: 'Tunis', country: 'Tunisie', email: 'contact@marchecentral.tn', phone: '+216 71 456 789', contact_person: 'Hichem Garbouj' },
+    { name: 'Marché Central', company_name: 'Marché Central des Produits Frais', tax_number: '6789012C/F/M/005', city: 'Tunis', country: 'Tunisie', email: 'contact@marchecentral.tn', phone: '+216 71 456 789', contact_person: 'Hichem Garbouj', preferred: true },
     { name: 'Tunisie Légumes', company_name: 'Tunisie Légumes SARL', tax_number: '7890123D/G/M/006', city: 'Nabeul', country: 'Tunisie', email: 'ventes@tunisie-legumes.tn', phone: '+216 72 123 456', contact_person: 'Nadia Mejri' },
-    { name: 'Fresh Seafood Tunisia', company_name: 'Fresh Seafood Tunisia SARL', tax_number: '8901234E/H/M/007', city: 'La Goulette', country: 'Tunisie', email: 'order@freshseafood.tn', phone: '+216 71 567 890', contact_person: 'Amine Khelil' },
-    { name: 'Coffee Solutions', company_name: 'Coffee Solutions Tunisie', tax_number: '9012345F/I/M/008', city: 'Tunis', country: 'Tunisie', email: 'pro@coffee-solutions.tn', phone: '+216 70 234 567', contact_person: 'Selma Ben Ali' },
-    { name: 'Mediterranean Foods', company_name: 'Mediterranean Foods Group', tax_number: '0123456G/J/M/009', city: 'Sousse', country: 'Tunisie', email: 'info@med-foods.tn', phone: '+216 73 123 456', contact_person: 'Mehdi Youssef' },
   ],
   agents: [
     {
@@ -856,22 +853,35 @@ export function generateSeedData(): SeedData {
       });
     }
 
-    // Link suppliers to ingredients
+    // Link suppliers to ingredients (explicit mapping for ALL 20 ingredients)
     const supplierMap: Record<string, number> = {};
     data.suppliers.forEach((s: any) => { supplierMap[s.name.toLowerCase()] = s.id; });
+    const ingToSupplier: Record<string, string> = {
+      'Viande Hachée Bœuf': 'fresh meat tunisia',
+      'Blanc de Poulet': 'fresh meat tunisia',
+      'Pain Burger': 'les grands moulins',
+      'Fromage Cheddar': 'société des fromages',
+      'Tomates': 'tunisie légumes',
+      'Oignons': 'tunisie légumes',
+      'Salade Laitue': 'tunisie légumes',
+      'Cornichons': 'marché central',
+      'Frites Surgelées': 'marché central',
+      'Huile de Friture': 'marché central',
+      'Mayonnaise': 'marché central',
+      'Ketchup': 'marché central',
+      'Moutarde': 'marché central',
+      'Farine de Blé': 'les grands moulins',
+      'Œufs': 'délice danone',
+      'Boissons Gazeuses': 'sotub',
+      'Eau Minérale': 'sotub',
+      'Sel': 'marché central',
+      'Poivre Noir': 'marché central',
+      'Pommes de Terre': 'tunisie légumes',
+    };
     for (const ing of data.ingredients) {
-      if (ing.name.toLowerCase().includes('viande') || ing.name.includes('Bœuf') || ing.name.includes('Poulet')) {
-        ing.preferred_supplier_id = supplierMap['fresh meat tunisia'];
-      } else if (ing.name.includes('Fromage')) {
-        ing.preferred_supplier_id = supplierMap['société des fromages'];
-      } else if (ing.name.includes('Pain') || ing.name.includes('Farine')) {
-        ing.preferred_supplier_id = supplierMap['les grands moulins'];
-      } else if (ing.name.includes('Boissons') || ing.name.includes('Eau')) {
-        ing.preferred_supplier_id = supplierMap['sotub'];
-      } else if (ing.name.includes('Tomates') || ing.name.includes('Salade') || ing.name.includes('Oignons') || ing.name.includes('Pommes')) {
-        ing.preferred_supplier_id = supplierMap['tunisie légumes'];
-      } else if (ing.name.includes('Frites') || ing.name.includes('Huile')) {
-        ing.preferred_supplier_id = supplierMap['marché central'];
+      const supplierKey = ingToSupplier[ing.name];
+      if (supplierKey) {
+        ing.preferred_supplier_id = supplierMap[supplierKey];
       }
     }
   }
