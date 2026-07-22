@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted, inject } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useAppStore } from '../stores/app'
 import { useNotificationStore } from '../stores/notifications'
@@ -9,6 +10,7 @@ import NotificationBell from '../components/notifications/NotificationBell.vue'
 import NotificationDropdown from '../components/notifications/NotificationDropdown.vue'
 import logoSrc from '../assets/sidelogo.png'
 
+const router = useRouter()
 const auth = useAuthStore()
 const app = useAppStore()
 const notifStore = useNotificationStore()
@@ -89,7 +91,7 @@ function toggleDropdown() {
           <button
             class="btn-logout"
             title="Se déconnecter"
-            @click="auth.logout(); $router.push('/login')"
+            @click="auth.logout(); router.push('/login')"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

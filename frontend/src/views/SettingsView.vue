@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useAppStore } from '../stores/app'
 import { useSupplierStore } from '../stores/suppliers'
+import { useImportStore } from '../stores/import'
 import { api } from '../api'
 import Modal from '../components/base/Modal.vue'
 import ConfirmDialog from '../components/base/ConfirmDialog.vue'
@@ -16,6 +17,7 @@ import RecipeUsageModal from '../components/base/RecipeUsageModal.vue'
 const auth = useAuthStore()
 const app = useAppStore()
 const supplierStore = useSupplierStore()
+const importStore = useImportStore()
 
 const subTab = ref('ingredients')
 const isSaving = ref(false)
@@ -211,6 +213,41 @@ async function fetchUsers() {
     const { data: res } = await api.getUsers()
     if (res.status === 'success') users.value = res.data
   } catch (err) { console.error(err) }
+}
+
+// ── Import Wizard ──
+const showImportWizard = ref(false)
+const dragActive = ref(false)
+const fileInput = ref(null)
+const stepLabels = ['Téléverser', 'Validation', 'Aperçu', 'Résoudre', 'Confirmer', 'Importation', 'Terminé']
+
+function openWizard() {
+  importStore.reset()
+  showImportWizard.value = true
+}
+
+function closeWizard() {
+  showImportWizard.value = false
+  importStore.reset()
+}
+
+function handleDragOver(e) { e.preventDefault(); dragActive.value = true }
+function handleDragLeave() { dragActive.value = false }
+function handleDrop(e) {
+  e.preventDefault(); dragActive.value = false
+  const files = e.dataTransfer.files
+  if (files.length > 0 && files[0].name.endsWith('.csv')) handleFileUpload(files[0])
+}
+function handleFileSelect(e) {
+  const files = e.target.files
+  if (files.length > 0) handleFileUpload(files[0])
+}
+async function handleFileUpload(file) {
+  try { await importStore.uploadAndValidate(file) } catch (err) { console.error('Upload error:', err) }
+}
+async function downloadTemplate() { await importStore.downloadTemplate() }
+async function confirmImport() {
+  try { await importStore.executeImport() } catch (err) { console.error('Import error:', err) }
 }
 
 watch(subTab, (tab) => {
@@ -1001,9 +1038,25 @@ async function handleDeleteDeptConfirm() {
           class="glass-panel"
           style="padding: 2rem;"
         >
-          <h2 style="font-size: 1.25rem; margin-bottom: 1.25rem;">
-            Menu mePOS ({{ app.recipes.length }})
-          </h2>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+    <h2 style="font-size: 1.25rem; margin: 0;">
+      Menu mePOS ({{ app.recipes.length }})
+    </h2>
+    <div style="display: flex; gap: 0.5rem;">
+      <button class="touch-btn" style="background: var(--bg-secondary); border: 1px solid var(--border-color); font-size: 0.8rem; padding: 0.4rem 0.8rem;" @click="downloadTemplate">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        Modèle CSV
+      </button>
+      <button v-if="auth.isManager" class="touch-btn" style="background: var(--blue); color: white; font-size: 0.8rem; padding: 0.4rem 0.8rem;" @click="openWizard">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        Importer CSV
+      </button>
+    </div>
+  </div>
           <div class="table-wrapper">
             <table class="mepos-table">
               <thead><tr><th>Produit</th><th>Prix</th><th>Nb Ingr.</th><th>Actions</th></tr></thead>
