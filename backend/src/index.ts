@@ -110,11 +110,16 @@ app.get('/health', (_req, res) => {
 });
 
 // SSE endpoint for real-time notifications
-const sseClients: Map<number, Set<Response>> = new Map();
+interface SseClient {
+  res: Response;
+  userId: number;
+  role: string;
+}
+const sseClients: Map<number, Set<SseClient>> = new Map();
 
 app.get('/api/v1/notifications/stream', authMiddleware, tenantContextMiddleware, (req: Request, res: Response) => {
   const tenantId = (req as any).tenantId;
-  const userId = (req as any).user?.id;
+  const user = (req as any).user;
 
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -128,7 +133,8 @@ app.get('/api/v1/notifications/stream', authMiddleware, tenantContextMiddleware,
   if (!sseClients.has(tenantId)) {
     sseClients.set(tenantId, new Set());
   }
-  sseClients.get(tenantId)!.add(res);
+  const clientEntry: SseClient = { res, userId: user.id, role: user.role };
+  sseClients.get(tenantId)!.add(clientEntry);
 
   const heartbeat = setInterval(() => {
     res.write(`:heartbeat\n\n`);
@@ -138,29 +144,34 @@ app.get('/api/v1/notifications/stream', authMiddleware, tenantContextMiddleware,
     clearInterval(heartbeat);
     const clients = sseClients.get(tenantId);
     if (clients) {
-      clients.delete(res);
+      clients.delete(clientEntry);
       if (clients.size === 0) sseClients.delete(tenantId);
     }
   });
 });
 
-eventBus.on('notification:created', async ({ notification }: { notification: any }) => {
+const ROLE_HIERARCHY: Record<string, number> = { admin: 3, manager: 2, user: 1 };
+
+function hasMinRole(userRole: string, minRole: string): boolean {
+  return (ROLE_HIERARCHY[userRole] || 0) >= (ROLE_HIERARCHY[minRole] || 0);
+}
+
+eventBus.on('notification:created', async ({ notification, minRole }: { notification: any; minRole?: string }) => {
   const clients = sseClients.get(notification.tenant_id);
   if (!clients || clients.size === 0) return;
 
-  const unreadCount = await getUnreadCount(
-    notification.tenant_id,
-    notification.assigned_to || 0
-  );
+  const unreadCache = new Map<number, number>();
 
-  const payload = JSON.stringify({
-    type: 'notification',
-    notification,
-    unreadCount,
-  });
-
-  clients.forEach(client => {
-    client.write(`data: ${payload}\n\n`);
+  clients.forEach(async (client) => {
+    if (notification.assigned_to && client.userId !== notification.assigned_to) return;
+    if (minRole && !hasMinRole(client.role, minRole)) return;
+    if (!unreadCache.has(client.userId)) {
+      const count = await getUnreadCount(notification.tenant_id, client.userId);
+      unreadCache.set(client.userId, count);
+    }
+    const unreadCount = unreadCache.get(client.userId)!;
+    const payload = JSON.stringify({ type: 'notification', notification, unreadCount });
+    client.res.write(`data: ${payload}\n\n`);
   });
 });
 

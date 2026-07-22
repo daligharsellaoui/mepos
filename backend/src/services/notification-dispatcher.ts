@@ -165,6 +165,7 @@ export function setupNotificationDispatcher() {
       actionUrl: `/app/transfers`,
       icon: 'check-circle',
       color: '#10b981',
+      assignedTo: data.requestedBy,
     });
   });
 
@@ -181,6 +182,7 @@ export function setupNotificationDispatcher() {
       actionUrl: `/app/transfers`,
       icon: 'x-circle',
       color: '#ef4444',
+      assignedTo: data.requestedBy,
     });
   });
 
@@ -196,6 +198,7 @@ export function setupNotificationDispatcher() {
       entityId: data.requestId,
       icon: 'check-circle',
       color: '#10b981',
+      assignedTo: data.requestedBy,
     });
   });
 
@@ -291,6 +294,7 @@ export function setupNotificationDispatcher() {
       entityId: data.userId,
       icon: 'user',
       color: '#6366f1',
+      assignedTo: data.userId,
     });
   });
 

@@ -89,7 +89,29 @@ export async function createLoss(
     );
 
     await client.query('COMMIT');
-    return insertLoss.rows[0];
+
+    const lossRecord = insertLoss.rows[0];
+    const ingResult = await query('SELECT name, unit FROM ingredients WHERE id = $1 AND tenant_id = $2', [ingredientId, tid]);
+    const ingData = ingResult.rows[0] || {};
+    const deptResult = await query('SELECT name FROM departments WHERE id = $1 AND tenant_id = $2', [departmentId, tid]);
+    const deptName = deptResult.rows[0]?.name || 'Inconnu';
+
+    eventBus.emit(Events.LOSS_DECLARED, {
+      tenantId: tid, lossId: lossRecord.id, quantity: qtyDecimal.toNumber(),
+      unit: ingData.unit || '', ingredientName: ingData.name || 'Inconnu',
+      reason: lossReason, costLoss: costLoss.toNumber(),
+      departmentName: deptName,
+    });
+
+    if (costLoss.greaterThan(50)) {
+      eventBus.emit(Events.LOSS_LARGE, {
+        tenantId: tid, lossId: lossRecord.id, quantity: qtyDecimal.toNumber(),
+        unit: ingData.unit || '', ingredientName: ingData.name || 'Inconnu',
+        reason: lossReason, costLoss: costLoss.toNumber(),
+      });
+    }
+
+    return lossRecord;
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;

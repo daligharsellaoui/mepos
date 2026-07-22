@@ -140,6 +140,7 @@ export async function createTransferRequest(
       tenantId: tid, requestId: newRequest.id, quantity: reqQty.toNumber(),
       unit: ing?.unit || '', ingredientName: ing?.name || 'Inconnu',
       sourceDept: srcDept?.name || 'Inconnu', destDept: destDept?.name || 'Inconnu',
+      requestedBy,
     });
 
     return newRequest;
@@ -150,7 +151,21 @@ export async function createTransferRequest(
      VALUES ($1, $2, $3, $4, 'pending', $5, $6) RETURNING *`,
     [sourceDepartmentId, destinationDepartmentId, ingredientId, reqQty.toString(), requestedBy, tid]
   );
-  return result.rows[0];
+  const newRequest = result.rows[0];
+
+  const ingResult = await query('SELECT name, unit FROM ingredients WHERE id = $1 AND tenant_id = $2', [ingredientId, tid]);
+  const ingData = ingResult.rows[0] || {};
+  const srcDeptResult = await query('SELECT name FROM departments WHERE id = $1 AND tenant_id = $2', [sourceDepartmentId, tid]);
+  const destDeptResult = await query('SELECT name FROM departments WHERE id = $1 AND tenant_id = $2', [destinationDepartmentId, tid]);
+
+  eventBus.emit(Events.TRANSFER_REQUESTED, {
+    tenantId: tid, requestId: newRequest.id, quantity: reqQty.toNumber(),
+    unit: ingData.unit || '', ingredientName: ingData.name || 'Inconnu',
+    sourceDept: srcDeptResult.rows[0]?.name || 'Inconnu', destDept: destDeptResult.rows[0]?.name || 'Inconnu',
+    requestedBy,
+  });
+
+  return newRequest;
 }
 
 /**
@@ -176,6 +191,7 @@ export async function approveTransferRequest(
     eventBus.emit(Events.TRANSFER_COMPLETED, {
       tenantId: tid, requestId: request.id, quantity: request.quantity,
       unit: ing?.unit || '', ingredientName: ing?.name || 'Inconnu',
+      requestedBy: request.requested_by,
     });
 
     return request;
@@ -222,6 +238,7 @@ export async function approveTransferRequest(
     eventBus.emit(Events.TRANSFER_COMPLETED, {
       tenantId: tid, requestId: request.id, quantity: parseFloat(request.quantity),
       unit: ingData.unit || '', ingredientName: ingData.name || 'Inconnu',
+      requestedBy: request.requested_by,
     });
 
     return updateResult.rows[0];
@@ -254,10 +271,16 @@ export async function rejectTransferRequest(
     eventBus.emit(Events.TRANSFER_REJECTED, {
       tenantId: tid, requestId: request.id, quantity: request.quantity,
       unit: ing?.unit || '', ingredientName: ing?.name || 'Inconnu',
+      requestedBy: request.requested_by,
     });
 
     return request;
   }
+
+  const reqRes = await query('SELECT * FROM transfer_requests WHERE id = $1 AND tenant_id = $2', [requestId, tid]);
+  if (reqRes.rows.length === 0) throw new Error('Transfer request not found');
+  const request = reqRes.rows[0];
+  if (request.status !== 'pending') throw new Error('Request is not pending validation');
 
   const result = await query(
     `UPDATE transfer_requests SET status = 'rejected', validated_by = $1, updated_at = CURRENT_TIMESTAMP
@@ -265,6 +288,16 @@ export async function rejectTransferRequest(
     [validatedBy, requestId, tid]
   );
   if (result.rows.length === 0) throw new Error('Request not found or not pending validation');
+
+  const ingResult = await query('SELECT name, unit FROM ingredients WHERE id = $1 AND tenant_id = $2', [request.ingredient_id, tid]);
+  const ingData = ingResult.rows[0] || {};
+
+  eventBus.emit(Events.TRANSFER_REJECTED, {
+    tenantId: tid, requestId: request.id, quantity: parseFloat(request.quantity),
+    unit: ingData.unit || '', ingredientName: ingData.name || 'Inconnu',
+    requestedBy: request.requested_by,
+  });
+
   return result.rows[0];
 }
 

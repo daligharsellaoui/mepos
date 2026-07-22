@@ -446,13 +446,27 @@ export async function setUserPreference(
   return result.rows[0];
 }
 
-eventBus.on('notification:created', ({ notification, minRole }: { notification: any; minRole?: string }) => {
+eventBus.on('notification:created', async ({ notification, minRole }: { notification: any; minRole?: string }) => {
   if (minRole && !isDemoMode) {
-    query(
-      `UPDATE notifications SET assigned_to = subq.id FROM (
-         SELECT id FROM users WHERE tenant_id = $1 AND role IN ($2)
-       ) subq WHERE id = $3`,
-      [notification.tenant_id, minRole, notification.id]
-    ).catch(() => {});
+    try {
+      const result = await query(
+        `INSERT INTO notifications (tenant_id, type, category, priority, title, message, icon, color,
+          entity_type, entity_id, created_by, assigned_to, action_url, metadata, read, archived, created_at, updated_at)
+         SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, u.id, $12, $13, FALSE, FALSE, NOW(), NOW()
+         FROM users u WHERE u.tenant_id = $14 AND u.role = $15`,
+        [
+          notification.tenant_id, notification.type, notification.category, notification.priority,
+          notification.title, notification.message, notification.icon, notification.color,
+          notification.entity_type, notification.entity_id, notification.created_by,
+          notification.action_url, JSON.stringify(notification.metadata || {}),
+          notification.tenant_id, minRole
+        ]
+      );
+      if (result.rowCount && result.rowCount > 0) {
+        await query('DELETE FROM notifications WHERE id = $1', [notification.id]);
+      }
+    } catch (_) {
+      // silent - notification remains visible to all if duplication fails
+    }
   }
 });
