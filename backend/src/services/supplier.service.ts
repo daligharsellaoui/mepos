@@ -588,16 +588,17 @@ export async function getSupplierScore(id: number, tenantId?: number | null): Pr
       return s + m.quantity * (ing?.purchase_price_per_unit ?? 0);
     }, 0);
 
-    const lossByReason: Record<string, { count: number; qty: number; cost: number }> = {};
+    const lossMap: Record<string, { count: number; qty: number; cost: number }> = {};
     for (const l of losses) {
       const reason = l.loss_reason || 'other';
-      if (!lossByReason[reason]) lossByReason[reason] = { count: 0, qty: 0, cost: 0 };
-      lossByReason[reason].count++;
-      lossByReason[reason].qty += l.quantity;
-      lossByReason[reason].cost += l.cost_loss;
+      if (!lossMap[reason]) lossMap[reason] = { count: 0, qty: 0, cost: 0 };
+      lossMap[reason].count++;
+      lossMap[reason].qty += l.quantity;
+      lossMap[reason].cost += l.cost_loss;
     }
+    const lossBreakdownArr = Object.entries(lossMap).map(([reason, v]) => ({ reason, ...v }));
 
-    return calculateScore(ingredients.length, losses.length, totalLossQty, totalLossCost, totalOppCost, totalPurchasedQty, totalPurchasedCost, lossByReason);
+    return calculateScore(ingredients.length, losses.length, totalLossQty, totalLossCost, totalOppCost, totalPurchasedQty, totalPurchasedCost, lossBreakdownArr);
   }
 
   const result = await query(
@@ -634,7 +635,7 @@ export async function getSupplierScore(id: number, tenantId?: number | null): Pr
        (SELECT COUNT(*) FROM supplier_ingredients) as ingredient_count,
        ls.*,
        ps.*,
-       (SELECT json_agg(json_build_object('reason', reason, 'count', cnt, 'qty', qty, 'cost', cost)) FROM breakdown) as loss_breakdown
+       (SELECT json_agg(json_build_object('reason', loss_reason, 'count', cnt, 'qty', qty, 'cost', cost)) FROM breakdown) as loss_breakdown
      FROM loss_stats ls, purchase_stats ps`,
     [id, tid]
   );

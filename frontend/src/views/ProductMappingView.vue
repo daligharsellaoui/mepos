@@ -143,7 +143,7 @@ async function applyAutoMatchSuggestions() {
   if (!autoMatchResults.value?.suggestions?.length) return
   try {
     const mappingData = autoMatchResults.value.suggestions.map(s => ({
-      external_product_id: mappings.value.find(m => m.external_product_name === s.external_product_name)?.external_product_id || s.mapping_id,
+      external_product_id: mappings.value.find(m => m.id === s.mapping_id)?.external_product_id,
       mepos_product_id: s.matched_recipe_id
     }))
     await mappingStore.bulkMap(mappingData)
