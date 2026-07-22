@@ -388,6 +388,8 @@ export async function getNotifications(
   const safeSort = allowedSorts.includes(sortBy) ? sortBy : 'created_at';
   const safeOrder = sortOrder === 'asc' ? 'ASC' : 'DESC';
 
+  const countParamIdx = paramIdx;
+
   const sql = `
     SELECT n.*,
            CASE WHEN nr.id IS NOT NULL THEN TRUE ELSE FALSE END as user_read,
@@ -410,7 +412,7 @@ export async function getNotifications(
      LEFT JOIN notification_reads nr
        ON nr.notification_id = n.id AND nr.user_id = $2
      WHERE n.tenant_id = $1${whereClause}`,
-    params.slice(0, paramIdx)
+    params.slice(0, countParamIdx)
   );
 
   return { data: result.rows, total: parseInt(countResult.rows[0]?.count || '0', 10) };
