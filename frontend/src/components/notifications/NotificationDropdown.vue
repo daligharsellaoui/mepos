@@ -208,7 +208,7 @@ function handleNavigate(url) {
     left: 0;
     width: 100%;
     max-width: 100vw;
-    max-height: calc(100vh - 56px);
+    max-height: calc(100dvh - 146px);
     border-radius: 0;
     border-left: none;
     border-right: none;
