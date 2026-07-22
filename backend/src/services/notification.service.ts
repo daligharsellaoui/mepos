@@ -446,20 +446,30 @@ export async function setUserPreference(
   return result.rows[0];
 }
 
+function rolesAtOrAbove(minRole: string): string[] {
+  const min = ROLE_HIERARCHY[minRole];
+  if (min === undefined) return [];
+  return Object.entries(ROLE_HIERARCHY)
+    .filter(([_, level]) => level >= min)
+    .map(([role]) => role);
+}
+
 eventBus.on('notification:created', async ({ notification, minRole }: { notification: any; minRole?: string }) => {
   if (minRole && !isDemoMode) {
+    const matchedRoles = rolesAtOrAbove(minRole);
+    if (matchedRoles.length === 0) return;
     try {
       const result = await query(
         `INSERT INTO notifications (tenant_id, type, category, priority, title, message, icon, color,
           entity_type, entity_id, created_by, assigned_to, action_url, metadata, read, archived, created_at, updated_at)
          SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, u.id, $12, $13, FALSE, FALSE, NOW(), NOW()
-         FROM users u WHERE u.tenant_id = $14 AND u.role = $15`,
+         FROM users u WHERE u.tenant_id = $14 AND u.role = ANY($15::text[])`,
         [
           notification.tenant_id, notification.type, notification.category, notification.priority,
           notification.title, notification.message, notification.icon, notification.color,
           notification.entity_type, notification.entity_id, notification.created_by,
           notification.action_url, JSON.stringify(notification.metadata || {}),
-          notification.tenant_id, minRole
+          notification.tenant_id, matchedRoles
         ]
       );
       if (result.rowCount && result.rowCount > 0) {

@@ -132,10 +132,10 @@ export async function updateStockQuantity(
       const newQty = new Decimal(stock.quantity).plus(delta);
       stock.quantity = Math.max(0, newQty.toNumber());
       const finalQty = new Decimal(stock.quantity);
-      getStockWarning(departmentId, ingredientId, undefined, null, tid);
+      await getStockWarning(departmentId, ingredientId, undefined, null, tid);
       return finalQty;
     }
-    getStockWarning(departmentId, ingredientId, undefined, null, tid);
+    await getStockWarning(departmentId, ingredientId, undefined, null, tid);
     return new Decimal(0);
   }
 
@@ -149,7 +149,7 @@ export async function updateStockQuantity(
     [departmentId, ingredientId, tid]
   );
   const finalQty = new Decimal(result.rows[0]?.quantity || 0);
-  getStockWarning(departmentId, ingredientId, undefined, clientOrDb, tid);
+  await getStockWarning(departmentId, ingredientId, undefined, clientOrDb, tid);
   return finalQty;
 }
 

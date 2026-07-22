@@ -132,6 +132,11 @@ app.get('/api/v1/notifications/stream', authMiddleware, tenantContextMiddleware,
     'X-Accel-Buffering': 'no',
   });
 
+  if (!user || !user.id) {
+    res.status(401).json({ status: 'error', message: 'Authentification requise' });
+    return;
+  }
+
   res.write(`data: ${JSON.stringify({ type: 'connected', message: 'Connexion établie.' })}\n\n`);
 
   if (!sseClients.has(tenantId)) {
