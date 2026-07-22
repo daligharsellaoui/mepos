@@ -10,6 +10,7 @@ export const Events = {
   RECIPE_CREATED: 'recipe.created',
   RECIPE_UPDATED: 'recipe.updated',
   RECIPE_DELETED: 'recipe.deleted',
+  STOCK_ADJUSTED: 'stock.adjusted',
   STOCK_LOW: 'stock.low',
   STOCK_OUT: 'stock.out',
   STOCK_CRITICAL: 'stock.critical',

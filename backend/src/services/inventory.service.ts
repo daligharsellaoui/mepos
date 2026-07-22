@@ -1045,11 +1045,16 @@ export async function adjustStock(data: {
     }
 
     // Emit STOCK_ADJUSTED for activity journal
-    eventBus.emit(Events.INGREDIENT_UPDATED, {
+    const ingName = demoDb.ingredients.find((i: any) => i.id === ingId)?.name || 'Inconnu';
+    eventBus.emit(Events.STOCK_ADJUSTED, {
       tenantId: tid,
-      id: ingId,
-      name: demoDb.ingredients.find((i: any) => i.id === ingId)?.name || 'Inconnu',
-      changes: { type, delta, previousQty: currentQty, newQty },
+      ingredientId: ingId,
+      ingredientName: ingName,
+      departmentId: targetDeptId,
+      type,
+      delta,
+      previousQty: currentQty,
+      newQty,
       source: 'web_application',
     });
 
@@ -1121,13 +1126,16 @@ export async function adjustStock(data: {
       });
     }
 
-    // Emit STOCK_ADJUSTED for activity journal (also via INGREDIENT_UPDATED)
+    // Emit STOCK_ADJUSTED for activity journal
     const ingResult2 = await query('SELECT name FROM ingredients WHERE id = $1 AND tenant_id = $2', [ingId, tid]);
-    eventBus.emit(Events.INGREDIENT_UPDATED, {
+    eventBus.emit(Events.STOCK_ADJUSTED, {
       tenantId: tid,
-      id: ingId,
-      name: ingResult2.rows[0]?.name || 'Inconnu',
-      changes: { type, delta, newQty },
+      ingredientId: ingId,
+      ingredientName: ingResult2.rows[0]?.name || 'Inconnu',
+      departmentId: effectiveDeptId,
+      type,
+      delta,
+      newQty,
       source: 'web_application',
     });
 

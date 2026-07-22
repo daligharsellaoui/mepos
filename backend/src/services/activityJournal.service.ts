@@ -23,6 +23,7 @@
 
 import { query, isDemoMode, demoDb } from '../database';
 import { eventBus, Events } from './event.service';
+import * as XLSX from 'xlsx';
 
 // ============================================================
 // TYPES
@@ -652,9 +653,8 @@ function exportCsv(entries: ActivityJournalEntry[]): string {
   return [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
 }
 
-function exportExcel(_entries: ActivityJournalEntry[]): Buffer {
+async function exportExcel(_entries: ActivityJournalEntry[]): Promise<Buffer> {
   try {
-    const XLSX = require('xlsx');
     const data = _entries.map(e => ({
       'ID': e.id,
       'Date': e.occurredAt,
@@ -875,6 +875,34 @@ export function setupActivityJournal() {
         departmentName: data.departmentName,
         departmentId: data.departmentId,
       },
+    });
+  });
+
+  // ── Purchase Events ──
+  // ── Stock Adjustment Events ──
+  eventBus.on(Events.STOCK_ADJUSTED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'inventory.stock.adjusted',
+      correlationId: data.correlationId,
+      entityType: 'ingredient',
+      entityId: String(data.ingredientId),
+      performedByUserId: data.adjustedBy,
+      performedBySource: data.source || 'web_application',
+      severity: data.type === 'reconciliation' ? 'notice' : 'info',
+      title: data.type === 'reconciliation' ? 'Ajustement de stock' : 'Approvisionnement',
+      description: `${data.type === 'reconciliation' ? 'Ajustement' : 'Ajout'} de ${Math.abs(data.delta)} ${data.unit || ''} de "${data.ingredientName}". Nouveau stock: ${data.newQty}.`,
+      metadata: {
+        ingredientName: data.ingredientName,
+        ingredientId: data.ingredientId,
+        departmentId: data.departmentId,
+        type: data.type,
+        delta: data.delta,
+        previousQty: data.previousQty,
+        newQty: data.newQty,
+      },
+      previousValues: { quantity: data.previousQty },
+      newValues: { quantity: data.newQty },
     });
   });
 
@@ -1496,7 +1524,7 @@ export function setupActivityJournal() {
     });
   });
 
-  // ── Notification Created Bridge (from notification system's custom event) ──
+  // ── Notification Events (from notification:created bridge) ──
   eventBus.on('notification:created', async ({ notification }: { notification: any }) => {
     if (!notification || !notification.tenant_id) return;
 
@@ -1520,24 +1548,6 @@ export function setupActivityJournal() {
         entityId: notification.entity_id,
       },
     });
-
-    // When notification is resolved (read/archived), emit resolved event
-    if (notification.archived) {
-      await writeJournalEntry({
-        tenantId: notification.tenant_id,
-        eventType: 'notification.resolved',
-        entityType: 'notification',
-        entityId: String(notification.id),
-        performedBySource: 'system',
-        severity: 'info',
-        title: 'Notification résolue',
-        description: `${notification.title} a été résolue.`,
-        metadata: {
-          notificationId: notification.id,
-          title: notification.title,
-        },
-      });
-    }
   });
 
   console.log('[ActivityJournal] Event handlers registered successfully.');

@@ -142,7 +142,7 @@ export async function syncTickets(
         departmentName: department.name,
         ticketDate: ticket_date,
         connectorType,
-        correlationId: `sale-${external_ticket_id}-${tid}-${Date.now()}`,
+        correlationId: `sale-${external_ticket_id}-${tid}`,
       });
 
       const result = await processSaleDeduction(null, stockDeptId, stockDeptId, department.name, resolvedItems, ticketId, tid);
@@ -224,7 +224,7 @@ export async function syncTickets(
         departmentName: department.name,
         ticketDate: ticket_date,
         connectorType,
-        correlationId: `sale-${external_ticket_id}-${tid}-${Date.now()}`,
+        correlationId: `sale-${external_ticket_id}-${tid}`,
       });
 
       const result = await processSaleDeduction(client, deptId, stockDeptId, department.name, resolvedItems, ticketId, tid);
