@@ -9,14 +9,11 @@ const auth = useAuthStore()
 const navItems = [
   { path: '/app', label: 'Dashboard', icon: 'dashboard' },
   { path: '/app/inventory', label: 'Stocks', icon: 'inventory' },
-  { path: '/app/suppliers', label: 'Fourniss.', icon: 'suppliers', notForCook: true },
   { path: '/app/recipes', label: 'Recettes', icon: 'recipes', cookOnly: true },
   { path: '/app/losses', label: 'Pertes', icon: 'losses' },
   { path: '/app/forecast', label: 'Prévisions', icon: 'forecast', adminOnly: true },
   { path: '/app/transfers', label: 'Transferts', icon: 'transfers' },
   { path: '/app/purchases', label: 'Achats', icon: 'purchases', notForCook: true },
-  { path: '/app/batches', label: 'Lots', icon: 'batches' },
-  { path: '/app/inventory-counts', label: 'Inventaire', icon: 'counts', notForCook: true },
   { path: '/app/settings', label: 'Config', icon: 'settings', adminOnly: true },
 ]
 

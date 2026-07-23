@@ -62,7 +62,7 @@ export async function createCountSession(
     await client.query('BEGIN');
 
     const result = await client.query(
-      `INSERT INTO inventory_counts (warehouse_id, status, notes, created_by, tenant_id)
+      `INSERT INTO inventory_counts (warehouse_id, status, notes, counted_by, tenant_id)
        VALUES ($1, 'draft', $2, $3, $4) RETURNING *`,
       [data.warehouse_id, data.notes || null, userId, tid]
     );

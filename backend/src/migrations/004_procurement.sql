@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
     subtotal DECIMAL(14, 4) DEFAULT 0,
     discount_total DECIMAL(14, 4) DEFAULT 0,
     tax_total DECIMAL(14, 4) DEFAULT 0,
-    grand_total DECIMAL(14, 4) DEFAULT 0,
+    total DECIMAL(14, 4) DEFAULT 0,
     created_by INT REFERENCES users(id) ON DELETE SET NULL,
     approved_by INT REFERENCES users(id) ON DELETE SET NULL,
     approved_at TIMESTAMP WITH TIME ZONE,

@@ -540,7 +540,7 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
     subtotal DECIMAL(14, 4) DEFAULT 0,
     discount_total DECIMAL(14, 4) DEFAULT 0,
     tax_total DECIMAL(14, 4) DEFAULT 0,
-    grand_total DECIMAL(14, 4) DEFAULT 0,
+    total DECIMAL(14, 4) DEFAULT 0,
     created_by INT REFERENCES users(id) ON DELETE SET NULL,
     approved_by INT REFERENCES users(id) ON DELETE SET NULL,
     approved_at TIMESTAMP WITH TIME ZONE,
@@ -716,6 +716,7 @@ CREATE TABLE IF NOT EXISTS inventory_counts (
     warehouse_id INT NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
     count_date DATE NOT NULL DEFAULT CURRENT_DATE,
     status inventory_count_status NOT NULL DEFAULT 'draft',
+    created_by INT REFERENCES users(id) ON DELETE SET NULL,
     counted_by INT REFERENCES users(id) ON DELETE SET NULL,
     approved_by INT REFERENCES users(id) ON DELETE SET NULL,
     approved_at TIMESTAMP WITH TIME ZONE,
@@ -727,7 +728,7 @@ CREATE TABLE IF NOT EXISTS inventory_counts (
 CREATE TABLE IF NOT EXISTS inventory_count_items (
     id SERIAL PRIMARY KEY,
     tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    inventory_count_id INT NOT NULL REFERENCES inventory_counts(id) ON DELETE CASCADE,
+    count_session_id INT NOT NULL REFERENCES inventory_counts(id) ON DELETE CASCADE,
     ingredient_id INT NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
     expected_quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
     actual_quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
@@ -740,12 +741,14 @@ CREATE TABLE IF NOT EXISTS inventory_count_items (
 CREATE TABLE IF NOT EXISTS inventory_adjustments (
     id SERIAL PRIMARY KEY,
     tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    inventory_count_id INT NOT NULL REFERENCES inventory_counts(id) ON DELETE CASCADE,
+    count_session_id INT NOT NULL REFERENCES inventory_counts(id) ON DELETE CASCADE,
+    count_item_id INT REFERENCES inventory_count_items(id) ON DELETE SET NULL,
     ingredient_id INT NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
-    warehouse_id INT REFERENCES departments(id) ON DELETE SET NULL,
+    department_id INT REFERENCES departments(id) ON DELETE SET NULL,
     previous_quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
     new_quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
-    difference DECIMAL(12, 4) GENERATED ALWAYS AS (new_quantity - previous_quantity) STORED,
+    difference DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    reference VARCHAR(100),
     reason VARCHAR(100),
     status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'applied', 'skipped')),
     applied_at TIMESTAMP WITH TIME ZONE,
@@ -1046,6 +1049,36 @@ export async function initializeDatabase() {
       
       console.log('Data migration complete: existing rows assigned to default tenant.');
     }
+
+    // ============================================================
+    // v4.0.0 Migration — Rename columns in existing procurement/inventory tables
+    // ============================================================
+    try {
+      await query(`ALTER TABLE purchase_orders RENAME COLUMN grand_total TO total`);
+    } catch { /* column may already be renamed */ }
+    try {
+      await query(`ALTER TABLE inventory_counts ADD COLUMN IF NOT EXISTS created_by INT REFERENCES users(id) ON DELETE SET NULL`);
+    } catch { /* ignore */ }
+    try {
+      await query(`ALTER TABLE inventory_count_items RENAME COLUMN inventory_count_id TO count_session_id`);
+    } catch { /* ignore */ }
+    try {
+      await query(`ALTER TABLE inventory_adjustments RENAME COLUMN inventory_count_id TO count_session_id`);
+    } catch { /* ignore */ }
+    try {
+      await query(`ALTER TABLE inventory_adjustments RENAME COLUMN warehouse_id TO department_id`);
+    } catch { /* ignore */ }
+    try {
+      await query(`ALTER TABLE inventory_adjustments ADD COLUMN IF NOT EXISTS count_item_id INT REFERENCES inventory_count_items(id) ON DELETE SET NULL`);
+    } catch { /* ignore */ }
+    try {
+      await query(`ALTER TABLE inventory_adjustments ADD COLUMN IF NOT EXISTS reference VARCHAR(100)`);
+    } catch { /* ignore */ }
+    // Replace generated `difference` column with regular column
+    try {
+      await query(`ALTER TABLE inventory_adjustments DROP COLUMN IF EXISTS difference`);
+      await query(`ALTER TABLE inventory_adjustments ADD COLUMN difference DECIMAL(12, 4) NOT NULL DEFAULT 0`);
+    } catch { /* ignore */ }
 
     // Detect fresh install vs existing database
     const checkTenants = await query('SELECT count(*) FROM tenants');
