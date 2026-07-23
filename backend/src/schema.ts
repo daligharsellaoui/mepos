@@ -759,9 +759,9 @@ CREATE INDEX IF NOT EXISTS idx_inventory_counts_tenant ON inventory_counts(tenan
 CREATE INDEX IF NOT EXISTS idx_inventory_counts_warehouse ON inventory_counts(tenant_id, warehouse_id);
 CREATE INDEX IF NOT EXISTS idx_inventory_counts_status ON inventory_counts(tenant_id, status);
 CREATE INDEX IF NOT EXISTS idx_inventory_counts_date ON inventory_counts(tenant_id, count_date DESC);
-CREATE INDEX IF NOT EXISTS idx_count_items_count ON inventory_count_items(inventory_count_id);
+CREATE INDEX IF NOT EXISTS idx_count_items_count ON inventory_count_items(count_session_id);
 CREATE INDEX IF NOT EXISTS idx_count_items_ingredient ON inventory_count_items(tenant_id, ingredient_id);
-CREATE INDEX IF NOT EXISTS idx_adjustments_count ON inventory_adjustments(inventory_count_id);
+CREATE INDEX IF NOT EXISTS idx_adjustments_count ON inventory_adjustments(count_session_id);
 CREATE INDEX IF NOT EXISTS idx_adjustments_tenant ON inventory_adjustments(tenant_id);
 
 -- ============================================================
