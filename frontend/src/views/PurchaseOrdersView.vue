@@ -40,7 +40,7 @@ const lineItems = ref([])
 const emptyLine = () => ({
   ingredient_id: null,
   ingredient_name: '',
-  quantity_ordered: 1,
+  ordered_quantity: 1,
   unit: 'kg',
   unit_price: 0,
   discount_percent: 0,
@@ -86,7 +86,7 @@ function editOrder(order) {
     ? order.items.map(item => ({
         ingredient_id: item.ingredient_id,
         ingredient_name: item.ingredient_name || '',
-        quantity_ordered: parseFloat(item.quantity_ordered) || 1,
+        ordered_quantity: parseFloat(item.ordered_quantity) || 1,
         unit: item.unit || 'kg',
         unit_price: parseFloat(item.unit_price) || 0,
         discount_percent: parseFloat(item.discount_percent) || 0,
@@ -112,7 +112,7 @@ function removeLine(index) {
 }
 
 const lineTotal = (item) => {
-  const qty = parseFloat(item.quantity_ordered) || 0
+  const qty = parseFloat(item.ordered_quantity) || 0
   const price = parseFloat(item.unit_price) || 0
   const discount = parseFloat(item.discount_percent) || 0
   const tax = parseFloat(item.tax_percent) || 0
@@ -123,7 +123,7 @@ const lineTotal = (item) => {
 
 const computedSubtotal = computed(() =>
   lineItems.value.reduce((sum, item) => {
-    const qty = parseFloat(item.quantity_ordered) || 0
+    const qty = parseFloat(item.ordered_quantity) || 0
     const price = parseFloat(item.unit_price) || 0
     return sum + qty * price
   }, 0)
@@ -131,7 +131,7 @@ const computedSubtotal = computed(() =>
 
 const computedDiscountTotal = computed(() =>
   lineItems.value.reduce((sum, item) => {
-    const qty = parseFloat(item.quantity_ordered) || 0
+    const qty = parseFloat(item.ordered_quantity) || 0
     const price = parseFloat(item.unit_price) || 0
     const discount = parseFloat(item.discount_percent) || 0
     return sum + qty * price * (discount / 100)
@@ -140,7 +140,7 @@ const computedDiscountTotal = computed(() =>
 
 const computedTaxTotal = computed(() =>
   lineItems.value.reduce((sum, item) => {
-    const afterDiscount = (parseFloat(item.quantity_ordered) || 0) * (parseFloat(item.unit_price) || 0) * (1 - (parseFloat(item.discount_percent) || 0) / 100)
+    const afterDiscount = (parseFloat(item.ordered_quantity) || 0) * (parseFloat(item.unit_price) || 0) * (1 - (parseFloat(item.discount_percent) || 0) / 100)
     const tax = parseFloat(item.tax_percent) || 0
     return sum + afterDiscount * (tax / 100)
   }, 0)
@@ -183,7 +183,7 @@ async function handleSave() {
     notes: form.value.notes,
     items: lineItems.value.filter(l => l.ingredient_id).map(l => ({
       ingredient_id: parseInt(l.ingredient_id),
-      quantity_ordered: parseFloat(l.quantity_ordered) || 1,
+      ordered_quantity: parseFloat(l.ordered_quantity) || 1,
       unit: l.unit || 'kg',
       unit_price: parseFloat(l.unit_price) || 0,
       discount_percent: parseFloat(l.discount_percent) || 0,
@@ -551,7 +551,7 @@ function handleRowAction(key, order) {
                 </select>
               </td>
               <td>
-                <input v-model.number="item.quantity_ordered" type="number" min="0" step="0.01" class="form-input" style="width: 100%;">
+                <input v-model.number="item.ordered_quantity" type="number" min="0" step="0.01" class="form-input" style="width: 100%;">
               </td>
               <td>
                 <input v-model="item.unit" class="form-input" style="width: 100%;">

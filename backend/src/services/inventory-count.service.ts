@@ -152,7 +152,7 @@ export async function getAllCountSessions(
     return { data, total, page, limit };
   }
 
-  let baseSql = 'FROM inventory_counts ic JOIN departments d ON ic.warehouse_id = d.id';
+  let baseSql = 'FROM inventory_counts ic JOIN departments d ON ic.warehouse_id = d.id LEFT JOIN users u ON ic.created_by = u.id';
   const params: any[] = [];
   const conditions: string[] = [];
 
@@ -189,7 +189,6 @@ export async function getAllCountSessions(
            (SELECT COUNT(*) FROM inventory_count_items WHERE count_session_id = ic.id) as item_count,
            (SELECT COUNT(*) FROM inventory_count_items WHERE count_session_id = ic.id AND actual_quantity IS NOT NULL) as counted_items
     ${baseSql}
-    LEFT JOIN users u ON ic.created_by = u.id
     ORDER BY ic.created_at DESC
     LIMIT $${params.length + 1} OFFSET $${params.length + 2}
   `;
