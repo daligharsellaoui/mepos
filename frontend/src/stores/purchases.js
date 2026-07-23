@@ -35,9 +35,9 @@ export const usePurchaseStore = defineStore('purchases', () => {
       })
       if (res.status === 'success') {
         if (reset) {
-          orders.value = res.orders || []
+          orders.value = res.data || []
         } else {
-          orders.value = [...orders.value, ...(res.orders || [])]
+          orders.value = [...orders.value, ...(res.data || [])]
         }
         total.value = res.total
       } else {

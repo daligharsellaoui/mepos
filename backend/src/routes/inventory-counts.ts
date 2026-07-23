@@ -44,7 +44,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     res.json({
       status: 'success',
-      sessions: result.data,
+      data: result.data,
       total: result.total,
       page: result.page,
       perPage: result.limit,

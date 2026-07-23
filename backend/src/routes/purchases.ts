@@ -42,7 +42,7 @@ router.get('/', async (req: Request, res: Response) => {
       page: page ? parseInt(page as string, 10) : undefined,
       perPage: perPage ? parseInt(perPage as string, 10) : undefined,
     });
-    res.json({ status: 'success', ...result });
+    res.json({ status: 'success', data: result.orders, total: result.total, page: result.page, perPage: result.perPage, totalPages: result.totalPages });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: error.message });
   }

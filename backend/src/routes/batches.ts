@@ -57,7 +57,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     res.json({
       status: 'success',
-      batches,
+      data: batches,
       total,
       page: p,
       perPage: l,
