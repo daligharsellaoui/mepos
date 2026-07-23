@@ -426,13 +426,6 @@ export async function processSaleDeduction(
     });
   }
 
-  eventBus.emit(Events.DATA_STOCKS_UPDATED, {
-    tenantId: tid,
-    departmentId: stockDeptId,
-    source: 'sale_deduction',
-    ticketId,
-  });
-
   return { deductedStocks, warnings };
 }
 

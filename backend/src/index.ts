@@ -232,17 +232,17 @@ app.get('/api/v1/data/stream', authMiddleware, tenantContextMiddleware, (req: Re
   const tenantId = (req as any).tenantId;
   const user = (req as any).user;
 
+  if (!user || !user.id) {
+    res.status(401).json({ status: 'error', message: 'Authentification requise' });
+    return;
+  }
+
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
     'X-Accel-Buffering': 'no',
   });
-
-  if (!user || !user.id) {
-    res.status(401).json({ status: 'error', message: 'Authentification requise' });
-    return;
-  }
 
   res.write(`data: ${JSON.stringify({ type: 'connected', message: 'Connexion données établie.' })}\n\n`);
 
