@@ -31,6 +31,16 @@ export const useAppStore = defineStore('app', () => {
   // ── Cache helpers ──
   // ── SSE Data Stream ──
   let dataEventSource = null
+  let dataRefreshTimer = null
+
+  function scheduleDataRefresh(user) {
+    if (dataRefreshTimer) return
+    // Debounce: coalesce rapid events into a single fetch
+    dataRefreshTimer = setTimeout(() => {
+      dataRefreshTimer = null
+      fetchData(user)
+    }, 500)
+  }
 
   function connectDataStream(user) {
     if (!user || dataEventSource) return
@@ -42,25 +52,28 @@ export const useAppStore = defineStore('app', () => {
     const baseOrigin = base.replace('/api/v1', '').replace(/\/+$/, '') || ''
     const url = `${baseOrigin}/api/v1/data/stream?token=${encodeURIComponent(token)}`
 
-    dataEventSource = new EventSource(url)
+    const es = new EventSource(url)
 
-    dataEventSource.addEventListener('data:stocks_updated', () => { fetchData(user) })
-    dataEventSource.addEventListener('data:loss_created', () => { fetchData(user) })
-    dataEventSource.addEventListener('data:ingredient_updated', () => { fetchData(user) })
-    dataEventSource.addEventListener('data:recipe_updated', () => { fetchData(user) })
-    dataEventSource.addEventListener('data:department_updated', () => { fetchData(user) })
-    dataEventSource.addEventListener('data:forecast_updated', () => { fetchData(user) })
+    es.addEventListener('data:stocks_updated', () => { scheduleDataRefresh(user) })
+    es.addEventListener('data:loss_created', () => { scheduleDataRefresh(user) })
+    es.addEventListener('data:ingredient_updated', () => { scheduleDataRefresh(user) })
+    es.addEventListener('data:recipe_updated', () => { scheduleDataRefresh(user) })
+    es.addEventListener('data:department_updated', () => { scheduleDataRefresh(user) })
+    es.addEventListener('data:forecast_updated', () => { scheduleDataRefresh(user) })
 
-    dataEventSource.onerror = () => {
-      if (dataEventSource) {
-        dataEventSource.close()
-        dataEventSource = null
-      }
-      setTimeout(() => connectDataStream(user), 5000)
+    // Let the browser handle auto-reconnect natively — do NOT close & reopen in onerror
+    es.onerror = () => {
+      console.debug('[DataStream] Connection error, browser will auto-reconnect')
     }
+
+    dataEventSource = es
   }
 
   function disconnectDataStream() {
+    if (dataRefreshTimer) {
+      clearTimeout(dataRefreshTimer)
+      dataRefreshTimer = null
+    }
     if (dataEventSource) {
       dataEventSource.close()
       dataEventSource = null

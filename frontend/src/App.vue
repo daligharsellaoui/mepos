@@ -37,9 +37,12 @@ onMounted(() => {
 
 onUnmounted(() => stopRealtime())
 
+// Watch for login AFTER mount (e.g., user logs in from /login page).
+// When already logged in at mount, the onMounted handles it — this
+// watch only fires on actual changes.
 watch(() => auth.isLoggedIn, (loggedIn) => {
-  if (loggedIn) startRealtime(auth.user)
-  else stopRealtime()
+  if (!loggedIn) stopRealtime()
+  else startRealtime(auth.user)
 })
 </script>
 
