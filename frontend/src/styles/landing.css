@@ -221,9 +221,11 @@
 
 /* Background layer */
 .landing-hero {
-  padding: 8rem 2rem 6rem;
-  min-height: 85vh;
+  padding: 0 2rem;
+  min-height: 100vh;
   position: relative;
+  display: flex;
+  align-items: center;
 }
 .landing-hero-inner {
   max-width: 1280px;
@@ -436,11 +438,13 @@
 }
 .landing-hero-glow {
   position: absolute;
-  width: 750px;
-  height: 750px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  height: 100%;
   background:
-    radial-gradient(circle at 35% 50%, rgba(99, 102, 241, 0.25) 0%, transparent 45%),
-    radial-gradient(circle at 65% 50%, rgba(129, 140, 248, 0.15) 0%, transparent 45%);
+    radial-gradient(circle at 35% 50%, rgba(99, 102, 241, 0.2) 0%, transparent 50%),
+    radial-gradient(circle at 65% 50%, rgba(129, 140, 248, 0.12) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
   animation: glowBreathe 5s ease-in-out infinite;
@@ -1160,9 +1164,6 @@
 
 /* RESPONSIVE */
 @media (max-width: 1024px) {
-  .landing-hero {
-    padding: 6rem 2rem 4rem;
-  }
   .landing-hero-inner {
     grid-template-columns: 1fr;
     text-align: center;
@@ -1186,10 +1187,6 @@
   .landing-hero-features {
     justify-content: center;
     gap: 1rem;
-  }
-  .landing-hero-glow {
-    width: 500px;
-    height: 500px;
   }
   .landing-hero-image {
     max-width: 80%;
@@ -1224,7 +1221,7 @@
     font-size: 2.75rem;
   }
   .landing-hero {
-    padding: 5rem 1.5rem 3rem;
+    padding: 0 1.5rem;
   }
   .landing-hero-trust {
     justify-content: center;

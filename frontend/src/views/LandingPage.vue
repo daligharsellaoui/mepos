@@ -204,6 +204,7 @@ const testimonials = [
     <section ref="heroEl" class="landing-hero">
       <div class="landing-hero-bg">
         <div class="landing-hero-bg-noise"></div>
+        <div class="landing-hero-glow"></div>
         <div class="landing-hero-particle" style="width:6px;height:6px;top:15%;left:10%;animation-delay:-1s;animation-duration:7s"></div>
         <div class="landing-hero-particle" style="width:4px;height:4px;top:70%;left:5%;animation-delay:-3s;animation-duration:9s"></div>
         <div class="landing-hero-particle" style="width:5px;height:5px;top:25%;left:85%;animation-delay:-5s;animation-duration:6s"></div>
@@ -259,7 +260,6 @@ const testimonials = [
           </div>
         </div>
         <div class="landing-hero-visual">
-          <div class="landing-hero-glow"></div>
           <div class="landing-hero-cube"></div>
           <div class="landing-hero-cube"></div>
           <div class="landing-hero-cube"></div>
