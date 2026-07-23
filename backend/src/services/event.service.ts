@@ -126,4 +126,12 @@ export const Events = {
 
   // Supplier Performance events
   SUPPLIER_PERFORMANCE_CHANGED: 'supplier.performance.changed',
+
+  // Data-change events for real-time frontend refresh via SSE
+  DATA_STOCKS_UPDATED: 'data:stocks_updated',
+  DATA_LOSS_CREATED: 'data:loss_created',
+  DATA_INGREDIENT_UPDATED: 'data:ingredient_updated',
+  DATA_RECIPE_UPDATED: 'data:recipe_updated',
+  DATA_DEPARTMENT_UPDATED: 'data:department_updated',
+  DATA_FORECAST_UPDATED: 'data:forecast_updated',
 };

@@ -60,6 +60,14 @@ export async function createLoss(
       });
     }
 
+    eventBus.emit(Events.DATA_LOSS_CREATED, {
+      tenantId: tid, lossId: lossRecord.id, departmentId,
+      ingredientId, quantity: qtyDecimal.toNumber(), lossReason,
+    });
+    eventBus.emit(Events.DATA_STOCKS_UPDATED, {
+      tenantId: tid, departmentId, source: 'loss',
+    });
+
     return lossRecord;
   }
 
@@ -111,6 +119,14 @@ export async function createLoss(
         reason: lossReason, costLoss: costLoss.toNumber(),
       });
     }
+
+    eventBus.emit(Events.DATA_LOSS_CREATED, {
+      tenantId: tid, lossId: lossRecord.id, departmentId,
+      ingredientId, quantity: qtyDecimal.toNumber(), lossReason,
+    });
+    eventBus.emit(Events.DATA_STOCKS_UPDATED, {
+      tenantId: tid, departmentId, source: 'loss',
+    });
 
     return lossRecord;
   } catch (error) {

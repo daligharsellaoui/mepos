@@ -79,6 +79,10 @@ export async function createDepartment(data: {
       });
     });
 
+    eventBus.emit(Events.DATA_DEPARTMENT_UPDATED, {
+      tenantId: tid, departmentId: newId, action: 'created',
+    });
+
     return newDept;
   }
 
@@ -109,6 +113,11 @@ export async function createDepartment(data: {
     );
 
     await client.query('COMMIT');
+
+    eventBus.emit(Events.DATA_DEPARTMENT_UPDATED, {
+      tenantId: tid, departmentId: newDept.id, action: 'created',
+    });
+
     return newDept;
   } catch (err) {
     await client.query('ROLLBACK');
@@ -150,6 +159,11 @@ export async function updateDepartment(
       description: description || '',
     };
     demoDb.departments[deptIndex] = updatedDept;
+
+    eventBus.emit(Events.DATA_DEPARTMENT_UPDATED, {
+      tenantId: tid, departmentId: deptId, action: 'updated',
+    });
+
     return updatedDept;
   }
 
@@ -171,6 +185,10 @@ export async function updateDepartment(
   if (result.rows.length === 0) {
     throw new Error('Dépôt introuvable.');
   }
+
+  eventBus.emit(Events.DATA_DEPARTMENT_UPDATED, {
+    tenantId: tid, departmentId: deptId, action: 'updated',
+  });
 
   return result.rows[0];
 }
@@ -276,6 +294,13 @@ export async function deleteDepartment(
         r.source_department_id !== deptId && r.destination_department_id !== deptId
     );
 
+    eventBus.emit(Events.DATA_DEPARTMENT_UPDATED, {
+      tenantId: tid, departmentId: deptId, action: 'deleted',
+    });
+    eventBus.emit(Events.DATA_STOCKS_UPDATED, {
+      tenantId: tid, departmentId: deptId, source: 'department_deletion',
+    });
+
     return { success: true, message: 'Dépôt supprimé avec succès.' };
   }
 
@@ -360,6 +385,13 @@ export async function deleteDepartment(
       await client.query('DELETE FROM departments WHERE id = $1 AND tenant_id = $2', [deptId, tid]);
       await client.query('COMMIT');
 
+      eventBus.emit(Events.DATA_DEPARTMENT_UPDATED, {
+        tenantId: tid, departmentId: deptId, action: 'deleted',
+      });
+      eventBus.emit(Events.DATA_STOCKS_UPDATED, {
+        tenantId: tid, departmentId: deptId, source: 'department_deletion',
+      });
+
       return { success: true, message: 'Stocks transférés et dépôt supprimé avec succès.' };
     } catch (err) {
       await client.query('ROLLBACK');
@@ -373,6 +405,13 @@ export async function deleteDepartment(
   if (result.rows.length === 0) {
     throw new Error('Dépôt introuvable.');
   }
+
+  eventBus.emit(Events.DATA_DEPARTMENT_UPDATED, {
+    tenantId: tid, departmentId: deptId, action: 'deleted',
+  });
+  eventBus.emit(Events.DATA_STOCKS_UPDATED, {
+    tenantId: tid, departmentId: deptId, source: 'department_deletion',
+  });
 
   return { success: true, message: 'Dépôt supprimé avec succès.' };
 }
@@ -468,6 +507,9 @@ export async function createIngredient(data: {
       tenantId: tid, id: newIng.id, name: newIng.name,
       alertThreshold: newIng.alert_threshold,
     });
+    eventBus.emit(Events.DATA_INGREDIENT_UPDATED, {
+      tenantId: tid, ingredientId: newIng.id, action: 'created',
+    });
 
     return newIng;
   }
@@ -487,6 +529,10 @@ export async function createIngredient(data: {
       [d.id, newIngId, tid]
     );
   }
+
+  eventBus.emit(Events.DATA_INGREDIENT_UPDATED, {
+    tenantId: tid, ingredientId: newIngId, action: 'created',
+  });
 
   return result.rows[0];
 }
@@ -533,6 +579,9 @@ export async function updateIngredient(
     eventBus.emit(Events.INGREDIENT_UPDATED, {
       tenantId: tid, id, name: demoDb.ingredients[idx].name,
     });
+    eventBus.emit(Events.DATA_INGREDIENT_UPDATED, {
+      tenantId: tid, ingredientId: id, action: 'updated',
+    });
 
     return demoDb.ingredients[idx];
   }
@@ -562,6 +611,10 @@ export async function updateIngredient(
 
   const result = await query(sql, params);
   if (result.rows.length === 0) throw new Error('Ingredient not found');
+
+  eventBus.emit(Events.DATA_INGREDIENT_UPDATED, {
+    tenantId: tid, ingredientId: id, action: 'updated',
+  });
 
   if (preferred_supplier_id !== undefined && preferred_supplier_id) {
     const oldResult = await query('SELECT preferred_supplier_id FROM ingredients WHERE id = $1 AND tenant_id = $2', [id, tid]);
@@ -622,6 +675,12 @@ export async function deleteIngredient(
     eventBus.emit(Events.INGREDIENT_DELETED, {
       tenantId: tid, id, name: deletedIng.name,
     });
+    eventBus.emit(Events.DATA_INGREDIENT_UPDATED, {
+      tenantId: tid, ingredientId: id, action: 'deleted',
+    });
+    eventBus.emit(Events.DATA_STOCKS_UPDATED, {
+      tenantId: tid, source: 'ingredient_deletion',
+    });
 
     return { success: true, message: 'Ingrédient supprimé avec succès.' };
   }
@@ -663,6 +722,14 @@ export async function deleteIngredient(
   );
 
   if (result.rows.length === 0) throw new Error('Ingredient not found');
+
+  eventBus.emit(Events.DATA_INGREDIENT_UPDATED, {
+    tenantId: tid, ingredientId: id, action: 'deleted',
+  });
+  eventBus.emit(Events.DATA_STOCKS_UPDATED, {
+    tenantId: tid, source: 'ingredient_deletion',
+  });
+
   return { success: true, message: 'Ingrédient supprimé avec succès.' };
 }
 
@@ -750,6 +817,9 @@ export async function createRecipe(data: { name: string; sale_price: number }, t
     eventBus.emit(Events.PRODUCT_CREATED, {
       tenantId: tid, recipeId: newRec.id, productId: newRec.id, name: newRec.name, salePrice: newRec.sale_price,
     });
+    eventBus.emit(Events.DATA_RECIPE_UPDATED, {
+      tenantId: tid, recipeId: newRec.id, action: 'created',
+    });
     return newRec;
   }
 
@@ -763,6 +833,9 @@ export async function createRecipe(data: { name: string; sale_price: number }, t
   });
   eventBus.emit(Events.PRODUCT_CREATED, {
     tenantId: tid, recipeId: recipe.id, productId: recipe.id, name: recipe.name, salePrice: recipe.sale_price,
+  });
+  eventBus.emit(Events.DATA_RECIPE_UPDATED, {
+    tenantId: tid, recipeId: recipe.id, action: 'created',
   });
   return recipe;
 }
@@ -789,6 +862,9 @@ export async function updateRecipe(
     eventBus.emit(Events.PRODUCT_UPDATED, {
       tenantId: tid, recipeId: id, productId: id, name: demoDb.recipes[idx].name, salePrice: demoDb.recipes[idx].sale_price,
     });
+    eventBus.emit(Events.DATA_RECIPE_UPDATED, {
+      tenantId: tid, recipeId: id, action: 'updated',
+    });
     return demoDb.recipes[idx];
   }
 
@@ -806,6 +882,9 @@ export async function updateRecipe(
   });
   eventBus.emit(Events.PRODUCT_UPDATED, {
     tenantId: tid, recipeId: recipe.id, productId: recipe.id, name: recipe.name, salePrice: recipe.sale_price,
+  });
+  eventBus.emit(Events.DATA_RECIPE_UPDATED, {
+    tenantId: tid, recipeId: recipe.id, action: 'updated',
   });
   return recipe;
 }
@@ -829,6 +908,9 @@ export async function deleteRecipe(id: number, tenantId?: number | null): Promis
     eventBus.emit(Events.PRODUCT_DELETED, {
       tenantId: tid, recipeId: id, productId: id, name: deleted.name,
     });
+    eventBus.emit(Events.DATA_RECIPE_UPDATED, {
+      tenantId: tid, recipeId: id, action: 'deleted',
+    });
     return { success: true, message: 'Recette supprimée avec succès.' };
   }
 
@@ -845,6 +927,9 @@ export async function deleteRecipe(id: number, tenantId?: number | null): Promis
   });
   eventBus.emit(Events.PRODUCT_DELETED, {
     tenantId: tid, recipeId: id, productId: id, name: recipeCheck.rows[0].name,
+  });
+  eventBus.emit(Events.DATA_RECIPE_UPDATED, {
+    tenantId: tid, recipeId: id, action: 'deleted',
   });
   return { success: true, message: 'Recette supprimée avec succès.' };
 }
@@ -878,6 +963,9 @@ export async function saveRecipeIngredients(
       recipeId,
       ingredientCount: ingredients.length,
     });
+    eventBus.emit(Events.DATA_RECIPE_UPDATED, {
+      tenantId: tid, recipeId, action: 'ingredients_updated',
+    });
     return;
   }
 
@@ -897,6 +985,9 @@ export async function saveRecipeIngredients(
     tenantId: tid,
     recipeId,
     ingredientCount: ingredients.length,
+  });
+  eventBus.emit(Events.DATA_RECIPE_UPDATED, {
+    tenantId: tid, recipeId, action: 'ingredients_updated',
   });
 }
 
@@ -1088,6 +1179,10 @@ export async function adjustStock(data: {
 
     getStockWarning(targetDeptId, ingId, undefined, null, tid);
 
+    eventBus.emit(Events.DATA_STOCKS_UPDATED, {
+      tenantId: tid, departmentId: targetDeptId, source: type,
+    });
+
     return { new_quantity: newQty, movement };
   }
 
@@ -1165,6 +1260,10 @@ export async function adjustStock(data: {
       delta,
       newQty,
       source: 'web_application',
+    });
+
+    eventBus.emit(Events.DATA_STOCKS_UPDATED, {
+      tenantId: tid, departmentId: effectiveDeptId, source: type,
     });
 
     return { new_quantity: newQty, movement: movementInsert.rows[0] };

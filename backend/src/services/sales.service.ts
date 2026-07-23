@@ -151,6 +151,11 @@ export async function syncTickets(
       syncedTicketsCount++;
     }
 
+    eventBus.emit(Events.DATA_STOCKS_UPDATED, {
+      tenantId: tid, departmentId: deptId, source: 'ticket_sync',
+      syncedCount: syncedTicketsCount,
+    });
+
     return { syncedTicketsCount, deductedStocks, warnings, unmappedProducts };
   }
 
@@ -234,6 +239,12 @@ export async function syncTickets(
     }
 
     await client.query('COMMIT');
+
+    eventBus.emit(Events.DATA_STOCKS_UPDATED, {
+      tenantId: tid, departmentId: deptId, source: 'ticket_sync',
+      syncedCount: syncedTicketsCount,
+    });
+
     return { syncedTicketsCount, deductedStocks, warnings, unmappedProducts };
   } catch (error) {
     await client.query('ROLLBACK');

@@ -12,7 +12,7 @@ import { initializeDatabase } from './schema';
 import { startSalesSimulator } from './simulator';
 import { authMiddleware } from './routes/auth';
 import { tenantContextMiddleware } from './middleware/tenantContext';
-import { eventBus } from './services/event.service';
+import { eventBus, Events } from './services/event.service';
 import { setupNotificationDispatcher } from './services/notification-dispatcher';
 import { getUnreadCount, cleanupExpiredNotifications } from './services/notification.service';
 import { sendPushForNotification } from './services/push.service';
@@ -222,6 +222,73 @@ eventBus.on('notification:created', async ({ notification, minRole }: { notifica
 
   sendPushForNotification(notification.tenant_id, notification, minRole);
 });
+
+// ======================================================
+// SSE endpoint for real-time data-change events
+// ======================================================
+const dataSseClients: Map<number, Set<SseClient>> = new Map();
+
+app.get('/api/v1/data/stream', authMiddleware, tenantContextMiddleware, (req: Request, res: Response) => {
+  const tenantId = (req as any).tenantId;
+  const user = (req as any).user;
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+
+  if (!user || !user.id) {
+    res.status(401).json({ status: 'error', message: 'Authentification requise' });
+    return;
+  }
+
+  res.write(`data: ${JSON.stringify({ type: 'connected', message: 'Connexion données établie.' })}\n\n`);
+
+  if (!dataSseClients.has(tenantId)) {
+    dataSseClients.set(tenantId, new Set());
+  }
+  const clientEntry: SseClient = { res, userId: user.id, role: user.role };
+  dataSseClients.get(tenantId)!.add(clientEntry);
+
+  const heartbeat = setInterval(() => {
+    res.write(`:heartbeat\n\n`);
+  }, 30000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    const clients = dataSseClients.get(tenantId);
+    if (clients) {
+      clients.delete(clientEntry);
+      if (clients.size === 0) dataSseClients.delete(tenantId);
+    }
+  });
+});
+
+// Broadcast data-change events to all connected data SSE clients
+const DATA_EVENTS = [
+  Events.DATA_STOCKS_UPDATED,
+  Events.DATA_LOSS_CREATED,
+  Events.DATA_INGREDIENT_UPDATED,
+  Events.DATA_RECIPE_UPDATED,
+  Events.DATA_DEPARTMENT_UPDATED,
+  Events.DATA_FORECAST_UPDATED,
+];
+
+for (const eventName of DATA_EVENTS) {
+  eventBus.on(eventName, (payload: any) => {
+    const tenantId = payload?.tenantId;
+    if (!tenantId) return;
+    const clients = dataSseClients.get(tenantId);
+    if (!clients || clients.size === 0) return;
+
+    const event = JSON.stringify({ type: eventName, timestamp: new Date().toISOString() });
+    clients.forEach((client) => {
+      client.res.write(`event: ${eventName}\ndata: ${event}\n\n`);
+    });
+  });
+}
 
 // Config endpoint for frontend (no secrets exposed)
 app.get('/api/config', (req, res) => {

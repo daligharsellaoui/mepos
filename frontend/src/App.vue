@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 import { useAuthStore } from './stores/auth'
 import { useAppStore } from './stores/app'
 import { useNotificationStore } from './stores/notifications'
@@ -10,14 +10,36 @@ const auth = useAuthStore()
 const app = useAppStore()
 const notifStore = useNotificationStore()
 
+let fallbackInterval = null
+
+function startRealtime(user) {
+  if (!user) return
+  app.setupNetworkListeners()
+  app.fetchData(user)
+  app.connectDataStream(user)
+  if (!fallbackInterval) {
+    fallbackInterval = window.setInterval(() => app.fetchData(user), 300000)
+  }
+}
+
+function stopRealtime() {
+  app.disconnectDataStream()
+  if (fallbackInterval) {
+    clearInterval(fallbackInterval)
+    fallbackInterval = null
+  }
+}
+
 onMounted(() => {
   auth.init()
-  if (auth.isLoggedIn) {
-    app.setupNetworkListeners()
-    app.fetchData(auth.user)
-    // Background polling every 30s as fallback (SSE handles real-time, this ensures data freshness)
-    window.setInterval(() => app.fetchData(auth.user), 30000)
-  }
+  if (auth.isLoggedIn) startRealtime(auth.user)
+})
+
+onUnmounted(() => stopRealtime())
+
+watch(() => auth.isLoggedIn, (loggedIn) => {
+  if (loggedIn) startRealtime(auth.user)
+  else stopRealtime()
 })
 </script>
 

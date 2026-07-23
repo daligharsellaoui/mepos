@@ -29,6 +29,44 @@ export const useAppStore = defineStore('app', () => {
   )
 
   // ── Cache helpers ──
+  // ── SSE Data Stream ──
+  let dataEventSource = null
+
+  function connectDataStream(user) {
+    if (!user || dataEventSource) return
+
+    const token = localStorage.getItem('mepos_token')
+    if (!token) return
+
+    const base = import.meta.env.VITE_API_URL || '/api/v1'
+    const baseOrigin = base.replace('/api/v1', '').replace(/\/+$/, '') || ''
+    const url = `${baseOrigin}/api/v1/data/stream?token=${encodeURIComponent(token)}`
+
+    dataEventSource = new EventSource(url)
+
+    dataEventSource.addEventListener('data:stocks_updated', () => { fetchData(user) })
+    dataEventSource.addEventListener('data:loss_created', () => { fetchData(user) })
+    dataEventSource.addEventListener('data:ingredient_updated', () => { fetchData(user) })
+    dataEventSource.addEventListener('data:recipe_updated', () => { fetchData(user) })
+    dataEventSource.addEventListener('data:department_updated', () => { fetchData(user) })
+    dataEventSource.addEventListener('data:forecast_updated', () => { fetchData(user) })
+
+    dataEventSource.onerror = () => {
+      if (dataEventSource) {
+        dataEventSource.close()
+        dataEventSource = null
+      }
+      setTimeout(() => connectDataStream(user), 5000)
+    }
+  }
+
+  function disconnectDataStream() {
+    if (dataEventSource) {
+      dataEventSource.close()
+      dataEventSource = null
+    }
+  }
+
   function loadOfflineCache() {
     const load = (key, setter) => {
       const cached = localStorage.getItem(key)
@@ -332,6 +370,7 @@ export const useAppStore = defineStore('app', () => {
     // Methods
     setupNetworkListeners, fetchData, closeAlert, toggleOfflineManual, setActiveTab,
     handleLossSubmit, handleTransferSubmit, handleAdjustSubmit,
-    loadOfflineCache, saveToCache
+    loadOfflineCache, saveToCache,
+    connectDataStream, disconnectDataStream
   }
 })
