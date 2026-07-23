@@ -59,7 +59,6 @@ export const useAppStore = defineStore('app', () => {
     es.addEventListener('data:ingredient_updated', () => { scheduleDataRefresh(user) })
     es.addEventListener('data:recipe_updated', () => { scheduleDataRefresh(user) })
     es.addEventListener('data:department_updated', () => { scheduleDataRefresh(user) })
-    es.addEventListener('data:forecast_updated', () => { scheduleDataRefresh(user) })
 
     // Let the browser handle auto-reconnect natively — do NOT close & reopen in onerror
     es.onerror = () => {
@@ -152,8 +151,10 @@ export const useAppStore = defineStore('app', () => {
   }
 
   // ── Data fetching ──
+  let isFetchingData = false
   async function fetchData(user) {
-    if (!user) return
+    if (!user || isFetchingData) return
+    isFetchingData = true
 
     if (!navigator.onLine) {
       loadOfflineCache()
@@ -210,6 +211,8 @@ export const useAppStore = defineStore('app', () => {
       console.warn('Network error:', err)
       loadOfflineCache()
       isOffline.value = true
+    } finally {
+      isFetchingData = false
     }
   }
 

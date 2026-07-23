@@ -273,7 +273,6 @@ const DATA_EVENTS = [
   Events.DATA_INGREDIENT_UPDATED,
   Events.DATA_RECIPE_UPDATED,
   Events.DATA_DEPARTMENT_UPDATED,
-  Events.DATA_FORECAST_UPDATED,
 ];
 
 for (const eventName of DATA_EVENTS) {

@@ -249,13 +249,6 @@ export async function getForecast(tenantId?: number | null): Promise<ForecastRes
     generatedAt,
   });
 
-  eventBus.emit(Events.DATA_FORECAST_UPDATED, {
-    tenantId: forecastTenantId,
-    recipesCount: recipes.length,
-    ingredientsCount: ingredients.length,
-    generatedAt,
-  });
-
   // Emit FORECAST_ALERT for each critical ingredient
   for (const ing of criticalIngredients) {
     eventBus.emit(Events.FORECAST_ALERT, {
