@@ -13,6 +13,8 @@
   content: '';
   position: fixed;
   inset: 0;
+  width: 100vw;
+  min-height: 100vh;
   pointer-events: none;
   z-index: 0;
   background-image:
@@ -220,18 +222,23 @@
 /* Background layer */
 .landing-hero {
   padding: 8rem 2rem 6rem;
+  min-height: 85vh;
+  position: relative;
+}
+.landing-hero-inner {
   max-width: 1280px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: 42fr 58fr;
   gap: 3rem;
   align-items: center;
-  min-height: 85vh;
-  position: relative;
 }
 .landing-hero-bg {
   position: absolute;
-  inset: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  height: 100%;
   overflow: hidden;
   pointer-events: none;
   z-index: 0;
@@ -1154,9 +1161,11 @@
 /* RESPONSIVE */
 @media (max-width: 1024px) {
   .landing-hero {
+    padding: 6rem 2rem 4rem;
+  }
+  .landing-hero-inner {
     grid-template-columns: 1fr;
     text-align: center;
-    padding: 6rem 2rem 4rem;
     gap: 3rem;
   }
   .landing-hero-content {
@@ -1228,8 +1237,8 @@
   .landing-hero-feature {
     flex: none;
   }
-  .landing-hero-image {
-    max-width: 100%;
+  .landing-hero-visual {
+    display: none;
   }
   .landing-section {
     padding: 4rem 1.5rem;

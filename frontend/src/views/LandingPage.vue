@@ -210,72 +210,63 @@ const testimonials = [
         <div class="landing-hero-particle" style="width:3px;height:3px;top:60%;left:90%;animation-delay:-2s;animation-duration:8s"></div>
         <div class="landing-hero-particle" style="width:7px;height:7px;top:40%;left:45%;animation-delay:-4s;animation-duration:10s"></div>
       </div>
-      <div class="landing-hero-content">
-        <div class="landing-hero-stagger">
-          <h1 class="landing-hero-title">
-            Gestion de stock.<br>Simplifiée.<br><span class="highlight">Surboostée.</span>
-          </h1>
-        </div>
-        <div class="landing-hero-stagger">
-          <p class="landing-hero-desc">
-            La solution tout-en-un de gestion de stock et d'inventaire conçue pour les commerces modernes.
-          </p>
-        </div>
-        <div class="landing-hero-features landing-hero-stagger">
-          <div class="landing-hero-feature">
-            <div class="landing-hero-feature-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      <div class="landing-hero-inner">
+        <div class="landing-hero-content">
+          <div class="landing-hero-stagger">
+            <h1 class="landing-hero-title" style="font-size: 4rem">
+              Gestion de stock simplifiée.<br><span class="highlight">Surboostée.</span>
+            </h1>
+          </div>
+          <div class="landing-hero-stagger">
+            <p class="landing-hero-desc">
+              La solution tout-en-un de gestion de stock et d'inventaire conçue pour les commerces modernes.
+            </p>
+          </div>
+          <div class="landing-hero-features landing-hero-stagger">
+            <div class="landing-hero-feature">
+              <div class="landing-hero-feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+              </div>
+              <span class="landing-hero-feature-label">Gestion de stock</span>
             </div>
-            <span class="landing-hero-feature-label">Gestion de stock</span>
-          </div>
-          <div class="landing-hero-feature">
-            <div class="landing-hero-feature-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8l-8 8"/><path d="M8 8h8v8"/></svg>
+            <div class="landing-hero-feature">
+              <div class="landing-hero-feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8l-8 8"/><path d="M8 8h8v8"/></svg>
+              </div>
+              <span class="landing-hero-feature-label">Gestion de pertes</span>
             </div>
-            <span class="landing-hero-feature-label">Gestion de pertes</span>
-          </div>
-          <div class="landing-hero-feature">
-            <div class="landing-hero-feature-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-6"/></svg>
+            <div class="landing-hero-feature">
+              <div class="landing-hero-feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-6"/></svg>
+              </div>
+              <span class="landing-hero-feature-label">Rapports & Analyses</span>
             </div>
-            <span class="landing-hero-feature-label">Rapports & Analyses</span>
-          </div>
-          <div class="landing-hero-feature">
-            <div class="landing-hero-feature-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <div class="landing-hero-feature">
+              <div class="landing-hero-feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              </div>
+              <span class="landing-hero-feature-label">Alertes & Notifications</span>
             </div>
-            <span class="landing-hero-feature-label">Alertes & Notifications</span>
+          </div>
+          <div class="landing-hero-actions landing-hero-stagger">
+            <button class="landing-hero-btn-primary" @click="goLogin">
+              <template v-if="isLoggedIn">Mon compte</template>
+              <template v-else>Se connecter</template>
+            </button>
+            <button class="landing-hero-btn-secondary">
+              Voir la démo
+            </button>
           </div>
         </div>
-        <div class="landing-hero-actions landing-hero-stagger">
-          <button class="landing-hero-btn-primary" @click="goLogin">
-            <template v-if="isLoggedIn">Mon compte</template>
-            <template v-else>Se connecter</template>
-          </button>
-          <button class="landing-hero-btn-secondary">
-            Voir la démo
-          </button>
-        </div>
-        <div class="landing-hero-trust landing-hero-stagger">
-          <div class="landing-hero-stars">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)" stroke="var(--amber)" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)" stroke="var(--amber)" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)" stroke="var(--amber)" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)" stroke="var(--amber)" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)" stroke="var(--amber)" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <div class="landing-hero-visual">
+          <div class="landing-hero-glow"></div>
+          <div class="landing-hero-cube"></div>
+          <div class="landing-hero-cube"></div>
+          <div class="landing-hero-cube"></div>
+          <div class="landing-hero-image landing-hero-image-stagger" :style="{ transform: `perspective(1200px) rotateY(${mouseX * 2}deg) rotateX(${-mouseY * 2}deg) translateY(${mouseY * 4}px)` }">
+            <div class="landing-hero-image-glow"></div>
+            <img :src="sectionSrc" alt="mePOS Inventory Intel" loading="lazy">
           </div>
-          <span class="landing-hero-trust-text">Adopté par plus de 150 commerces</span>
-        </div>
-      </div>
-      <div class="landing-hero-visual">
-        <div class="landing-hero-glow"></div>
-        <div class="landing-hero-cube"></div>
-        <div class="landing-hero-cube"></div>
-        <div class="landing-hero-cube"></div>
-        <div class="landing-hero-image landing-hero-image-stagger" :style="{ transform: `perspective(1200px) rotateY(${mouseX * 2}deg) rotateX(${-mouseY * 2}deg) translateY(${mouseY * 4}px)` }">
-          <div class="landing-hero-image-glow"></div>
-          <div class="landing-hero-image-sweep"></div>
-          <img :src="sectionSrc" alt="mePOS Inventory Intel" loading="lazy">
         </div>
       </div>
     </section>
