@@ -144,7 +144,7 @@ export async function createReception(data: any, tenantId?: number | null, userI
           batch_id: batch.id,
           ingredient_id: item.ingredient_id,
           quantity: item.received_quantity,
-          movement_type: 'reception',
+          type: 'reception',
           reference_type: 'goods_reception',
           reference_id: reception.id,
           unit_price: unitPrice.toNumber(),
@@ -274,7 +274,7 @@ export async function createReception(data: any, tenantId?: number | null, userI
         const batch = batchResult.rows[0];
 
         await client.query(
-          `INSERT INTO batch_movements (tenant_id, batch_id, ingredient_id, quantity, movement_type, reference_type, reference_id, unit_price)
+          `INSERT INTO batch_movements (tenant_id, batch_id, ingredient_id, quantity, type, reference_type, reference_id, unit_price)
            VALUES ($1, $2, $3, $4, 'reception', 'goods_reception', $5, $6)`,
           [tid, batch.id, item.ingredient_id, item.received_quantity, reception.id, unitPrice.toString()]
         );

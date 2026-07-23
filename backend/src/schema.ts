@@ -661,7 +661,7 @@ CREATE TABLE IF NOT EXISTS inventory_batches (
     unit VARCHAR(10),
     unit_price DECIMAL(12, 4) NOT NULL DEFAULT 0,
     total_cost DECIMAL(14, 4) NOT NULL DEFAULT 0,
-    manufacturing_date DATE,
+    production_date DATE,
     expiration_date DATE,
     storage_location VARCHAR(100),
     status batch_status NOT NULL DEFAULT 'active',
@@ -676,7 +676,8 @@ CREATE TABLE IF NOT EXISTS batch_movements (
     batch_id INT NOT NULL REFERENCES inventory_batches(id) ON DELETE CASCADE,
     ingredient_id INT NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
     quantity DECIMAL(12, 4) NOT NULL,
-    movement_type VARCHAR(50) NOT NULL CHECK (movement_type IN (
+    warehouse_id INT REFERENCES departments(id) ON DELETE SET NULL,
+    type VARCHAR(50) NOT NULL CHECK (type IN (
         'reception', 'consumption', 'transfer_out', 'transfer_in',
         'split_out', 'split_in', 'adjustment', 'discard', 'expired'
     )),
@@ -696,7 +697,7 @@ CREATE INDEX IF NOT EXISTS idx_batches_expiry ON inventory_batches(expiration_da
 CREATE INDEX IF NOT EXISTS idx_batches_supplier ON inventory_batches(tenant_id, supplier_id);
 CREATE INDEX IF NOT EXISTS idx_batch_movements_batch ON batch_movements(batch_id);
 CREATE INDEX IF NOT EXISTS idx_batch_movements_ingredient ON batch_movements(tenant_id, ingredient_id);
-CREATE INDEX IF NOT EXISTS idx_batch_movements_type ON batch_movements(tenant_id, movement_type);
+CREATE INDEX IF NOT EXISTS idx_batch_movements_type ON batch_movements(tenant_id, type);
 CREATE INDEX IF NOT EXISTS idx_batch_movements_created ON batch_movements(tenant_id, created_at DESC);
 
 -- ============================================================
@@ -1081,6 +1082,15 @@ export async function initializeDatabase() {
     } catch { /* ignore */ }
     try {
       await query(`ALTER TABLE purchase_order_items RENAME COLUMN notes TO line_notes`);
+    } catch { /* ignore */ }
+    try {
+      await query(`ALTER TABLE inventory_batches RENAME COLUMN manufacturing_date TO production_date`);
+    } catch { /* ignore */ }
+    try {
+      await query(`ALTER TABLE batch_movements ADD COLUMN IF NOT EXISTS warehouse_id INT REFERENCES departments(id) ON DELETE SET NULL`);
+    } catch { /* ignore */ }
+    try {
+      await query(`ALTER TABLE batch_movements RENAME COLUMN movement_type TO type`);
     } catch { /* ignore */ }
 
     // Detect fresh install vs existing database
