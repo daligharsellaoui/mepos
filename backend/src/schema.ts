@@ -567,7 +567,7 @@ CREATE TABLE IF NOT EXISTS purchase_order_items (
     tax_rate DECIMAL(5, 2) DEFAULT 0,
     tax_amount DECIMAL(12, 4) DEFAULT 0,
     line_total DECIMAL(14, 4) DEFAULT 0,
-    notes TEXT,
+    line_notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -1078,6 +1078,9 @@ export async function initializeDatabase() {
     try {
       await query(`ALTER TABLE inventory_adjustments DROP COLUMN IF EXISTS difference`);
       await query(`ALTER TABLE inventory_adjustments ADD COLUMN difference DECIMAL(12, 4) NOT NULL DEFAULT 0`);
+    } catch { /* ignore */ }
+    try {
+      await query(`ALTER TABLE purchase_order_items RENAME COLUMN notes TO line_notes`);
     } catch { /* ignore */ }
 
     // Detect fresh install vs existing database

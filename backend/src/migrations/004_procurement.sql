@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS purchase_order_items (
     tax_rate DECIMAL(5, 2) DEFAULT 0,
     tax_amount DECIMAL(12, 4) DEFAULT 0,
     line_total DECIMAL(14, 4) DEFAULT 0,
-    notes TEXT,
+    line_notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
