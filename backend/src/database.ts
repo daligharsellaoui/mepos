@@ -42,6 +42,20 @@ export const demoDb: {
   purchases: any[];
   product_mappings: any[];
   activity_journal: any[];
+  purchase_orders: any[];
+  purchase_order_items: any[];
+  goods_receptions: any[];
+  goods_reception_items: any[];
+  supplier_invoices: any[];
+  inventory_batches: any[];
+  batch_movements: any[];
+  inventory_counts: any[];
+  inventory_count_items: any[];
+  inventory_adjustments: any[];
+  ingredient_price_history: any[];
+  supplier_ingredients: any[];
+  purchase_returns: any[];
+  purchase_return_items: any[];
 } = {
   tenants: seedData.tenants,
   users: seedData.users,
@@ -64,6 +78,20 @@ export const demoDb: {
   purchases: seedData.purchases,
   product_mappings: [],
   activity_journal: [],
+  purchase_orders: [],
+  purchase_order_items: [],
+  goods_receptions: [],
+  goods_reception_items: [],
+  supplier_invoices: [],
+  inventory_batches: [],
+  batch_movements: [],
+  inventory_counts: [],
+  inventory_count_items: [],
+  inventory_adjustments: [],
+  ingredient_price_history: [],
+  supplier_ingredients: [],
+  purchase_returns: [],
+  purchase_return_items: [],
 };
 
 // Check DB Connection

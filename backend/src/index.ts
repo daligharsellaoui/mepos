@@ -33,6 +33,11 @@ import pushRouter from './routes/push';
 import suppliersRouter from './routes/suppliers';
 import importRouter from './routes/import';
 import mappingsRouter from './routes/mappings';
+import purchasesRouter from './routes/purchases';
+import receptionsRouter from './routes/receptions';
+import batchesRouter from './routes/batches';
+import inventoryCountsRouter from './routes/inventory-counts';
+import priceHistoryRouter from './routes/price-history';
 
 dotenv.config();
 
@@ -119,6 +124,21 @@ app.use('/api/v1/journal', authMiddleware, tenantContextMiddleware, journalRoute
 
 // Product mapping routes (POS Product Mapping)
 app.use('/api/v1/mappings', authMiddleware, tenantContextMiddleware, mappingsRouter);
+
+// Purchase Order routes
+app.use('/api/v1/purchases', authMiddleware, tenantContextMiddleware, purchasesRouter);
+
+// Goods Reception routes
+app.use('/api/v1/receptions', authMiddleware, tenantContextMiddleware, receptionsRouter);
+
+// Batch Management routes
+app.use('/api/v1/batches', authMiddleware, tenantContextMiddleware, batchesRouter);
+
+// Inventory Count routes
+app.use('/api/v1/inventory-counts', authMiddleware, tenantContextMiddleware, inventoryCountsRouter);
+
+// Price History routes
+app.use('/api/v1/price-history', authMiddleware, tenantContextMiddleware, priceHistoryRouter);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {

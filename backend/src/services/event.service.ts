@@ -80,4 +80,50 @@ export const Events = {
   PURCHASE_CANCELLED: 'purchase.cancelled',
   IMPORT_INGREDIENT_CREATED: 'import.ingredient.created',
   IMPORT_INGREDIENT_REUSED: 'import.ingredient.reused',
+
+  // Purchase Order events
+  PURCHASE_ORDER_CREATED: 'purchase.order.created',
+  PURCHASE_ORDER_UPDATED: 'purchase.order.updated',
+  PURCHASE_ORDER_SUBMITTED: 'purchase.order.submitted',
+  PURCHASE_ORDER_APPROVED: 'purchase.order.approved',
+  PURCHASE_ORDER_REJECTED: 'purchase.order.rejected',
+  PURCHASE_ORDER_CANCELLED: 'purchase.order.cancelled',
+  PURCHASE_ORDER_CLOSED: 'purchase.order.closed',
+
+  // Goods Reception events
+  GOODS_RECEIVED: 'goods.received',
+  GOODS_PARTIALLY_RECEIVED: 'goods.partially.received',
+  GOODS_REJECTED: 'goods.rejected',
+  GOODS_DAMAGED: 'goods.damaged',
+
+  // Batch events
+  BATCH_CREATED: 'batch.created',
+  BATCH_TRANSFERRED: 'batch.transferred',
+  BATCH_CONSUMED: 'batch.consumed',
+  BATCH_SPLIT: 'batch.split',
+  BATCH_MERGED: 'batch.merged',
+  BATCH_ADJUSTED: 'batch.adjusted',
+  BATCH_EXPIRED: 'batch.expired',
+  BATCH_DISCARDED: 'batch.discarded',
+
+  // Inventory Count events
+  INVENTORY_COUNT_CREATED: 'inventory.count.created',
+  INVENTORY_COUNT_STARTED: 'inventory.count.started',
+  INVENTORY_COUNT_COMPLETED: 'inventory.count.completed',
+  INVENTORY_COUNT_APPROVED: 'inventory.count.approved',
+  INVENTORY_COUNT_CANCELLED: 'inventory.count.cancelled',
+
+  // Price History events
+  PRICE_CHANGED: 'price.changed',
+  PRICE_TREND_ALERT: 'price.trend.alert',
+
+  // Purchase Recommendation events
+  PURCHASE_RECOMMENDATION_GENERATED: 'purchase.recommendation.generated',
+
+  // Purchase Return events
+  PURCHASE_RETURN_CREATED: 'purchase.return.created',
+  PURCHASE_RETURN_COMPLETED: 'purchase.return.completed',
+
+  // Supplier Performance events
+  SUPPLIER_PERFORMANCE_CHANGED: 'supplier.performance.changed',
 };

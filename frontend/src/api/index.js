@@ -166,6 +166,55 @@ export const api = {
   getJournalEventTypes: () => client.get('/journal/event-types'),
   getSaleExpansion: (ticketId) => client.get(`/journal/sale/${ticketId}/expansion`),
   exportJournal: (params) => client.get('/journal/export', { params, responseType: 'blob' }),
+
+  // Purchase Orders
+  getPurchaseOrders: (params) => client.get('/purchases', { params }),
+  getPurchaseOrder: (id) => client.get(`/purchases/${id}`),
+  createPurchaseOrder: (data) => client.post('/purchases', data),
+  updatePurchaseOrder: (id, data) => client.put(`/purchases/${id}`, data),
+  submitPurchaseOrder: (id) => client.post(`/purchases/${id}/submit`),
+  approvePurchaseOrder: (id) => client.post(`/purchases/${id}/approve`),
+  rejectPurchaseOrder: (id) => client.post(`/purchases/${id}/reject`),
+  cancelPurchaseOrder: (id) => client.post(`/purchases/${id}/cancel`),
+  closePurchaseOrder: (id) => client.post(`/purchases/${id}/close`),
+  deletePurchaseOrder: (id) => client.delete(`/purchases/${id}`),
+
+  // Goods Receptions
+  getReceptions: (params) => client.get('/receptions', { params }),
+  getReception: (id) => client.get(`/receptions/${id}`),
+  createReception: (data) => client.post('/receptions', data),
+
+  // Batches
+  getBatches: (params) => client.get('/batches', { params }),
+  getBatch: (id) => client.get(`/batches/${id}`),
+  getBatchMovements: (id) => client.get(`/batches/${id}/movements`),
+  getExpiringBatches: () => client.get('/batches/expiring'),
+  consumeBatch: (id, quantity) => client.post(`/batches/${id}/consume`, { quantity }),
+  transferBatch: (id, data) => client.post(`/batches/${id}/transfer`, data),
+  splitBatch: (id, quantity) => client.post(`/batches/${id}/split`, { quantity }),
+  adjustBatch: (id, data) => client.post(`/batches/${id}/adjust`, data),
+  discardBatch: (id, reason) => client.post(`/batches/${id}/discard`, { reason }),
+  expireBatches: () => client.post('/batches/expire-now'),
+
+  // Inventory Counts
+  getInventoryCounts: (params) => client.get('/inventory-counts', { params }),
+  getInventoryCount: (id) => client.get(`/inventory-counts/${id}`),
+  getCountDiscrepancies: (id) => client.get(`/inventory-counts/${id}/discrepancies`),
+  createInventoryCount: (data) => client.post('/inventory-counts', data),
+  updateCountItem: (itemId, data) => client.put(`/inventory-counts/items/${itemId}`, data),
+  startInventoryCount: (id) => client.post(`/inventory-counts/${id}/start`),
+  completeInventoryCount: (id) => client.post(`/inventory-counts/${id}/complete`),
+  approveInventoryCount: (id) => client.post(`/inventory-counts/${id}/approve`),
+  cancelInventoryCount: (id) => client.post(`/inventory-counts/${id}/cancel`),
+
+  // Price History
+  getPriceHistory: (ingredientId, params) => client.get(`/price-history/ingredients/${ingredientId}/history`, { params }),
+  getPriceAnalytics: (ingredientId) => client.get(`/price-history/ingredients/${ingredientId}/analytics`),
+  recordPrice: (ingredientId, data) => client.post(`/price-history/ingredients/${ingredientId}/record`, data),
+  getSupplierPriceComparison: (supplierId) => client.get(`/price-history/suppliers/${supplierId}/comparison`),
+  getSupplierIngredients: (supplierId) => client.get(`/price-history/suppliers/${supplierId}/ingredients`),
+  linkSupplierIngredient: (data) => client.post('/price-history/supplier-ingredients', data),
+  unlinkSupplierIngredient: (data) => client.delete('/price-history/supplier-ingredients', { data }),
 }
 
 export default client

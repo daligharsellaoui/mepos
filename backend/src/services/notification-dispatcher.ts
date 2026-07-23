@@ -712,5 +712,172 @@ export function setupNotificationDispatcher() {
     });
   });
 
+  eventBus.on(Events.PURCHASE_ORDER_SUBMITTED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'purchase',
+      category: CATEGORIES.purchase,
+      priority: PRIORITIES.high,
+      title: 'Bon de commande à approuver',
+      message: `Bon de commande soumis par ${data.supplierName} (${data.reference})`,
+      entityType: 'purchase_order',
+      entityId: data.id,
+      icon: 'file-text',
+      color: '#f59e0b',
+      minRole: 'manager',
+    });
+  });
+
+  eventBus.on(Events.PURCHASE_ORDER_APPROVED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'success',
+      category: CATEGORIES.purchase,
+      priority: PRIORITIES.medium,
+      title: 'Bon de commande approuvé',
+      message: `Bon de commande ${data.reference} approuvé par ${data.approvedBy}`,
+      entityType: 'purchase_order',
+      entityId: data.id,
+      icon: 'check-circle',
+      color: '#10b981',
+    });
+  });
+
+  eventBus.on(Events.PURCHASE_ORDER_REJECTED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'warning',
+      category: CATEGORIES.purchase,
+      priority: PRIORITIES.medium,
+      title: 'Bon de commande rejeté',
+      message: `Bon de commande ${data.reference} rejeté`,
+      entityType: 'purchase_order',
+      entityId: data.id,
+      icon: 'x-circle',
+      color: '#ef4444',
+    });
+  });
+
+  eventBus.on(Events.GOODS_RECEIVED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'success',
+      category: CATEGORIES.purchase,
+      priority: PRIORITIES.medium,
+      title: 'Réception de marchandises',
+      message: `${data.itemsReceived} articles reçus sur le bon de commande ${data.reference}`,
+      entityType: 'purchase_order',
+      entityId: data.id,
+      icon: 'package',
+      color: '#10b981',
+    });
+  });
+
+  eventBus.on(Events.GOODS_PARTIALLY_RECEIVED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'warning',
+      category: CATEGORIES.purchase,
+      priority: PRIORITIES.medium,
+      title: 'Réception partielle',
+      message: 'Une réception partielle de marchandises a été enregistrée',
+      entityType: 'purchase_order',
+      entityId: data.id,
+      icon: 'alert-triangle',
+      color: '#f59e0b',
+    });
+  });
+
+  eventBus.on(Events.BATCH_EXPIRED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'critical',
+      category: CATEGORIES.inventory,
+      priority: PRIORITIES.critical,
+      title: 'Lot périmé détecté',
+      message: `Le lot ${data.batchNumber} de "${data.ingredientName}" est périmé`,
+      entityType: 'ingredient',
+      entityId: data.ingredientId,
+      icon: 'alert-octagon',
+      color: '#dc2626',
+      minRole: 'admin',
+    });
+  });
+
+  eventBus.on(Events.BATCH_CREATED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'information',
+      category: CATEGORIES.inventory,
+      priority: PRIORITIES.low,
+      title: 'Nouveau lot créé',
+      message: `Un nouveau lot a été créé pour "${data.ingredientName}"`,
+      entityType: 'ingredient',
+      entityId: data.ingredientId,
+      icon: 'layers',
+      color: '#06b6d4',
+    });
+  });
+
+  eventBus.on(Events.INVENTORY_COUNT_COMPLETED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'information',
+      category: CATEGORIES.inventory,
+      priority: PRIORITIES.medium,
+      title: 'Comptage d\'inventaire terminé',
+      message: `Comptage terminé pour l'entrepôt "${data.warehouseName}"`,
+      entityType: 'warehouse',
+      entityId: data.warehouseId,
+      icon: 'clipboard-list',
+      color: '#8b5cf6',
+      minRole: 'manager',
+    });
+  });
+
+  eventBus.on(Events.INVENTORY_COUNT_APPROVED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'success',
+      category: CATEGORIES.inventory,
+      priority: PRIORITIES.medium,
+      title: 'Inventaire approuvé',
+      message: 'Le comptage d\'inventaire a été approuvé',
+      entityType: 'warehouse',
+      entityId: data.warehouseId,
+      icon: 'check-circle',
+      color: '#10b981',
+    });
+  });
+
+  eventBus.on(Events.PRICE_CHANGED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'information',
+      category: CATEGORIES.inventory,
+      priority: PRIORITIES.low,
+      title: 'Prix modifié',
+      message: `Prix de "${data.ingredientName}" modifié: ${data.oldPrice} TND → ${data.newPrice} TND`,
+      entityType: 'ingredient',
+      entityId: data.ingredientId,
+      icon: 'dollar-sign',
+      color: '#06b6d4',
+    });
+  });
+
+  eventBus.on(Events.PURCHASE_RECOMMENDATION_GENERATED, async (data: any) => {
+    await createNotification({
+      tenantId: data.tenantId,
+      type: 'information',
+      category: CATEGORIES.inventory,
+      priority: PRIORITIES.low,
+      title: 'Recommandation d\'achat',
+      message: 'Une recommandation d\'achat a été générée',
+      icon: 'shopping-cart',
+      color: '#22c55e',
+      minRole: 'manager',
+    });
+  });
+
   console.log('[NotificationDispatcher] Handlers registered for all events.');
 }

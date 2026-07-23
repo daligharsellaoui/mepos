@@ -198,6 +198,52 @@ export const EVENT_CATEGORIES: Record<string, string> = {
   'sale.imported': 'sales',
   'sale.expanded': 'sales',
   'sale.inventory_deducted': 'sales',
+
+  // Purchase Orders
+  'purchase.order.created': 'purchases',
+  'purchase.order.updated': 'purchases',
+  'purchase.order.submitted': 'purchases',
+  'purchase.order.approved': 'purchases',
+  'purchase.order.rejected': 'purchases',
+  'purchase.order.cancelled': 'purchases',
+  'purchase.order.closed': 'purchases',
+
+  // Goods Reception
+  'goods.received': 'purchases',
+  'goods.partially.received': 'purchases',
+  'goods.rejected': 'purchases',
+  'goods.damaged': 'purchases',
+
+  // Batch Management
+  'batch.created': 'inventory',
+  'batch.transferred': 'inventory',
+  'batch.consumed': 'inventory',
+  'batch.split': 'inventory',
+  'batch.merged': 'inventory',
+  'batch.adjusted': 'inventory',
+  'batch.expired': 'inventory',
+  'batch.discarded': 'inventory',
+
+  // Inventory Counts
+  'inventory.count.created': 'inventory',
+  'inventory.count.started': 'inventory',
+  'inventory.count.completed': 'inventory',
+  'inventory.count.approved': 'inventory',
+  'inventory.count.cancelled': 'inventory',
+
+  // Price History
+  'price.changed': 'inventory',
+  'price.trend.alert': 'inventory',
+
+  // Purchase Recommendations
+  'purchase.recommendation.generated': 'forecast',
+
+  // Purchase Returns
+  'purchase.return.created': 'purchases',
+  'purchase.return.completed': 'purchases',
+
+  // Supplier Performance
+  'supplier.performance.changed': 'suppliers',
 };
 
 // ============================================================
@@ -1783,6 +1829,630 @@ export function setupActivityJournal() {
         entityType: notification.entity_type,
         entityId: notification.entity_id,
         ...cleanMetadata,
+      },
+    });
+  });
+
+  // ── Purchase Order Events ──
+  eventBus.on(Events.PURCHASE_ORDER_CREATED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'purchase.order.created',
+      correlationId: data.correlationId,
+      entityType: 'purchase_order',
+      entityId: String(data.id),
+      performedByUserId: data.createdBy,
+      performedBySource: 'web_application',
+      severity: 'notice',
+      title: 'Bon de commande créé',
+      description: `Bon de commande créé pour ${data.supplierName || 'le fournisseur'}.`,
+      metadata: {
+        supplierName: data.supplierName,
+        supplierId: data.supplierId,
+        totalAmount: data.totalAmount,
+        status: data.status,
+      },
+    });
+  });
+
+  eventBus.on(Events.PURCHASE_ORDER_UPDATED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'purchase.order.updated',
+      correlationId: data.correlationId,
+      entityType: 'purchase_order',
+      entityId: String(data.id),
+      performedByUserId: data.updatedBy,
+      performedBySource: 'web_application',
+      severity: 'info',
+      title: 'Bon de commande modifié',
+      description: `Bon de commande modifié pour ${data.supplierName || 'le fournisseur'}.`,
+      metadata: {
+        supplierName: data.supplierName,
+        changes: data.changes,
+      },
+      previousValues: data.previousValues,
+      newValues: data.newValues,
+    });
+  });
+
+  eventBus.on(Events.PURCHASE_ORDER_SUBMITTED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'purchase.order.submitted',
+      correlationId: data.correlationId,
+      entityType: 'purchase_order',
+      entityId: String(data.id),
+      performedByUserId: data.submittedBy,
+      performedBySource: 'web_application',
+      severity: 'info',
+      title: 'Bon de commande soumis pour approbation',
+      description: `Bon de commande soumis pour approbation - ${data.supplierName || 'Fournisseur'}.`,
+      metadata: {
+        supplierName: data.supplierName,
+        totalAmount: data.totalAmount,
+      },
+    });
+  });
+
+  eventBus.on(Events.PURCHASE_ORDER_APPROVED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'purchase.order.approved',
+      correlationId: data.correlationId,
+      entityType: 'purchase_order',
+      entityId: String(data.id),
+      performedByUserId: data.approvedBy,
+      performedBySource: 'web_application',
+      severity: 'notice',
+      title: 'Bon de commande approuvé',
+      description: `Bon de commande approuvé pour ${data.supplierName || 'le fournisseur'}.`,
+      metadata: {
+        supplierName: data.supplierName,
+        approvedBy: data.approvedBy,
+      },
+    });
+  });
+
+  eventBus.on(Events.PURCHASE_ORDER_REJECTED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'purchase.order.rejected',
+      correlationId: data.correlationId,
+      entityType: 'purchase_order',
+      entityId: String(data.id),
+      performedByUserId: data.rejectedBy,
+      performedBySource: 'web_application',
+      severity: 'warning',
+      title: 'Bon de commande rejeté',
+      description: `Bon de commande rejeté pour ${data.supplierName || 'le fournisseur'}. Motif: ${data.reason || 'Non spécifié'}`,
+      metadata: {
+        supplierName: data.supplierName,
+        reason: data.reason,
+      },
+    });
+  });
+
+  eventBus.on(Events.PURCHASE_ORDER_CANCELLED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'purchase.order.cancelled',
+      correlationId: data.correlationId,
+      entityType: 'purchase_order',
+      entityId: String(data.id),
+      performedByUserId: data.cancelledBy,
+      performedBySource: 'web_application',
+      severity: 'warning',
+      title: 'Bon de commande annulé',
+      description: `Bon de commande annulé pour ${data.supplierName || 'le fournisseur'}.`,
+      metadata: {
+        supplierName: data.supplierName,
+        reason: data.reason,
+      },
+    });
+  });
+
+  eventBus.on(Events.PURCHASE_ORDER_CLOSED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'purchase.order.closed',
+      correlationId: data.correlationId,
+      entityType: 'purchase_order',
+      entityId: String(data.id),
+      performedByUserId: data.closedBy,
+      performedBySource: 'web_application',
+      severity: 'info',
+      title: 'Bon de commande clôturé',
+      description: `Bon de commande clôturé pour ${data.supplierName || 'le fournisseur'}.`,
+      metadata: {
+        supplierName: data.supplierName,
+        totalAmount: data.totalAmount,
+      },
+    });
+  });
+
+  // ── Goods Reception Events ──
+  eventBus.on(Events.GOODS_RECEIVED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'goods.received',
+      correlationId: data.correlationId,
+      entityType: 'goods_reception',
+      entityId: String(data.id),
+      performedByUserId: data.receivedBy,
+      performedBySource: 'web_application',
+      severity: 'notice',
+      title: 'Marchandises reçues',
+      description: `Réception de marchandises - PO ${data.poReference || 'N/A'} dans ${data.warehouseName || 'l\'entrepôt'}.`,
+      metadata: {
+        poReference: data.poReference,
+        poId: data.poId,
+        warehouseName: data.warehouseName,
+        warehouseId: data.warehouseId,
+        itemsCount: data.itemsCount,
+      },
+    });
+  });
+
+  eventBus.on(Events.GOODS_PARTIALLY_RECEIVED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'goods.partially.received',
+      correlationId: data.correlationId,
+      entityType: 'goods_reception',
+      entityId: String(data.id),
+      performedByUserId: data.receivedBy,
+      performedBySource: 'web_application',
+      severity: 'info',
+      title: 'Marchandises partiellement reçues',
+      description: `Réception partielle - PO ${data.poReference || 'N/A'} dans ${data.warehouseName || 'l\'entrepôt'}.`,
+      metadata: {
+        poReference: data.poReference,
+        poId: data.poId,
+        warehouseName: data.warehouseName,
+        warehouseId: data.warehouseId,
+        itemsCount: data.itemsCount,
+      },
+    });
+  });
+
+  eventBus.on(Events.GOODS_REJECTED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'goods.rejected',
+      correlationId: data.correlationId,
+      entityType: 'goods_reception',
+      entityId: String(data.id),
+      performedByUserId: data.rejectedBy,
+      performedBySource: 'web_application',
+      severity: 'warning',
+      title: 'Marchandises rejetées',
+      description: `Marchandises rejetées - PO ${data.poReference || 'N/A'}. Motif: ${data.reason || 'Non spécifié'}`,
+      metadata: {
+        poReference: data.poReference,
+        poId: data.poId,
+        reason: data.reason,
+      },
+    });
+  });
+
+  eventBus.on(Events.GOODS_DAMAGED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'goods.damaged',
+      correlationId: data.correlationId,
+      entityType: 'goods_reception',
+      entityId: String(data.id),
+      performedByUserId: data.reportedBy,
+      performedBySource: 'web_application',
+      severity: 'warning',
+      title: 'Marchandises endommagées',
+      description: `Marchandises endommagées signalées - PO ${data.poReference || 'N/A'}.`,
+      metadata: {
+        poReference: data.poReference,
+        poId: data.poId,
+        description: data.description,
+      },
+    });
+  });
+
+  // ── Batch Events ──
+  eventBus.on(Events.BATCH_CREATED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'batch.created',
+      correlationId: data.correlationId,
+      entityType: 'batch',
+      entityId: String(data.id),
+      performedByUserId: data.createdBy,
+      performedBySource: 'web_application',
+      severity: 'notice',
+      title: 'Lot créé',
+      description: `Lot créé pour "${data.ingredientName || 'l\'ingrédient'}" - N° ${data.batchNumber || 'N/A'}.`,
+      metadata: {
+        ingredientName: data.ingredientName,
+        ingredientId: data.ingredientId,
+        batchNumber: data.batchNumber,
+        quantity: data.quantity,
+        unit: data.unit,
+        expiryDate: data.expiryDate,
+      },
+    });
+  });
+
+  eventBus.on(Events.BATCH_TRANSFERRED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'batch.transferred',
+      correlationId: data.correlationId,
+      entityType: 'batch',
+      entityId: String(data.id),
+      performedByUserId: data.transferredBy,
+      performedBySource: 'web_application',
+      severity: 'info',
+      title: 'Lot transféré',
+      description: `Lot N° ${data.batchNumber || 'N/A'} de "${data.ingredientName || 'l\'ingrédient'}" transféré.`,
+      metadata: {
+        ingredientName: data.ingredientName,
+        batchNumber: data.batchNumber,
+        sourceWarehouse: data.sourceWarehouse,
+        destWarehouse: data.destWarehouse,
+        quantity: data.quantity,
+      },
+    });
+  });
+
+  eventBus.on(Events.BATCH_CONSUMED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'batch.consumed',
+      correlationId: data.correlationId,
+      entityType: 'batch',
+      entityId: String(data.id),
+      performedBySource: 'system',
+      severity: 'info',
+      title: 'Lot consommé',
+      description: `Lot N° ${data.batchNumber || 'N/A'} de "${data.ingredientName || 'l\'ingrédient'}" consommé.`,
+      metadata: {
+        ingredientName: data.ingredientName,
+        batchNumber: data.batchNumber,
+        quantity: data.quantity,
+      },
+    });
+  });
+
+  eventBus.on(Events.BATCH_SPLIT, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'batch.split',
+      correlationId: data.correlationId,
+      entityType: 'batch',
+      entityId: String(data.id),
+      performedByUserId: data.splitBy,
+      performedBySource: 'web_application',
+      severity: 'info',
+      title: 'Lot divisé',
+      description: `Lot N° ${data.batchNumber || 'N/A'} de "${data.ingredientName || 'l\'ingrédient'}" divisé.`,
+      metadata: {
+        ingredientName: data.ingredientName,
+        batchNumber: data.batchNumber,
+        newBatchNumbers: data.newBatchNumbers,
+      },
+    });
+  });
+
+  eventBus.on(Events.BATCH_MERGED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'batch.merged',
+      correlationId: data.correlationId,
+      entityType: 'batch',
+      entityId: String(data.id),
+      performedByUserId: data.mergedBy,
+      performedBySource: 'web_application',
+      severity: 'info',
+      title: 'Lot fusionné',
+      description: `Lots fusionnés pour "${data.ingredientName || 'l\'ingrédient'}".`,
+      metadata: {
+        ingredientName: data.ingredientName,
+        sourceBatchNumbers: data.sourceBatchNumbers,
+        targetBatchNumber: data.targetBatchNumber,
+      },
+    });
+  });
+
+  eventBus.on(Events.BATCH_ADJUSTED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'batch.adjusted',
+      correlationId: data.correlationId,
+      entityType: 'batch',
+      entityId: String(data.id),
+      performedByUserId: data.adjustedBy,
+      performedBySource: 'web_application',
+      severity: 'info',
+      title: 'Lot ajusté',
+      description: `Lot N° ${data.batchNumber || 'N/A'} de "${data.ingredientName || 'l\'ingrédient'}" ajusté.`,
+      metadata: {
+        ingredientName: data.ingredientName,
+        batchNumber: data.batchNumber,
+        previousQty: data.previousQty,
+        newQty: data.newQty,
+        reason: data.reason,
+      },
+    });
+  });
+
+  eventBus.on(Events.BATCH_EXPIRED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'batch.expired',
+      correlationId: data.correlationId,
+      entityType: 'batch',
+      entityId: String(data.id),
+      performedBySource: 'system',
+      severity: 'warning',
+      title: 'Lot expiré',
+      description: `Lot N° ${data.batchNumber || 'N/A'} de "${data.ingredientName || 'l\'ingrédient'}" a expiré.`,
+      metadata: {
+        ingredientName: data.ingredientName,
+        batchNumber: data.batchNumber,
+        expiryDate: data.expiryDate,
+        quantity: data.quantity,
+      },
+    });
+  });
+
+  eventBus.on(Events.BATCH_DISCARDED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'batch.discarded',
+      correlationId: data.correlationId,
+      entityType: 'batch',
+      entityId: String(data.id),
+      performedByUserId: data.discardedBy,
+      performedBySource: 'web_application',
+      severity: 'warning',
+      title: 'Lot jeté',
+      description: `Lot N° ${data.batchNumber || 'N/A'} de "${data.ingredientName || 'l\'ingrédient'}" jeté. Motif: ${data.reason || 'Non spécifié'}`,
+      metadata: {
+        ingredientName: data.ingredientName,
+        batchNumber: data.batchNumber,
+        quantity: data.quantity,
+        reason: data.reason,
+      },
+    });
+  });
+
+  // ── Inventory Count Events ──
+  eventBus.on(Events.INVENTORY_COUNT_CREATED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'inventory.count.created',
+      correlationId: data.correlationId,
+      entityType: 'inventory_count',
+      entityId: String(data.id),
+      performedByUserId: data.createdBy,
+      performedBySource: 'web_application',
+      severity: 'info',
+      title: 'Inventaire créé',
+      description: `Comptage d'inventaire créé pour ${data.warehouseName || 'l\'entrepôt'}.`,
+      metadata: {
+        warehouseName: data.warehouseName,
+        warehouseId: data.warehouseId,
+        itemsCount: data.itemsCount,
+      },
+    });
+  });
+
+  eventBus.on(Events.INVENTORY_COUNT_STARTED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'inventory.count.started',
+      correlationId: data.correlationId,
+      entityType: 'inventory_count',
+      entityId: String(data.id),
+      performedByUserId: data.startedBy,
+      performedBySource: 'web_application',
+      severity: 'info',
+      title: 'Inventaire démarré',
+      description: `Comptage d'inventaire démarré dans ${data.warehouseName || 'l\'entrepôt'}.`,
+      metadata: {
+        warehouseName: data.warehouseName,
+        warehouseId: data.warehouseId,
+      },
+    });
+  });
+
+  eventBus.on(Events.INVENTORY_COUNT_COMPLETED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'inventory.count.completed',
+      correlationId: data.correlationId,
+      entityType: 'inventory_count',
+      entityId: String(data.id),
+      performedByUserId: data.completedBy,
+      performedBySource: 'web_application',
+      severity: 'notice',
+      title: 'Inventaire terminé',
+      description: `Comptage d'inventaire terminé dans ${data.warehouseName || 'l\'entrepôt'}.`,
+      metadata: {
+        warehouseName: data.warehouseName,
+        warehouseId: data.warehouseId,
+        itemsCounted: data.itemsCounted,
+        discrepancies: data.discrepancies,
+      },
+    });
+  });
+
+  eventBus.on(Events.INVENTORY_COUNT_APPROVED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'inventory.count.approved',
+      correlationId: data.correlationId,
+      entityType: 'inventory_count',
+      entityId: String(data.id),
+      performedByUserId: data.approvedBy,
+      performedBySource: 'web_application',
+      severity: 'notice',
+      title: 'Inventaire approuvé',
+      description: `Comptage d'inventaire approuvé pour ${data.warehouseName || 'l\'entrepôt'}.`,
+      metadata: {
+        warehouseName: data.warehouseName,
+        warehouseId: data.warehouseId,
+        approvedBy: data.approvedBy,
+      },
+    });
+  });
+
+  eventBus.on(Events.INVENTORY_COUNT_CANCELLED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'inventory.count.cancelled',
+      correlationId: data.correlationId,
+      entityType: 'inventory_count',
+      entityId: String(data.id),
+      performedByUserId: data.cancelledBy,
+      performedBySource: 'web_application',
+      severity: 'warning',
+      title: 'Inventaire annulé',
+      description: `Comptage d'inventaire annulé pour ${data.warehouseName || 'l\'entrepôt'}.`,
+      metadata: {
+        warehouseName: data.warehouseName,
+        warehouseId: data.warehouseId,
+        reason: data.reason,
+      },
+    });
+  });
+
+  // ── Price Changed Event ──
+  eventBus.on(Events.PRICE_CHANGED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'price.changed',
+      correlationId: data.correlationId,
+      entityType: 'ingredient',
+      entityId: String(data.ingredientId),
+      performedByUserId: data.changedBy,
+      performedBySource: 'web_application',
+      severity: 'info',
+      title: 'Prix modifié',
+      description: `Prix de "${data.ingredientName || 'l\'ingrédient'}" changé de ${data.oldPrice} à ${data.newPrice}.`,
+      metadata: {
+        ingredientName: data.ingredientName,
+        ingredientId: data.ingredientId,
+        oldPrice: data.oldPrice,
+        newPrice: data.newPrice,
+        unit: data.unit,
+      },
+      previousValues: { price: data.oldPrice },
+      newValues: { price: data.newPrice },
+    });
+  });
+
+  eventBus.on(Events.PRICE_TREND_ALERT, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'price.trend.alert',
+      correlationId: data.correlationId,
+      entityType: 'ingredient',
+      entityId: String(data.ingredientId),
+      performedBySource: 'system',
+      severity: 'warning',
+      title: 'Alerte tendance prix',
+      description: `Tendance à la hausse détectée pour "${data.ingredientName || 'l\'ingrédient'}" (${data.priceChange}% sur ${data.period}).`,
+      metadata: {
+        ingredientName: data.ingredientName,
+        ingredientId: data.ingredientId,
+        priceChange: data.priceChange,
+        period: data.period,
+        currentPrice: data.currentPrice,
+        averagePrice: data.averagePrice,
+      },
+    });
+  });
+
+  // ── Purchase Recommendation Event ──
+  eventBus.on(Events.PURCHASE_RECOMMENDATION_GENERATED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'purchase.recommendation.generated',
+      correlationId: data.correlationId,
+      entityType: 'forecast',
+      performedBySource: 'forecast_engine',
+      severity: 'info',
+      title: 'Recommandation d\'achat générée',
+      description: `${data.recommendationsCount || 0} recommandation(s) d'achat générée(s).`,
+      metadata: {
+        recommendationsCount: data.recommendationsCount,
+        totalEstimatedCost: data.totalEstimatedCost,
+        generatedAt: data.generatedAt,
+      },
+    });
+  });
+
+  // ── Purchase Return Events ──
+  eventBus.on(Events.PURCHASE_RETURN_CREATED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'purchase.return.created',
+      correlationId: data.correlationId,
+      entityType: 'purchase_return',
+      entityId: String(data.id),
+      performedByUserId: data.createdBy,
+      performedBySource: 'web_application',
+      severity: 'info',
+      title: 'Retour fournisseur créé',
+      description: `Retour créé pour ${data.supplierName || 'le fournisseur'} - PO ${data.poReference || 'N/A'}.`,
+      metadata: {
+        supplierName: data.supplierName,
+        poReference: data.poReference,
+        poId: data.poId,
+        reason: data.reason,
+        totalAmount: data.totalAmount,
+      },
+    });
+  });
+
+  eventBus.on(Events.PURCHASE_RETURN_COMPLETED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'purchase.return.completed',
+      correlationId: data.correlationId,
+      entityType: 'purchase_return',
+      entityId: String(data.id),
+      performedByUserId: data.completedBy,
+      performedBySource: 'web_application',
+      severity: 'notice',
+      title: 'Retour fournisseur terminé',
+      description: `Retour terminé pour ${data.supplierName || 'le fournisseur'} - PO ${data.poReference || 'N/A'}.`,
+      metadata: {
+        supplierName: data.supplierName,
+        poReference: data.poReference,
+        poId: data.poId,
+        totalAmount: data.totalAmount,
+      },
+    });
+  });
+
+  // ── Supplier Performance Event ──
+  eventBus.on(Events.SUPPLIER_PERFORMANCE_CHANGED, async (data: any) => {
+    await writeJournalEntry({
+      tenantId: data.tenantId,
+      eventType: 'supplier.performance.changed',
+      correlationId: data.correlationId,
+      entityType: 'supplier',
+      entityId: String(data.supplierId),
+      performedBySource: 'system',
+      severity: 'info',
+      title: 'Performance fournisseur mise à jour',
+      description: `Performance de "${data.supplierName || 'le fournisseur'}" mise à jour (note: ${data.newRating || 'N/A'}).`,
+      metadata: {
+        supplierName: data.supplierName,
+        supplierId: data.supplierId,
+        previousRating: data.previousRating,
+        newRating: data.newRating,
+        metrics: data.metrics,
       },
     });
   });

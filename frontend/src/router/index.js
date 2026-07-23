@@ -105,6 +105,24 @@ const routes = [
         path: 'notifications/preferences',
         name: 'NotificationPreferences',
         component: () => import('../views/NotificationPreferences.vue')
+      },
+      {
+        path: 'purchases',
+        name: 'Purchases',
+        component: () => import('../views/PurchaseOrdersView.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'batches',
+        name: 'Batches',
+        component: () => import('../views/BatchManagementView.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'inventory-counts',
+        name: 'InventoryCounts',
+        component: () => import('../views/InventoryCountView.vue'),
+        meta: { requiresAuth: true }
       }
     ]
   }

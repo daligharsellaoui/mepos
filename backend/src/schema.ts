@@ -513,6 +513,343 @@ CREATE INDEX IF NOT EXISTS idx_product_mappings_connector ON product_mappings(te
 CREATE INDEX IF NOT EXISTS idx_product_mappings_status ON product_mappings(tenant_id, mapping_status);
 CREATE INDEX IF NOT EXISTS idx_product_mappings_external ON product_mappings(tenant_id, external_product_id);
 CREATE INDEX IF NOT EXISTS idx_product_mappings_recipe ON product_mappings(mepos_product_id);
+
+-- ============================================================
+-- PROCUREMENT MODULE (Phase 4)
+-- ============================================================
+
+DO $$ BEGIN
+    CREATE TYPE purchase_order_status AS ENUM (
+        'draft', 'pending_approval', 'approved', 'ordered',
+        'partially_received', 'received', 'cancelled', 'closed'
+    );
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+CREATE TABLE IF NOT EXISTS purchase_orders (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    supplier_id INT REFERENCES suppliers(id) ON DELETE SET NULL,
+    warehouse_id INT REFERENCES departments(id) ON DELETE SET NULL,
+    reference_number VARCHAR(100),
+    status purchase_order_status NOT NULL DEFAULT 'draft',
+    order_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    expected_delivery TIMESTAMP WITH TIME ZONE,
+    currency VARCHAR(10) DEFAULT 'TND',
+    notes TEXT,
+    subtotal DECIMAL(14, 4) DEFAULT 0,
+    discount_total DECIMAL(14, 4) DEFAULT 0,
+    tax_total DECIMAL(14, 4) DEFAULT 0,
+    grand_total DECIMAL(14, 4) DEFAULT 0,
+    created_by INT REFERENCES users(id) ON DELETE SET NULL,
+    approved_by INT REFERENCES users(id) ON DELETE SET NULL,
+    approved_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS purchase_order_items (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    purchase_order_id INT NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+    ingredient_id INT REFERENCES ingredients(id) ON DELETE SET NULL,
+    line_number INT NOT NULL DEFAULT 1,
+    ordered_quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    received_quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    rejected_quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    damaged_quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    purchase_unit VARCHAR(50),
+    inventory_unit VARCHAR(10),
+    conversion_ratio DECIMAL(12, 4) DEFAULT 1.0000,
+    unit_price DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    discount_percent DECIMAL(5, 2) DEFAULT 0,
+    discount_amount DECIMAL(12, 4) DEFAULT 0,
+    tax_rate DECIMAL(5, 2) DEFAULT 0,
+    tax_amount DECIMAL(12, 4) DEFAULT 0,
+    line_total DECIMAL(14, 4) DEFAULT 0,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS goods_receptions (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    purchase_order_id INT REFERENCES purchase_orders(id) ON DELETE SET NULL,
+    warehouse_id INT REFERENCES departments(id) ON DELETE SET NULL,
+    reception_number VARCHAR(100),
+    reception_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    notes TEXT,
+    received_by INT REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS goods_reception_items (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    goods_reception_id INT NOT NULL REFERENCES goods_receptions(id) ON DELETE CASCADE,
+    purchase_order_item_id INT REFERENCES purchase_order_items(id) ON DELETE SET NULL,
+    ingredient_id INT REFERENCES ingredients(id) ON DELETE SET NULL,
+    received_quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    rejected_quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    damaged_quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    unit_price DECIMAL(12, 4),
+    batch_number VARCHAR(100),
+    expiration_date DATE,
+    storage_location VARCHAR(100),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS supplier_invoices (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    supplier_id INT REFERENCES suppliers(id) ON DELETE SET NULL,
+    purchase_order_id INT REFERENCES purchase_orders(id) ON DELETE SET NULL,
+    goods_reception_id INT REFERENCES goods_receptions(id) ON DELETE SET NULL,
+    invoice_number VARCHAR(100) NOT NULL,
+    invoice_date DATE,
+    due_date DATE,
+    amount DECIMAL(14, 4) NOT NULL DEFAULT 0,
+    tax_amount DECIMAL(14, 4) DEFAULT 0,
+    total_amount DECIMAL(14, 4) NOT NULL DEFAULT 0,
+    currency VARCHAR(10) DEFAULT 'TND',
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'overdue', 'cancelled')),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_purchase_orders_tenant ON purchase_orders(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_purchase_orders_supplier ON purchase_orders(tenant_id, supplier_id);
+CREATE INDEX IF NOT EXISTS idx_purchase_orders_status ON purchase_orders(tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_purchase_orders_date ON purchase_orders(tenant_id, order_date DESC);
+CREATE INDEX IF NOT EXISTS idx_purchase_orders_reference ON purchase_orders(tenant_id, reference_number);
+CREATE INDEX IF NOT EXISTS idx_po_items_po ON purchase_order_items(purchase_order_id);
+CREATE INDEX IF NOT EXISTS idx_po_items_ingredient ON purchase_order_items(tenant_id, ingredient_id);
+CREATE INDEX IF NOT EXISTS idx_goods_receptions_tenant ON goods_receptions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_goods_receptions_po ON goods_receptions(purchase_order_id);
+CREATE INDEX IF NOT EXISTS idx_goods_receptions_date ON goods_receptions(tenant_id, reception_date DESC);
+CREATE INDEX IF NOT EXISTS idx_gr_items_reception ON goods_reception_items(goods_reception_id);
+CREATE INDEX IF NOT EXISTS idx_gr_items_po_item ON goods_reception_items(purchase_order_item_id);
+CREATE INDEX IF NOT EXISTS idx_supplier_invoices_tenant ON supplier_invoices(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_supplier_invoices_supplier ON supplier_invoices(tenant_id, supplier_id);
+
+-- ============================================================
+-- BATCH MANAGEMENT (Phase 4)
+-- ============================================================
+
+DO $$ BEGIN
+    CREATE TYPE batch_status AS ENUM (
+        'active', 'partially_consumed', 'consumed',
+        'expired', 'discarded', 'transferred', 'adjusted'
+    );
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+CREATE TABLE IF NOT EXISTS inventory_batches (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    batch_number VARCHAR(100) NOT NULL,
+    ingredient_id INT NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
+    supplier_id INT REFERENCES suppliers(id) ON DELETE SET NULL,
+    purchase_order_id INT REFERENCES purchase_orders(id) ON DELETE SET NULL,
+    goods_reception_id INT REFERENCES goods_receptions(id) ON DELETE SET NULL,
+    warehouse_id INT REFERENCES departments(id) ON DELETE SET NULL,
+    initial_quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    remaining_quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    unit VARCHAR(10),
+    unit_price DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    total_cost DECIMAL(14, 4) NOT NULL DEFAULT 0,
+    manufacturing_date DATE,
+    expiration_date DATE,
+    storage_location VARCHAR(100),
+    status batch_status NOT NULL DEFAULT 'active',
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS batch_movements (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    batch_id INT NOT NULL REFERENCES inventory_batches(id) ON DELETE CASCADE,
+    ingredient_id INT NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
+    quantity DECIMAL(12, 4) NOT NULL,
+    movement_type VARCHAR(50) NOT NULL CHECK (movement_type IN (
+        'reception', 'consumption', 'transfer_out', 'transfer_in',
+        'split_out', 'split_in', 'adjustment', 'discard', 'expired'
+    )),
+    reference_type VARCHAR(50),
+    reference_id INT,
+    unit_price DECIMAL(12, 4),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_batches_tenant_number ON inventory_batches(tenant_id, batch_number);
+CREATE INDEX IF NOT EXISTS idx_batches_tenant ON inventory_batches(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_batches_ingredient ON inventory_batches(tenant_id, ingredient_id);
+CREATE INDEX IF NOT EXISTS idx_batches_warehouse ON inventory_batches(tenant_id, warehouse_id);
+CREATE INDEX IF NOT EXISTS idx_batches_status ON inventory_batches(tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_batches_expiry ON inventory_batches(expiration_date) WHERE expiration_date IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_batches_supplier ON inventory_batches(tenant_id, supplier_id);
+CREATE INDEX IF NOT EXISTS idx_batch_movements_batch ON batch_movements(batch_id);
+CREATE INDEX IF NOT EXISTS idx_batch_movements_ingredient ON batch_movements(tenant_id, ingredient_id);
+CREATE INDEX IF NOT EXISTS idx_batch_movements_type ON batch_movements(tenant_id, movement_type);
+CREATE INDEX IF NOT EXISTS idx_batch_movements_created ON batch_movements(tenant_id, created_at DESC);
+
+-- ============================================================
+-- INVENTORY COUNTS (Phase 4)
+-- ============================================================
+
+DO $$ BEGIN
+    CREATE TYPE inventory_count_status AS ENUM (
+        'draft', 'in_progress', 'completed', 'approved', 'cancelled'
+    );
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+CREATE TABLE IF NOT EXISTS inventory_counts (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    warehouse_id INT NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
+    count_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    status inventory_count_status NOT NULL DEFAULT 'draft',
+    counted_by INT REFERENCES users(id) ON DELETE SET NULL,
+    approved_by INT REFERENCES users(id) ON DELETE SET NULL,
+    approved_at TIMESTAMP WITH TIME ZONE,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS inventory_count_items (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    inventory_count_id INT NOT NULL REFERENCES inventory_counts(id) ON DELETE CASCADE,
+    ingredient_id INT NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
+    expected_quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    actual_quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    difference DECIMAL(12, 4) GENERATED ALWAYS AS (actual_quantity - expected_quantity) STORED,
+    reason VARCHAR(100),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS inventory_adjustments (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    inventory_count_id INT NOT NULL REFERENCES inventory_counts(id) ON DELETE CASCADE,
+    ingredient_id INT NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
+    warehouse_id INT REFERENCES departments(id) ON DELETE SET NULL,
+    previous_quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    new_quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    difference DECIMAL(12, 4) GENERATED ALWAYS AS (new_quantity - previous_quantity) STORED,
+    reason VARCHAR(100),
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'applied', 'skipped')),
+    applied_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_counts_tenant ON inventory_counts(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_counts_warehouse ON inventory_counts(tenant_id, warehouse_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_counts_status ON inventory_counts(tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_inventory_counts_date ON inventory_counts(tenant_id, count_date DESC);
+CREATE INDEX IF NOT EXISTS idx_count_items_count ON inventory_count_items(inventory_count_id);
+CREATE INDEX IF NOT EXISTS idx_count_items_ingredient ON inventory_count_items(tenant_id, ingredient_id);
+CREATE INDEX IF NOT EXISTS idx_adjustments_count ON inventory_adjustments(inventory_count_id);
+CREATE INDEX IF NOT EXISTS idx_adjustments_tenant ON inventory_adjustments(tenant_id);
+
+-- ============================================================
+-- PRICE HISTORY (Phase 4)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS ingredient_price_history (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    ingredient_id INT NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
+    supplier_id INT REFERENCES suppliers(id) ON DELETE SET NULL,
+    purchase_order_id INT REFERENCES purchase_orders(id) ON DELETE SET NULL,
+    unit_price DECIMAL(12, 4) NOT NULL,
+    purchase_unit VARCHAR(50),
+    conversion_factor DECIMAL(12, 4) DEFAULT 1.0000,
+    price_per_unit DECIMAL(12, 4) NOT NULL,
+    quantity DECIMAL(12, 4) DEFAULT 0,
+    currency VARCHAR(10) DEFAULT 'TND',
+    price_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    source VARCHAR(50) DEFAULT 'manual' CHECK (source IN ('manual', 'purchase', 'import', 'adjustment')),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS supplier_ingredients (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    supplier_id INT NOT NULL REFERENCES suppliers(id) ON DELETE CASCADE,
+    ingredient_id INT NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
+    supplier_sku VARCHAR(100),
+    unit_price DECIMAL(12, 4),
+    purchase_unit VARCHAR(50),
+    conversion_factor DECIMAL(12, 4) DEFAULT 1.0000,
+    minimum_order_quantity DECIMAL(12, 4) DEFAULT 0,
+    lead_time_days INT DEFAULT 0,
+    is_preferred BOOLEAN DEFAULT FALSE,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(tenant_id, supplier_id, ingredient_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_price_history_tenant ON ingredient_price_history(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_price_history_ingredient ON ingredient_price_history(tenant_id, ingredient_id);
+CREATE INDEX IF NOT EXISTS idx_price_history_supplier ON ingredient_price_history(tenant_id, supplier_id);
+CREATE INDEX IF NOT EXISTS idx_price_history_date ON ingredient_price_history(tenant_id, ingredient_id, price_date DESC);
+CREATE INDEX IF NOT EXISTS idx_price_history_po ON ingredient_price_history(purchase_order_id);
+CREATE INDEX IF NOT EXISTS idx_supplier_ings_tenant ON supplier_ingredients(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_supplier_ings_supplier ON supplier_ingredients(tenant_id, supplier_id);
+CREATE INDEX IF NOT EXISTS idx_supplier_ings_ingredient ON supplier_ingredients(tenant_id, ingredient_id);
+
+-- ============================================================
+-- PURCHASE RETURNS (Phase 4)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS purchase_returns (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    supplier_id INT REFERENCES suppliers(id) ON DELETE SET NULL,
+    purchase_order_id INT REFERENCES purchase_orders(id) ON DELETE SET NULL,
+    goods_reception_id INT REFERENCES goods_receptions(id) ON DELETE SET NULL,
+    return_number VARCHAR(100),
+    return_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    reason VARCHAR(255),
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'cancelled')),
+    notes TEXT,
+    created_by INT REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS purchase_return_items (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    purchase_return_id INT NOT NULL REFERENCES purchase_returns(id) ON DELETE CASCADE,
+    purchase_order_item_id INT REFERENCES purchase_order_items(id) ON DELETE SET NULL,
+    batch_id INT REFERENCES inventory_batches(id) ON DELETE SET NULL,
+    ingredient_id INT REFERENCES ingredients(id) ON DELETE SET NULL,
+    quantity DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    unit_price DECIMAL(12, 4) DEFAULT 0,
+    total_amount DECIMAL(14, 4) DEFAULT 0,
+    reason VARCHAR(255),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_purchase_returns_tenant ON purchase_returns(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_purchase_returns_supplier ON purchase_returns(tenant_id, supplier_id);
+CREATE INDEX IF NOT EXISTS idx_purchase_returns_po ON purchase_returns(purchase_order_id);
+CREATE INDEX IF NOT EXISTS idx_return_items_return ON purchase_return_items(purchase_return_id);
+CREATE INDEX IF NOT EXISTS idx_return_items_batch ON purchase_return_items(batch_id);
 `;
 
 export async function initializeDatabase() {
@@ -946,7 +1283,7 @@ export async function initializeDatabase() {
         }
 
         // Reset all sequences
-        const tables = ['users', 'departments', 'suppliers', 'ingredients', 'recipes', 'sales_tickets', 'sales_ticket_items', 'stock_movements', 'ingredient_losses', 'transfer_requests', 'agents', 'agent_heartbeats', 'tenant_settings', 'audit_logs', 'tenants', 'platform_users', 'product_mappings'];
+        const tables = ['users', 'departments', 'suppliers', 'ingredients', 'recipes', 'sales_tickets', 'sales_ticket_items', 'stock_movements', 'ingredient_losses', 'transfer_requests', 'agents', 'agent_heartbeats', 'tenant_settings', 'audit_logs', 'tenants', 'platform_users', 'product_mappings', 'purchase_orders', 'purchase_order_items', 'goods_receptions', 'goods_reception_items', 'supplier_invoices', 'inventory_batches', 'batch_movements', 'inventory_counts', 'inventory_count_items', 'inventory_adjustments', 'ingredient_price_history', 'supplier_ingredients', 'purchase_returns', 'purchase_return_items'];
         for (const table of tables) {
           await client.query(`SELECT setval('${table}_id_seq', (SELECT COALESCE(MAX(id), 1) FROM ${table}))`);
         }
