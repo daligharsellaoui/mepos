@@ -28,19 +28,8 @@ export const useAppStore = defineStore('app', () => {
     stocks.value.filter(s => parseFloat(s.quantity) <= parseFloat(s.alert_threshold))
   )
 
-  // ── Cache helpers ──
   // ── SSE Data Stream ──
   let dataEventSource = null
-  let dataRefreshTimer = null
-
-  function scheduleDataRefresh(user) {
-    if (dataRefreshTimer) return
-    // Debounce: coalesce rapid events into a single fetch
-    dataRefreshTimer = setTimeout(() => {
-      dataRefreshTimer = null
-      fetchData(user)
-    }, 500)
-  }
 
   function connectDataStream(user) {
     if (!user || dataEventSource) return
@@ -54,13 +43,32 @@ export const useAppStore = defineStore('app', () => {
 
     const es = new EventSource(url)
 
-    es.addEventListener('data:stocks_updated', () => { scheduleDataRefresh(user) })
-    es.addEventListener('data:loss_created', () => { scheduleDataRefresh(user) })
-    es.addEventListener('data:ingredient_updated', () => { scheduleDataRefresh(user) })
-    es.addEventListener('data:recipe_updated', () => { scheduleDataRefresh(user) })
-    es.addEventListener('data:department_updated', () => { scheduleDataRefresh(user) })
+    es.addEventListener('data:stocks_updated', () => {
+      fetchStocks(user)
+      fetchForecast(user)
+    })
+    es.addEventListener('data:loss_created', () => {
+      fetchLosses(user)
+      fetchStocks(user)
+      fetchForecast(user)
+    })
+    es.addEventListener('data:ingredient_updated', () => {
+      fetchIngredients(user)
+      fetchRecipes(user)
+      fetchStocks(user)
+      fetchForecast(user)
+    })
+    es.addEventListener('data:recipe_updated', () => {
+      fetchRecipes(user)
+      fetchForecast(user)
+    })
+    es.addEventListener('data:department_updated', () => {
+      fetchDepartments(user)
+      fetchStocks(user)
+      fetchForecast(user)
+    })
 
-    // Let the browser handle auto-reconnect natively — do NOT close & reopen in onerror
+    // Let the browser handle auto-reconnect natively
     es.onerror = () => {
       console.debug('[DataStream] Connection error, browser will auto-reconnect')
     }
@@ -69,10 +77,6 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function disconnectDataStream() {
-    if (dataRefreshTimer) {
-      clearTimeout(dataRefreshTimer)
-      dataRefreshTimer = null
-    }
     if (dataEventSource) {
       dataEventSource.close()
       dataEventSource = null
@@ -148,6 +152,75 @@ export const useAppStore = defineStore('app', () => {
 
   function closeAlert(id) {
     alerts.value = alerts.value.filter(a => a.id !== id)
+  }
+
+  // ── Individual data fetchers (for SSE tagged refreshes) ──
+  async function fetchStocks(user) {
+    if (!user || isFetchingData) return
+    try {
+      const res = await api.getStocks()
+      if (res.data.status === 'success') {
+        stocks.value = res.data.data
+        saveToCache('mepos_stocks', res.data.data)
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function fetchLosses(user) {
+    if (!user || isFetchingData) return
+    try {
+      const res = await api.getLosses()
+      if (res.data.status === 'success') {
+        losses.value = res.data.data
+        saveToCache('mepos_losses', res.data.data)
+        detectNewLosses(user)
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function fetchDepartments(user) {
+    if (!user || isFetchingData) return
+    try {
+      const res = await api.getDepartments()
+      if (res.data.status === 'success') {
+        departments.value = res.data.data
+        saveToCache('mepos_departments', res.data.data)
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function fetchIngredients(user) {
+    if (!user || isFetchingData) return
+    try {
+      const res = await api.getIngredients()
+      if (res.data.status === 'success') {
+        ingredients.value = res.data.data
+        saveToCache('mepos_ingredients', res.data.data)
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function fetchRecipes(user) {
+    if (!user || isFetchingData) return
+    try {
+      const res = await api.getRecipes()
+      if (res.data.status === 'success') {
+        recipes.value = res.data.data
+        saveToCache('mepos_recipes', res.data.data)
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function fetchForecast(user) {
+    if (!user || isFetchingData || user.role !== 'admin') return
+    try {
+      isForecastLoading.value = true
+      const res = await api.getForecast()
+      if (res.data.status === 'success' && res.data.data) {
+        forecast.value = res.data.data
+      }
+    } catch { /* ignore */ }
+    finally { isForecastLoading.value = false }
   }
 
   // ── Data fetching ──
